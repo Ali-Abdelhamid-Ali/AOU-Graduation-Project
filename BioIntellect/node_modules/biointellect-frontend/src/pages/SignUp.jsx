@@ -1,11 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { TopBar } from '../components/TopBar'
 import { InputField } from '../components/InputField'
 import { AnimatedButton } from '../components/AnimatedButton'
 import styles from './SignUp.module.css'
-import useDraggable from '../hooks/useDraggable'
 
 /**
  * SignUp Page
@@ -29,8 +28,6 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
     password_confirm: '',
   })
   const [validationErrors, setValidationErrors] = useState({})
-  const cardRef = useRef(null)
-  useDraggable(cardRef, 'signup-card')
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -101,9 +98,6 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
 
       <div className={styles.container}>
         <motion.div
-          ref={(el) => {
-            cardRef.current = el
-          }}
           className={styles.card}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -1,9 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { TopBar } from '../components/TopBar'
-import useDraggable from '../hooks/useDraggable'
-import { AnimatedButton } from '../components/AnimatedButton'
 import styles from './SelectRole.module.css'
 
 /**
@@ -72,34 +70,25 @@ export const SelectRole = ({ onRoleSelected }) => {
 
           {/* Role Selection Cards */}
           <div className={styles.rolesGrid}>
-            {roleOptions.map((role) => {
-              const RoleCard = () => {
-                const ref = useRef(null)
-                useDraggable(ref, `role-${role.id}`)
-                return (
-                  <motion.div
-                    key={role.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: role.id === 'doctor' ? 0.1 : 0.2 }}
-                  >
-                    <button
-                      ref={ref}
-                      className={`${styles.roleCard} ${
-                        selectedRole === role.id ? styles.selected : ''
-                      } ${styles[role.color]}`}
-                      onClick={() => handleRoleSelect(role.id)}
-                    >
-                      <div className={styles.icon}>{role.icon}</div>
-                      <h2 className={styles.roleLabel}>{role.label}</h2>
-                      <p className={styles.roleDescription}>{role.description}</p>
-                      <div className={styles.arrow}>→</div>
-                    </button>
-                  </motion.div>
-                )
-              }
-              return <RoleCard key={role.id} />
-            })}
+            {roleOptions.map((role, index) => (
+              <motion.div
+                key={role.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <button
+                  className={`${styles.roleCard} ${selectedRole === role.id ? styles.selected : ''
+                    } ${styles[role.color]}`}
+                  onClick={() => handleRoleSelect(role.id)}
+                >
+                  <div className={styles.icon}>{role.icon}</div>
+                  <h2 className={styles.roleLabel}>{role.label}</h2>
+                  <p className={styles.roleDescription}>{role.description}</p>
+                  <div className={styles.arrow}>→</div>
+                </button>
+              </motion.div>
+            ))}
           </div>
 
           {/* Info Box */}

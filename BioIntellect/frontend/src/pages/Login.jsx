@@ -6,27 +6,24 @@ import { TopBar } from '../components/TopBar'
 import { InputField } from '../components/InputField'
 import { AnimatedButton } from '../components/AnimatedButton'
 import { useSlideInAnimation } from '../hooks/useAnimations'
-import useDraggable from '../hooks/useDraggable'
 import styles from './Login.module.css'
 
-  /**
-   * Login Page
-   *
-   * User authentication interface (mocked)
-   * Features:
-   * - Email and password fields
-   * - Form validation
-   * - Error handling and animations
-   * - Loading state
-   * - Forgot password link
-   * - Sign up link
-   */
+/**
+ * Login Page
+ *
+ * User authentication interface (mocked)
+ * Features:
+ * - Email and password fields
+ * - Form validation
+ * - Error handling and animations
+ * - Loading state
+ * - Forgot password link
+ * - Sign up link
+ */
 
 export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick }) => {
   const { signIn, isLoading, error, clearError, userRole } = useAuth()
   const formRef = useSlideInAnimation(true, 'up')
-  const cardRef = useRef(null)
-  useDraggable(cardRef, 'login-card')
   const errorRef = useRef(null)
 
   const [formData, setFormData] = useState({
@@ -111,10 +108,7 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick }) 
 
       <div className={styles.container}>
         <motion.div
-          ref={(el) => {
-            formRef.current = el
-            cardRef.current = el
-          }}
+          ref={formRef}
           className={styles.card}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

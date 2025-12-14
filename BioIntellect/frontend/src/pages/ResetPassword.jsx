@@ -1,11 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { TopBar } from '../components/TopBar'
 import { InputField } from '../components/InputField'
 import { AnimatedButton } from '../components/AnimatedButton'
 import styles from './ResetPassword.module.css'
-import useDraggable from '../hooks/useDraggable'
 
 /**
  * ResetPassword Page
@@ -24,8 +23,6 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin }) => {
   const [email, setEmail] = useState('')
   const [validationError, setValidationError] = useState('')
   const [resetSent, setResetSent] = useState(false)
-  const cardRef = useRef(null)
-  useDraggable(cardRef, 'reset-card')
 
   const handleEmailChange = (value) => {
     setEmail(value)
@@ -71,7 +68,6 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin }) => {
 
         <div className={styles.container}>
           <motion.div
-            ref={(el) => { cardRef.current = el }}
             className={styles.card}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -79,21 +75,21 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin }) => {
           >
             <div className={styles.successState}>
               <div className={styles.icon}>✓</div>
-                <h1 className={styles.title}>Reset Link Sent</h1>
-                <p className={styles.subtitle}>
-                  Check your email at <strong>{email}</strong>
-                </p>
+              <h1 className={styles.title}>Reset Link Sent</h1>
+              <p className={styles.subtitle}>
+                Check your email at <strong>{email}</strong>
+              </p>
               <p className={styles.description}>
                 It may take a few minutes to arrive or appear in your spam folder (5-10 minutes)
               </p>
 
               <div className={styles.steps}>
-                  <h3>Next steps:</h3>
+                <h3>Next steps:</h3>
                 <ol>
-                    <li>Open the email from BioIntellect</li>
-                    <li>Click the password reset link</li>
-                    <li>Enter a new password</li>
-                    <li>Save changes and return to Sign In</li>
+                  <li>Open the email from BioIntellect</li>
+                  <li>Click the password reset link</li>
+                  <li>Enter a new password</li>
+                  <li>Save changes and return to Sign In</li>
                 </ol>
               </div>
 

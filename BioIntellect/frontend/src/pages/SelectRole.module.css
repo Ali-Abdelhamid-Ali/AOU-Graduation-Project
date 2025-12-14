@@ -1,0 +1,356 @@
+/* ============================================================================
+   SELECT ROLE PAGE - Premium Medical Design
+   ============================================================================ */
+
+/* ============================================================================
+   PAGE LAYOUT
+   ============================================================================ */
+
+.pageWrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-primary-light) 100%);
+  padding-top: 64px;
+}
+
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 64px);
+  padding: var(--spacing-2xl);
+  width: 100%;
+  margin: 0 auto;
+}
+
+.content {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ============================================================================
+   HEADER SECTION
+   ============================================================================ */
+
+.header {
+  text-align: center;
+  margin-bottom: var(--spacing-3xl);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 auto var(--spacing-md);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.5px;
+  text-align: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+.highlight {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.subtitle {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-normal);
+  margin: 0 auto;
+  font-weight: var(--font-weight-normal);
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+  display: block;
+}
+
+/* ============================================================================
+   ROLES GRID
+   ============================================================================ */
+
+.rolesGrid {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-2xl);
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+/* ============================================================================
+   ROLE CARD - Base Styles
+   ============================================================================ */
+
+.roleCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-xl);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--gradient-card);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  text-align: center;
+  min-height: 220px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Ensure consistent content alignment for both cards */
+.roleCard.primary,
+.roleCard.secondary {
+  padding-bottom: calc(var(--spacing-xl) + var(--spacing-lg) + 24px);
+}
+
+/* Move patient card slightly right to align with doctor card */
+.roleCard.secondary {
+  transform: translateX(50px);
+}
+
+.roleCard.secondary:hover {
+  transform: translateX(50px) translateY(-20px);
+}
+
+.roleCard:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 12px 24px rgba(0, 102, 204, 0.15), 0 4px 8px rgba(0, 102, 204, 0.1);
+  transform: translateY(-6px);
+  background: var(--gradient-card);
+}
+
+.roleCard:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+html.dark .roleCard {
+  border-color: var(--color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+html.dark .roleCard:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 12px 24px rgba(77, 148, 255, 0.25), 0 4px 8px rgba(77, 148, 255, 0.15);
+}
+
+/* ============================================================================
+   ROLE CARD - Color Variants
+   ============================================================================ */
+
+.roleCard.primary:hover {
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary-bg) 0%, rgba(0, 102, 204, 0.05) 100%);
+}
+
+.roleCard.secondary:hover {
+  border-color: var(--color-secondary);
+  background: linear-gradient(135deg, var(--color-secondary-bg) 0%, rgba(0, 168, 107, 0.05) 100%);
+  transform: translateX(50px) translateY(-6px);
+}
+
+/* ============================================================================
+   ROLE CARD - Selected State
+   ============================================================================ */
+
+.roleCard.selected {
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary-bg) 0%, rgba(0, 102, 204, 0.08) 100%);
+  box-shadow: 0 8px 16px rgba(0, 102, 204, 0.2), inset 0 0 0 2px var(--color-primary);
+  transform: scale(1.02);
+}
+
+.roleCard.secondary.selected {
+  transform: translateX(50px) scale(1.02);
+}
+
+html.dark .roleCard.selected {
+  background: linear-gradient(135deg, rgba(77, 148, 255, 0.15) 0%, rgba(77, 148, 255, 0.08) 100%);
+  box-shadow: 0 8px 16px rgba(77, 148, 255, 0.3), inset 0 0 0 2px var(--color-primary);
+}
+
+/* ============================================================================
+   ROLE CARD - Content Elements
+   ============================================================================ */
+
+.icon {
+  font-size: 52px;
+  margin-bottom: var(--spacing-lg);
+  display: block;
+  flex-shrink: 0;
+}
+
+.roleLabel {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+  letter-spacing: -0.3px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roleDescription {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: var(--line-height-normal);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arrow {
+  position: absolute;
+  bottom: var(--spacing-lg);
+  right: var(--spacing-lg);
+  font-size: var(--font-size-lg);
+  color: var(--color-primary);
+  opacity: 0;
+  transition: all var(--transition-normal);
+  transform: translateX(0);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roleCard:hover .arrow {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+/* Ensure arrow is in exact same position for both cards */
+.roleCard.primary .arrow,
+.roleCard.secondary .arrow {
+  right: var(--spacing-lg);
+  bottom: var(--spacing-lg);
+}
+
+.roleCard.primary:hover .arrow,
+.roleCard.secondary:hover .arrow {
+  right: var(--spacing-lg);
+  bottom: var(--spacing-lg);
+  transform: translateX(4px);
+}
+
+/* ============================================================================
+   INFO BOX
+   ============================================================================ */
+
+.infoBox {
+  background: var(--color-primary-bg);
+  border-left: 3px solid var(--color-primary);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+/* ============================================================================
+   TABLET (max-width: 768px)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .pageWrapper {
+    padding-top: 56px;
+  }
+
+  .container {
+    min-height: calc(100vh - 56px);
+    padding: var(--spacing-lg);
+  }
+
+  .content {
+    max-width: 100%;
+  }
+
+  .title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .subtitle {
+    font-size: var(--font-size-base);
+  }
+
+  .rolesGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+  }
+
+  .roleCard {
+    min-height: 160px;
+    padding: var(--spacing-lg);
+  }
+
+  .icon {
+    font-size: 40px;
+  }
+
+  .roleLabel {
+    font-size: var(--font-size-lg);
+  }
+}
+
+/* ============================================================================
+   MOBILE (max-width: 480px)
+   ============================================================================ */
+
+@media (max-width: 480px) {
+  .container {
+    padding: var(--spacing-md);
+  }
+
+  .rolesGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .roleCard {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--spacing-md);
+    text-align: right;
+    min-height: auto;
+    padding: var(--spacing-md);
+  }
+
+  .icon {
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .arrow {
+    right: var(--spacing-md);
+    opacity: 1;
+  }
+
+  .title {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .header {
+    margin-bottom: var(--spacing-xl);
+  }
+}

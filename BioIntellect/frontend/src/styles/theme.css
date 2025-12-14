@@ -1,0 +1,530 @@
+/* ============================================================================
+   BIOUI - Medical-Grade Design System
+   ============================================================================
+   
+   Principles:
+   - Low Cognitive Load
+   - High Contrast for Accessibility
+   - Minimal Motion
+   - Healthcare-focused color palette
+   
+   ============================================================================ */
+
+/* ============================================================================
+   ROOT VARIABLES - Design Tokens
+   ============================================================================ */
+
+:root {
+  /* ========================================
+     PREMIUM MEDICAL COLOR SYSTEM
+     Professional Healthcare Design
+     ======================================== */
+  
+  /* Primary Colors - Premium Medical Blue */
+  --color-primary: #0066cc;            /* Trustworthy Medical Blue */
+  --color-primary-dark: #0052a3;       /* Deep medical blue */
+  --color-primary-light: #4d94ff;     /* Bright medical blue */
+  --color-primary-bg: #e6f2ff;         /* Soft medical blue background */
+  --color-primary-gradient: linear-gradient(135deg, #0066cc 0%, #004d99 100%);
+  
+  /* Secondary Colors - Health Green */
+  --color-secondary: #00a86b;          /* Premium health green */
+  --color-secondary-dark: #00875a;
+  --color-secondary-light: #33cc99;
+  --color-secondary-bg: #e6fff5;      /* Soft health green background */
+  --color-secondary-gradient: linear-gradient(135deg, #00a86b 0%, #00875a 100%);
+  
+  /* Background & Surface - Premium Medical */
+  --color-background: #fafbfc;         /* Soft off-white - easy on eyes */
+  --color-surface: #ffffff;            /* Pure white cards */
+  --color-surface-elevated: #ffffff;  /* Elevated surfaces */
+  --color-surface-subtle: #f5f7fa;   /* Subtle background */
+  
+  /* Text Colors - Premium Readability */
+  --color-text: #1a1f2e;              /* Deep charcoal - premium readability */
+  --color-text-muted: #6b7280;         /* Soft gray - comfortable reading */
+  --color-text-light: #9ca3af;        /* Light gray for hints */
+  --color-text-inverse: #ffffff;      /* White text for dark backgrounds */
+  
+  /* Status Colors - Medical Grade */
+  --color-success: #10b981;            /* Premium success green */
+  --color-success-bg: #d1fae5;         /* Soft success background */
+  --color-success-dark: #059669;
+  --color-error: #ef4444;              /* Premium error red */
+  --color-error-bg: #fee2e2;           /* Soft error background */
+  --color-error-dark: #dc2626;
+  --color-warning: #f59e0b;            /* Premium warning amber */
+  --color-warning-bg: #fef3c7;         /* Soft warning background */
+  --color-warning-dark: #d97706;
+  --color-info: #3b82f6;               /* Premium info blue */
+  --color-info-bg: #dbeafe;             /* Soft info background */
+  --color-info-dark: #2563eb;
+  
+  /* Accent Colors - Premium Medical */
+  --color-alert: #f87171;              /* Soft alert red */
+  --color-accent: #8b5cf6;             /* Premium accent purple */
+  --color-accent-bg: #ede9fe;          /* Soft accent background */
+  
+  /* Gray Scale - Premium Medical */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  
+  /* Borders - Premium */
+  --color-border: #e5e7eb;             /* Soft border */
+  --color-border-strong: #d1d5db;      /* Stronger border */
+  --color-border-subtle: #f3f4f6;      /* Subtle border */
+  
+  /* Medical Gradients - Premium */
+  --gradient-primary: linear-gradient(135deg, #0066cc 0%, #004d99 100%);
+  --gradient-secondary: linear-gradient(135deg, #00a86b 0%, #00875a 100%);
+  --gradient-soft: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+  --gradient-card: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  
+  /* Toggle switch background */
+  --color-toggle-bg: var(--color-gray-200);
+
+  
+  /* Spacing System */
+  --spacing-2xs: 4px;
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+  
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  --font-family-mono: 'Courier New', monospace;
+  
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 30px;
+  
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  
+  /* Shadows - Premium & Professional */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.15);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.18);
+  
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 200ms ease-in-out;
+  --transition-slow: 300ms ease-in-out;
+  
+  /* Z-index */
+  --z-tooltip: 1000;
+  --z-modal: 1100;
+  --z-topbar: 1200;
+}
+
+/* ============================================================================
+   GLOBAL STYLES
+   ============================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  direction: ltr; /* English LTR */
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Smooth theme transitions */
+html, body, #root, .container, .card, .topbar, .roleCard {
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+
+/* ========================================
+   DARK MODE - Premium Medical Dark Theme
+   Applied when <html class="dark">
+   ======================================== */
+html.dark,
+.dark {
+  /* Primary Colors - Premium Medical Blue Dark */
+  --color-primary: #4d94ff;            /* Bright medical blue */
+  --color-primary-dark: #0066cc;       /* Standard medical blue */
+  --color-primary-light: #80b3ff;     /* Light medical blue */
+  --color-primary-bg: #1a3d66;        /* Dark medical blue background */
+  --color-primary-gradient: linear-gradient(135deg, #4d94ff 0%, #0066cc 100%);
+  
+  /* Secondary Colors - Health Green Dark */
+  --color-secondary: #33cc99;           /* Bright health green */
+  --color-secondary-dark: #00a86b;
+  --color-secondary-light: #66d9b3;
+  --color-secondary-bg: #0d4d33;        /* Dark health green background */
+  --color-secondary-gradient: linear-gradient(135deg, #33cc99 0%, #00a86b 100%);
+  
+  /* Background & Surface - Premium Medical Dark */
+  --color-background: #0d1117;          /* Deep dark - premium medical */
+  --color-surface: #161b22;            /* Card surface - elegant contrast */
+  --color-surface-elevated: #1c2128;  /* Elevated surfaces */
+  --color-surface-subtle: #0f1419;     /* Subtle background */
+  
+  /* Text Colors - Premium Dark Mode */
+  --color-text: #e6edf3;              /* Soft white - premium readability */
+  --color-text-muted: #8b949e;         /* Comfortable gray */
+  --color-text-light: #6e7681;        /* Light gray for hints */
+  --color-text-inverse: #0d1117;        /* Dark text for light backgrounds */
+  
+  /* Status Colors - Premium Medical Dark */
+  --color-success: #3fb950;             /* Bright success green */
+  --color-success-bg: #0d4d33;         /* Dark success background */
+  --color-success-dark: #238636;
+  --color-error: #f85149;              /* Bright error red */
+  --color-error-bg: #3d1f1f;          /* Dark error background */
+  --color-error-dark: #da3633;
+  --color-warning: #d29922;            /* Bright warning amber */
+  --color-warning-bg: #3d2f00;         /* Dark warning background */
+  --color-warning-dark: #bb8009;
+  --color-info: #58a6ff;               /* Bright info blue */
+  --color-info-bg: #1a3d66;             /* Dark info background */
+  --color-info-dark: #1f6feb;
+  
+  /* Accent Colors - Premium Dark */
+  --color-alert: #f85149;              /* Bright alert red */
+  --color-accent: #a5a5ff;             /* Premium accent purple */
+  --color-accent-bg: #2d2d5c;           /* Dark accent background */
+  
+  /* Gray Scale - Premium Dark Mode */
+  --color-gray-50: #0d1117;
+  --color-gray-100: #161b22;
+  --color-gray-200: #21262d;
+  --color-gray-300: #30363d;
+  --color-gray-400: #484f58;
+  --color-gray-500: #6e7681;
+  --color-gray-600: #8b949e;
+  --color-gray-700: #b1bac4;
+  --color-gray-800: #c9d1d9;
+  --color-gray-900: #f0f6fc;
+  
+  /* Borders - Premium Dark */
+  --color-border: #30363d;             /* Visible border */
+  --color-border-strong: #484f58;      /* Stronger border */
+  --color-border-subtle: #21262d;      /* Subtle border */
+  
+  /* Medical Gradients - Premium Dark */
+  --gradient-primary: linear-gradient(135deg, #4d94ff 0%, #0066cc 100%);
+  --gradient-secondary: linear-gradient(135deg, #33cc99 0%, #00a86b 100%);
+  --gradient-soft: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+  --gradient-card: linear-gradient(135deg, #161b22 0%, #1c2128 100%);
+  
+  /* Toggle switch background */
+  --color-toggle-bg: var(--color-gray-500);
+}
+
+/* ============================================================================
+   TYPOGRAPHY
+   ============================================================================ */
+
+h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  margin-bottom: var(--spacing-lg);
+  color: var(--color-text);
+  letter-spacing: -0.5px;
+}
+
+h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text);
+  letter-spacing: -0.3px;
+}
+
+h3 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text);
+}
+
+p {
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  font-weight: var(--font-weight-medium);
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+/* ============================================================================
+   FORM ELEMENTS
+   ============================================================================ */
+
+input,
+textarea,
+select {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea,
+select {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text);
+  transition: all var(--transition-normal);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1), inset 0 0 0 1px var(--color-primary);
+  background-color: var(--color-surface-elevated);
+}
+
+input::placeholder {
+  color: var(--color-text-light);
+  font-size: var(--font-size-base);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: var(--color-gray-100);
+  color: var(--color-text-light);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+html.dark input[type="text"]:focus,
+html.dark input[type="email"]:focus,
+html.dark input[type="password"]:focus,
+html.dark input[type="number"]:focus,
+html.dark textarea:focus,
+html.dark select:focus {
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2), inset 0 0 0 1px var(--color-primary);
+}
+
+/* ============================================================================
+   SCROLLBAR STYLING
+   ============================================================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gray-400);
+  border-radius: var(--radius-md);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-500);
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: var(--color-gray-200);
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-gray-500);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-600);
+}
+
+/* ============================================================================
+   UTILITY CLASSES
+   ============================================================================ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.mt-0 { margin-top: 0; }
+.mt-xs { margin-top: var(--spacing-xs); }
+.mt-sm { margin-top: var(--spacing-sm); }
+.mt-md { margin-top: var(--spacing-md); }
+.mt-lg { margin-top: var(--spacing-lg); }
+.mt-xl { margin-top: var(--spacing-xl); }
+
+.mb-0 { margin-bottom: 0; }
+.mb-xs { margin-bottom: var(--spacing-xs); }
+.mb-sm { margin-bottom: var(--spacing-sm); }
+.mb-md { margin-bottom: var(--spacing-md); }
+.mb-lg { margin-bottom: var(--spacing-lg); }
+.mb-xl { margin-bottom: var(--spacing-xl); }
+
+/* ============================================================================
+   MEDIA QUERIES
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+
+  h1 {
+    font-size: var(--font-size-2xl);
+  }
+
+  h2 {
+    font-size: var(--font-size-xl);
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 var(--spacing-md);
+  }
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn var(--transition-normal) ease-in-out;
+}
+
+.slide-in-up {
+  animation: slideInUp var(--transition-slow) ease-in-out;
+}
+
+.slide-in-down {
+  animation: slideInDown var(--transition-slow) ease-in-out;
+}

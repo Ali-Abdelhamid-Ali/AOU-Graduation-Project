@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { TopBar } from '../components/TopBar'
 import { InputField } from '../components/InputField'
+import { SelectField } from '../components/SelectField'
 import { AnimatedButton } from '../components/AnimatedButton'
 import styles from './SignUp.module.css'
 
@@ -22,19 +23,39 @@ import styles from './SignUp.module.css'
 export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
   const { signUp, isLoading, error, clearError, userRole } = useAuth()
   const [formData, setFormData] = useState({
-    full_name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     password_confirm: '',
+    specific_role: '',
+    date_of_birth: '',
+    gender: '',
   })
   const [validationErrors, setValidationErrors] = useState({})
+
+  // Determine available roles based on main role selection
+  const roleOptions = userRole === 'doctor'
+    ? [
+      { value: 'physician', label: 'Physician' },
+      { value: 'cardiologist', label: 'Cardiologist' },
+      { value: 'neurologist', label: 'Neurologist' },
+      { value: 'administrator', label: 'Administrator' },
+    ]
+    : [
+      { value: 'patient', label: 'Patient' },
+    ]
+
+  const genderOptions = [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+  ]
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }))
-    // Clear field error when user starts typing
     if (validationErrors[field]) {
       setValidationErrors((prev) => ({
         ...prev,
@@ -47,11 +68,8 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
   const validateForm = () => {
     const errors = {}
 
-    if (!formData.full_name.trim()) {
-      errors.full_name = 'Full name is required'
-    } else if (formData.full_name.trim().length < 3) {
-      errors.full_name = 'Full name must be at least 3 characters'
-    }
+    if (!formData.first_name.trim()) errors.first_name = 'First name is required'
+    if (!formData.last_name.trim()) errors.last_name = 'Last name is required'
 
     if (!formData.email.trim()) {
       errors.email = 'Email is required'
@@ -65,10 +83,18 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
       errors.password = 'Password must be at least 6 characters'
     }
 
-    if (!formData.password_confirm) {
-      errors.password_confirm = 'Password confirmation is required'
-    } else if (formData.password !== formData.password_confirm) {
+    if (formData.password !== formData.password_confirm) {
       errors.password_confirm = 'Passwords do not match'
+    }
+
+    if (!formData.specific_role) {
+      errors.specific_role = 'Please select a specific role'
+    }
+
+    // Patient specific validation
+    if (userRole === 'patient') {
+      if (!formData.date_of_birth) errors.date_of_birth = 'Date of birth is required'
+      if (!formData.gender) errors.gender = 'Gender is required'
     }
 
     return errors
@@ -83,9 +109,19 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
       return
     }
 
-    setValidationErrors({})
-    // Call mock signUp from context (simulated async)
-    const result = await signUp(formData.full_name, formData.email, formData.password, userRole || 'patient')
+    // Prepare data for AuthContext
+    const signUpData = {
+      email: formData.email,
+      password: formData.password,
+      firstName: formData.first_name,
+      lastName: formData.last_name,
+      role: formData.specific_role,
+      // Optional fields for patient
+      dateOfBirth: formData.date_of_birth,
+      gender: formData.gender,
+    }
+
+    const result = await signUp(signUpData)
 
     if (result && result.success) {
       setTimeout(() => onSignUpSuccess(), 300)
@@ -103,15 +139,13 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          {/* Header */}
           <div className={styles.header}>
             <h1 className={styles.title}>Create Account</h1>
             <p className={styles.subtitle}>
-              Join BioIntellect — a clinical-grade health platform
+              Join BioIntellect as a {userRole === 'doctor' ? 'Medical Professional' : 'Patient'}
             </p>
           </div>
 
-          {/* Error Alert */}
           {error && (
             <motion.div
               className={styles.alertError}
@@ -122,21 +156,29 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
             </motion.div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className={styles.form}>
-            {/* Full Name Field */}
-            <InputField
-              id="full_name"
-              label="Full Name"
-              type="text"
-              placeholder="Ali Abdelhamid"
-              value={formData.full_name}
-              onChange={(e) => handleInputChange('full_name', e.target.value)}
-              error={validationErrors.full_name}
-              required
-            />
+            {/* Name Fields Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <InputField
+                id="first_name"
+                label="First Name"
+                placeholder="Ali"
+                value={formData.first_name}
+                onChange={(e) => handleInputChange('first_name', e.target.value)}
+                error={validationErrors.first_name}
+                required
+              />
+              <InputField
+                id="last_name"
+                label="Last Name"
+                placeholder="Abdelhamid"
+                value={formData.last_name}
+                onChange={(e) => handleInputChange('last_name', e.target.value)}
+                error={validationErrors.last_name}
+                required
+              />
+            </div>
 
-            {/* Email Field */}
             <InputField
               id="email"
               label="Email"
@@ -148,7 +190,43 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
               required
             />
 
-            {/* Password Field */}
+            {/* Role Dropdown */}
+            <SelectField
+              id="specific_role"
+              label={userRole === 'doctor' ? 'Specialty / Role' : 'Role'}
+              value={formData.specific_role}
+              onChange={(e) => handleInputChange('specific_role', e.target.value)}
+              options={roleOptions}
+              error={validationErrors.specific_role}
+              required
+              placeholder="Select your specific role"
+            />
+
+            {/* Patient Specific Fields */}
+            {userRole === 'patient' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <InputField
+                  id="date_of_birth"
+                  label="Date of Birth"
+                  type="date"
+                  value={formData.date_of_birth}
+                  onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
+                  error={validationErrors.date_of_birth}
+                  required
+                />
+                <SelectField
+                  id="gender"
+                  label="Gender"
+                  value={formData.gender}
+                  onChange={(e) => handleInputChange('gender', e.target.value)}
+                  options={genderOptions}
+                  error={validationErrors.gender}
+                  required
+                  placeholder="Select gender"
+                />
+              </div>
+            )}
+
             <InputField
               id="password"
               label="Password"
@@ -161,7 +239,6 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
               helperText="Use at least 6 characters"
             />
 
-            {/* Confirm Password Field */}
             <InputField
               id="password_confirm"
               label="Confirm Password"
@@ -173,17 +250,6 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
               required
             />
 
-            {/* Terms */}
-            <div className={styles.termsWrapper}>
-              <p className={styles.terms}>
-                By creating an account you agree to our{' '}
-                <a href="/terms" className={styles.termsLink} target="_blank" rel="noopener noreferrer">
-                  Terms of Service
-                </a>
-              </p>
-            </div>
-
-            {/* Submit Button */}
             <AnimatedButton
               type="submit"
               variant="primary"
@@ -195,12 +261,6 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
             </AnimatedButton>
           </form>
 
-          {/* Divider */}
-          <div className={styles.divider}>
-            <span>or</span>
-          </div>
-
-          {/* Login Link */}
           <div className={styles.footer}>
             <p>
               Already have an account?{' '}
@@ -213,9 +273,6 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
               </button>
             </p>
           </div>
-
-          {/* Info Box */}
-
         </motion.div>
       </div>
     </div>

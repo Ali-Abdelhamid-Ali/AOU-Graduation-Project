@@ -1,8 +1,3 @@
-/**
- * Supabase Configuration
- * 
- * Initialize Supabase client for database and authentication
- */
 
 import { createClient } from '@supabase/supabase-js'
 

@@ -190,16 +190,22 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick }) 
 
           {/* Sign Up Link */}
           <div className={styles.footer}>
-            <p>
-              Don't have an account?{' '}
-              <button
-                type="button"
-                className={styles.signUpLink}
-                onClick={onSignUpClick}
-              >
-                Create an account
-              </button>
-            </p>
+            {userRole === 'doctor' ? (
+              <p>
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  className={styles.signUpLink}
+                  onClick={onSignUpClick}
+                >
+                  Create an account
+                </button>
+              </p>
+            ) : (
+              <p className={styles.helperText}>
+                Don't have an account? Contact your administrator.
+              </p>
+            )}
           </div>
 
           {/* Info Box */}

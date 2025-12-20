@@ -1,0 +1,324 @@
+.pageWrapper {
+    min-height: 100vh;
+    background-color: var(--color-background);
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Cinematic Background - Centered Hero */
+.hero {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: url('/src/images/medical_hero.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%);
+    z-index: 1;
+}
+
+.container {
+    width: 100%;
+    max-width: 1400px;
+    padding: 0 2rem;
+    position: relative;
+    z-index: 2;
+    margin: 0 auto;
+}
+
+/* The Central Glass Portal */
+.glassPortal {
+    width: 100%;
+    max-width: 1000px;
+    padding: 6rem 4rem;
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(25px) saturate(200%);
+    -webkit-backdrop-filter: blur(25px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 32px;
+    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    margin: 0 auto;
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.badge {
+    display: inline-block;
+    padding: 10px 24px;
+    background: white;
+    color: var(--color-primary);
+    border-radius: 100px;
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    margin-bottom: 3rem;
+    box-shadow: 0 10px 20px -5px rgba(0, 102, 204, 0.1);
+    text-transform: uppercase;
+}
+
+.title {
+    font-size: clamp(3.5rem, 8.5vw, 6.5rem);
+    font-weight: 950;
+    color: #1a1f2e;
+    line-height: 1;
+    margin-bottom: 2.5rem;
+    letter-spacing: -4px;
+}
+
+.subtitle {
+    font-size: 1.5rem;
+    color: #374151;
+    line-height: 1.6;
+    max-width: 800px;
+    margin: 0 auto 4rem;
+    font-weight: 500;
+}
+
+.ctaGroup {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+}
+
+.mainBtn {
+    min-width: 220px;
+    height: 64px !important;
+    border-radius: 16px !important;
+    font-size: 1.1rem !important;
+}
+
+.secBtn {
+    min-width: 220px;
+    height: 64px !important;
+    border-radius: 16px !important;
+    font-size: 1.1rem !important;
+    background: white !important;
+    color: var(--color-primary) !important;
+    border: 2px solid var(--color-primary) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   ADDITIONAL SECTIONS
+   ---------------------------------------------------------------------------- */
+
+/* Features Section */
+.featuresSection {
+    padding: 120px 0;
+    background: var(--color-surface);
+}
+
+.sectionHeader {
+    text-align: center;
+    margin-bottom: 6rem;
+}
+
+.sectionTitle {
+    font-size: 3rem;
+    font-weight: 900;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+}
+
+.sectionSubtitle {
+    color: var(--color-primary);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+
+.featureGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 3rem;
+}
+
+.featureCard {
+    background: var(--color-background);
+    padding: 4rem 2.5rem;
+    border-radius: 32px;
+    border: 1px solid var(--color-border);
+    transition: all 0.4s ease;
+    text-align: center;
+}
+
+.featureCard:hover {
+    transform: translateY(-12px);
+    box-shadow: var(--shadow-2xl);
+    border-color: var(--color-primary-light);
+}
+
+.iconBox {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 2.5rem;
+    background: var(--color-primary-bg);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.25rem;
+}
+
+.featureTitle {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 1.25rem;
+}
+
+/* Stats Section */
+.statsSection {
+    background: var(--color-primary);
+    color: white;
+    padding: 120px 0;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 4rem;
+}
+
+.statItem {
+    text-align: center;
+}
+
+.statItem h4 {
+    font-size: 4rem;
+    font-weight: 950;
+    margin-bottom: 0.5rem;
+}
+
+.statItem p {
+    font-size: 1.25rem;
+    opacity: 0.9;
+    font-weight: 600;
+}
+
+/* Services Section */
+.servicesSection {
+    padding: 120px 0;
+    background: var(--color-surface-subtle);
+}
+
+.servicesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+.serviceCard {
+    background: var(--color-surface);
+    padding: 3rem 2rem;
+    border-radius: 24px;
+    text-align: center;
+    border: 1px solid var(--color-border);
+    transition: all 0.3s ease;
+}
+
+.serviceCard:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-xl);
+}
+
+.serviceIcon {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+    display: block;
+}
+
+.serviceTitle {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* Contact Network */
+.contactSection {
+    padding: 120px 0;
+    background: var(--color-surface);
+    text-align: center;
+}
+
+.contactGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 4rem;
+    margin-top: 5rem;
+}
+
+.contactItem h5 {
+    color: var(--color-primary);
+    font-size: 0.9rem;
+    letter-spacing: 3px;
+    margin-bottom: 1.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+/* Footer Section */
+.footer {
+    padding: 60px 0;
+    background: var(--color-background);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+@media (max-width: 1024px) {
+    .glassPortal {
+        padding: 4rem 2rem;
+    }
+
+    .title {
+        font-size: 4rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero {
+        height: auto;
+        padding: 160px 0 100px;
+    }
+
+    .glassPortal {
+        padding: 3rem 1.5rem;
+    }
+
+    .title {
+        font-size: 3rem;
+    }
+
+    .subtitle {
+        font-size: 1.1rem;
+    }
+
+    .ctaGroup {
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+    }
+
+    .mainBtn,
+    .secBtn {
+        width: 100%;
+        min-width: unset;
+    }
+}

@@ -58,6 +58,49 @@ export const AuthProvider = ({ children }) => {
     if (currentUser && currentUser.user_role) setUserRole(currentUser.user_role)
   }, [currentUser])
 
+  // ============================================================================
+  // Session Timeout Logic (15 Minutes)
+  // ============================================================================
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    const TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
+    const CHECK_INTERVAL = 60 * 1000 // Check every minute
+
+    const updateActivity = () => {
+      localStorage.setItem('biointellect_last_activity', Date.now().toString())
+    }
+
+    const checkInactivity = () => {
+      const lastActivity = parseInt(localStorage.getItem('biointellect_last_activity') || '0', 10)
+      if (Date.now() - lastActivity > TIMEOUT_MS) {
+        signOut() // Auto-logout
+      }
+    }
+
+    // Initialize activity timestamp on mount/login if not present
+    if (!localStorage.getItem('biointellect_last_activity')) {
+      updateActivity()
+    }
+
+    // Listeners for user activity
+    window.addEventListener('mousemove', updateActivity)
+    window.addEventListener('keydown', updateActivity)
+    window.addEventListener('click', updateActivity)
+    window.addEventListener('scroll', updateActivity)
+
+    // Interval to check timeout
+    const intervalId = setInterval(checkInactivity, CHECK_INTERVAL)
+
+    return () => {
+      window.removeEventListener('mousemove', updateActivity)
+      window.removeEventListener('keydown', updateActivity)
+      window.removeEventListener('click', updateActivity)
+      window.removeEventListener('scroll', updateActivity)
+      clearInterval(intervalId)
+    }
+  }, [isAuthenticated])
+
   const selectRole = (role) => {
     if (!['doctor', 'patient'].includes(role)) {
       setError('Invalid role')
@@ -67,6 +110,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('userRole', role)
     setError(null)
   }
+
+  // Helper to hash password using SHA-256 (Web Crypto API)
+  const hashPassword = async (password) => {
+    if (!password) return null;
+    const msgUint8 = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  };
 
   // Helper to simulate latency
   const wait = (ms = 400) => new Promise((res) => setTimeout(res, ms))
@@ -92,11 +145,12 @@ export const AuthProvider = ({ children }) => {
           return { success: false, error: 'Email already registered' }
         }
 
+        const hashedPassword = await hashPassword(password)
         const newUser = {
           user_id: `mock_${Date.now()}`,
           email,
           full_name,
-          password,
+          password_hash: hashedPassword, // Mocking the hash field
           user_role: role,
           is_active: true,
           is_verified: false,
@@ -119,6 +173,7 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             full_name,
             user_role: role,
@@ -138,54 +193,44 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'User creation failed' }
       }
 
-      // 2. Insert into public.users (Common for all roles)
+      // 2. Insert into users table (Common Record)
+      // 2. Insert into users table (Common Record)
       const { error: profileError } = await supabase.from('users').insert({
         user_id: authData.user.id,
         email: email,
+        password_hash: 'SUPABASE_AUTH_MANAGED',
         full_name: full_name,
-        password_hash: 'SUPABASE_AUTH_MANAGED', // Placeholder
-        user_role: role, // Specific role (e.g. 'cardiologist', 'patient')
+        user_role: role,
         is_active: true,
-        is_verified: false,
-        phone_number: null,
+        is_verified: true,
+        email_verified_at: new Date().toISOString()
       })
 
-      if (profileError) {
-        console.error('User Profile Error:', profileError)
-        setError(profileError.message)
-        setIsLoading(false)
-        return { success: false, error: profileError.message }
-      }
+      if (profileError) throw profileError
 
-      // 3. If Patient, Insert into public.patients
+      // 3. Insert into Role-Specific Table
       if (role === 'patient') {
-        const mrn = `MRN-${Date.now().toString().slice(-8)}-${Math.floor(Math.random() * 1000)}`
-
         const { error: patientError } = await supabase.from('patients').insert({
-          medical_record_number: mrn,
+          patient_id: authData.user.id,
           first_name: firstName,
           last_name: lastName,
           date_of_birth: dateOfBirth,
-          gender: gender,
+          gender: gender || 'male',
           email: email,
-          created_by: authData.user.id,
-          is_active: true
+          is_active: true,
+          consent_given: true,
+          consent_date: new Date().toISOString()
         })
 
-        if (patientError) {
-          console.error('Patient Profile Error:', patientError)
-          setError(`User created but patient profile failed: ${patientError.message}`)
-          setIsLoading(false)
-          return { success: false, error: patientError.message }
-        }
+        if (patientError) throw patientError
       }
 
       const newUser = {
-        id: authData.user.id,
+        user_id: authData.user.id,
         email,
         full_name,
         user_role: role,
-        is_verified: false,
+        is_verified: true,
         is_active: true,
       }
 
@@ -215,7 +260,8 @@ export const AuthProvider = ({ children }) => {
         // Fallback to mock
         await wait()
         const users = loadMockUsers()
-        const found = users.find((u) => u.email === email && u.password === password)
+        const hashedInput = await hashPassword(password)
+        const found = users.find((u) => u.email === email && (u.password_hash === hashedInput || u.password === password))
         if (!found) {
           setError('Invalid credentials')
 
@@ -246,43 +292,68 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: authError.message }
       }
 
-      // Get user profile
-      let { data: userData, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('user_id', authData.user.id)
-        .maybeSingle() // Use maybeSingle to avoid 'JSON object' error if 0 rows
+      // 2. Resolve Profile - Direct lookup in the appropriate table based on role
+      const userRoleFromAuth = authData.user.user_metadata?.user_role
 
-      // If profile is missing (orphaned auth user), try to recover/create it
-      if (!userData) {
-        console.warn('User profile missing, attempting recovery...')
-        const recoveryData = {
-          user_id: authData.user.id,
-          email: email,
-          full_name: authData.user.user_metadata?.full_name || 'User',
-          password_hash: 'SUPABASE_AUTH_MANAGED',
-          user_role: authData.user.user_metadata?.user_role || 'doctor', // Default fallback
-          is_active: true,
-          is_verified: false, // Default to unverified
-        }
-
-        const { data: newProfile, error: recoveryError } = await supabase
-          .from('users')
-          .upsert(recoveryData, { onConflict: 'user_id' }) // Use Upsert to fix duplicate key error
-          .select()
-          .single()
-
-        if (recoveryError) {
-          setError('Profile recovery failed: ' + recoveryError.message)
-          setIsLoading(false)
-          return { success: false, error: recoveryError.message }
-        }
-        userData = newProfile
-      }
-      else if (profileError) {
-        setError(profileError.message)
+      // Enforce Role Consistency:
+      // - If user is on the Patient path, they MUST have a 'patient' account.
+      // - If user is on the Doctor/Medical path, any non-patient account (Admin, Physician, etc.) is allowed.
+      if (userRole === 'patient' && userRoleFromAuth !== 'patient') {
+        await supabase.auth.signOut()
+        setError('Access Denied: This login portal is restricted to patients only.')
         setIsLoading(false)
-        return { success: false, error: profileError.message }
+        return { success: false, error: 'Role mismatch' }
+      }
+
+      if (userRole === 'doctor' && userRoleFromAuth === 'patient') {
+        await supabase.auth.signOut()
+        setError('Access Denied: Patients cannot access the medical staff portal.')
+        setIsLoading(false)
+        return { success: false, error: 'Role mismatch' }
+      }
+
+      let userData = null
+
+      if (userRoleFromAuth === 'patient') {
+        // High-Priority Patient Verification: Check the 'patients' table ONLY
+        const { data: patientData, error: patientError } = await supabase
+          .from('patients')
+          .select('*')
+          .eq('patient_id', authData.user.id)
+          .maybeSingle()
+
+        if (patientError) throw patientError
+
+        if (!patientData) {
+          await supabase.auth.signOut()
+          setError('Security Breach: Patient profile missing in clinical records.')
+          setIsLoading(false)
+          return { success: false, error: 'Patient profile missing' }
+        }
+
+        userData = {
+          ...patientData,
+          id: authData.user.id,
+          full_name: `${patientData.first_name} ${patientData.last_name}`,
+          user_role: 'patient'
+        }
+      } else {
+        // Staff/Admin lookup in the 'users' table
+        const { data: staffData, error: staffError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('user_id', authData.user.id)
+          .maybeSingle()
+
+        if (staffError) throw staffError
+
+        if (!staffData) {
+          await supabase.auth.signOut()
+          setError('Staff profile record not found.')
+          setIsLoading(false)
+          return { success: false, error: 'User profile missing' }
+        }
+        userData = staffData
       }
 
       localStorage.setItem('biointellect_current_user', JSON.stringify(userData))
@@ -292,10 +363,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('userRole', userData.user_role)
 
       setIsLoading(false)
-      return { success: true, user: userData }
+      return { success: true, user: userData, role: userData.user_role }
     } catch (err) {
       setError(err.message)
-
       setIsLoading(false)
       return { success: false, error: err.message }
     }
@@ -337,16 +407,9 @@ export const AuthProvider = ({ children }) => {
         const found = users.find((u) => u.email === email)
         if (!found) {
           setError('Email not found')
-
           setIsLoading(false)
           return { success: false, error: 'Email not found' }
         }
-        // The following lines were removed as they were syntactically incorrect and likely unintended JSX.
-        // The original intent was likely to remove the `found.is_verified = true` and `saveMockUsers(users)`
-        // as a password reset in a mock scenario should not modify user data directly.
-
-        // found.is_verified = true // Removed
-        // saveMockUsers(users) // Removed
 
         setIsLoading(false)
         return { success: true }
@@ -354,40 +417,120 @@ export const AuthProvider = ({ children }) => {
 
       // Use Supabase
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}`,
       })
 
       if (error) {
         setError(error.message)
+        setIsLoading(false)
+        return { success: false, error: error.message }
+      }
 
+      setIsLoading(false)
+      return { success: true }
+    } catch (err) {
+      setError(err.message)
+      setIsLoading(false)
+      return { success: false, error: err.message }
+    }
+  }
+
+  const updatePassword = async (newPassword) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      if (!supabase || !import.meta.env.VITE_SUPABASE_URL) {
+        await wait()
+        // Mock update
+        setIsLoading(false)
+        return { success: true }
+      }
+
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) {
+        setError(error.message)
         setIsLoading(false)
         return { success: false, error: error.message }
       }
 
 
       setIsLoading(false)
-      return { success: true }
+      return { success: true, user: data.user }
     } catch (err) {
       setError(err.message)
-
       setIsLoading(false)
       return { success: false, error: err.message }
     }
   }
 
   // Function for Admins to register patients without losing their own session
-  const registerPatient = async (patientData) => {
-    // We utilize a separate client instance or just the API to avoid auth context switching if possible.
-    // However, Supabase JS client auth is singleton by default in the browser.
-    // To work around this without a backend, we can use the `supabase.auth.admin.createUser` ONLY if we are in a service role context (Backend).
-    // BUT we are on frontend. 
-    // The standard workaround for frontend "Admin creates User" without logout is:
-    // 1. We cannot strictly do this securely purely on frontend without logging out the admin, UNLESS we use a second `createClient` instance with memory storage.
-
+  const registerDoctor = async (doctorData) => {
+    setIsLoading(true)
+    setError(null)
     try {
-      // Import createClient dynamically or use the one from supabase-js
       const { createClient } = await import('@supabase/supabase-js')
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+      const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+      const tempSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          storage: { getItem: () => null, setItem: () => { }, removeItem: () => { } },
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      })
+
+      const { email, password, fullName, specialty, phone, licenseNumber } = doctorData
+
+      // 1. Create Auth User
+      const { data: authData, error: authError } = await tempSupabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            user_role: specialty || 'physician',
+          }
+        }
+      })
+
+      if (authError) throw authError
+      if (!authData.user) throw new Error('Failed to create auth user')
+
+      // 2. Create Profile in public.users - EXACT MATCH TO PROVIDED SCHEMA
+      const { error: profileError } = await supabase.from('users').insert({
+        user_id: authData.user.id,
+        email: email,
+        password_hash: 'SUPABASE_AUTH_MANAGED',
+        full_name: fullName,
+        phone_number: phone || null,
+        user_role: specialty || 'physician',
+        specialty: specialty || 'General Medicine', // Filling specialty column
+        license_number: licenseNumber || null,
+        is_active: true,
+        is_verified: true,
+        email_verified_at: new Date().toISOString()
+      })
+
+      if (profileError) throw profileError
+
+      setIsLoading(false)
+      return { success: true, user: authData.user }
+    } catch (err) {
+      console.error('Register Doctor Error:', err)
+      setError(err.message)
+      setIsLoading(false)
+      return { success: false, error: err.message }
+    }
+  }
+  const registerPatient = async (patientData) => {
+    try {
+      const { createClient } = await import('@supabase/supabase-js')
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
       const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -405,10 +548,30 @@ export const AuthProvider = ({ children }) => {
         }
       })
 
-      const { email, password, firstName, lastName, dateOfBirth, gender, phone, address } = patientData
+      const {
+        email,
+        password,
+        firstName,
+        lastName,
+        dateOfBirth,
+        gender,
+        phone,
+        address,
+        city,
+        country,
+        bloodType,
+        allergies,
+        chronicConditions,
+        emergencyContactName,
+        emergencyContactPhone,
+        emergencyContactRelation,
+        currentMedications,
+        consentGiven,
+        dataRetentionUntil
+      } = patientData
       const full_name = `${firstName} ${lastName}`
 
-      // 1. Create User via Temp Client
+      // 1. Create User via Temp Client (to handle Supabase Auth without logging out Admin)
       const { data: authData, error: authError } = await tempSupabase.auth.signUp({
         email,
         password,
@@ -423,25 +586,56 @@ export const AuthProvider = ({ children }) => {
       if (authError) throw authError
       if (!authData.user) throw new Error('Failed to create user')
 
-      // 2. Main Admin Client performs database inserts (RLS should allow Admin to insert)
-
-      // 2. Call the Secure Database Function (RPC) to create profiles
-      // This bypasses RLS issues because the function runs as Security Definer
-      const { data: mrn, error: rpcError } = await supabase.rpc('register_patient_profile', {
-        p_user_id: authData.user.id,
-        p_email: email,
-        p_first_name: firstName,
-        p_last_name: lastName,
-        p_full_name: full_name,
-        p_dob: dateOfBirth,
-        p_gender: gender,
-        p_phone: phone || null,
-        p_address: address || null
+      // 2. Create User Profile in public.users (Schema requirement: Patients MUST have a user record for FK/Role checks)
+      const { error: userError } = await supabase.from('users').insert({
+        user_id: authData.user.id,
+        email: email,
+        password_hash: 'SUPABASE_AUTH_MANAGED',
+        full_name: full_name,
+        user_role: 'patient',
+        is_active: true,
+        is_verified: true,
+        email_verified_at: new Date().toISOString()
       })
 
-      if (rpcError) throw rpcError
+      if (userError) throw userError
 
-      return { success: true, user: authData.user, mrn }
+      // 3. Create Patient Record (Matching EXACT provided schema)
+      // MRN is now handled by database trigger trigger_generate_mrn
+      const { data: patientRecord, error: patientError } = await supabase.from('patients').insert({
+        patient_id: authData.user.id, // Linking patient_id directly to auth user id
+        first_name: firstName,
+        last_name: lastName,
+        date_of_birth: dateOfBirth,
+        gender: gender || 'male',
+        blood_type: bloodType || null,
+        phone_number: phone || null,
+        email: email || null,
+        address: address || null,
+        city: city || null,
+        country: country || 'Egypt',
+        emergency_contact_name: emergencyContactName || null,
+        emergency_contact_phone: emergencyContactPhone || null,
+        emergency_contact_relation: emergencyContactRelation || null,
+        allergies: allergies || [],
+        chronic_conditions: chronicConditions || [],
+        current_medications: currentMedications || {},
+        created_by: currentUser?.user_id || currentUser?.id, // Admin who created this
+        is_active: true,
+        consent_given: consentGiven || false,
+        consent_date: consentGiven ? new Date().toISOString() : null,
+        data_retention_until: dataRetentionUntil || null
+      }).select().single()
+
+      if (patientError) throw patientError
+
+      return {
+        success: true,
+        user: authData.user,
+        mrn: patientRecord.medical_record_number,
+        patient_id: patientRecord.patient_id,
+        user_id: authData.user.id
+      }
 
     } catch (error) {
       console.error('Register Patient Error:', error)
@@ -464,7 +658,9 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signOut,
     resetPassword,
+    updatePassword,
     registerPatient,
+    registerDoctor,
     clearError,
   }
 

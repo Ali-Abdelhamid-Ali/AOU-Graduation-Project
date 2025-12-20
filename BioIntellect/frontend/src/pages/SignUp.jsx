@@ -20,7 +20,7 @@ import styles from './SignUp.module.css'
  * - Login link
  */
 
-export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
+export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
   const { signUp, isLoading, error, clearError, userRole } = useAuth()
   const [formData, setFormData] = useState({
     first_name: '',
@@ -40,7 +40,6 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
       { value: 'physician', label: 'Physician' },
       { value: 'cardiologist', label: 'Cardiologist' },
       { value: 'neurologist', label: 'Neurologist' },
-      { value: 'administrator', label: 'Administrator' },
     ]
     : [
       { value: 'patient', label: 'Patient' },
@@ -130,7 +129,7 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick }) => {
 
   return (
     <div className={styles.pageWrapper}>
-      <TopBar userRole={userRole} />
+      <TopBar userRole={userRole} onBack={onBack} />
 
       <div className={styles.container}>
         <motion.div

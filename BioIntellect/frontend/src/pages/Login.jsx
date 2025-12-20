@@ -21,7 +21,7 @@ import styles from './Login.module.css'
  * - Sign up link
  */
 
-export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick }) => {
+export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick, onBack }) => {
   const { signIn, isLoading, error, clearError, userRole } = useAuth()
   const formRef = useSlideInAnimation(true, 'up')
   const errorRef = useRef(null)
@@ -97,22 +97,34 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick }) 
 
     if (result.success) {
       setTimeout(() => {
-        onLoginSuccess()
+        onLoginSuccess(result.role || userRole)
       }, 500)
     }
   }
 
   return (
     <div className={styles.pageWrapper}>
-      <TopBar userRole={userRole} />
+      <TopBar userRole={userRole} onBack={onBack} />
 
       <div className={styles.container}>
         <motion.div
           ref={formRef}
           className={styles.card}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0, y: 30, scale: 0.98 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              transition: {
+                duration: 0.5,
+                ease: [0.22, 1, 0.36, 1],
+                staggerChildren: 0.08
+              }
+            }
+          }}
         >
           {/* Header */}
           <div className={styles.header}>
@@ -146,6 +158,7 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick }) 
               onChange={(e) => handleInputChange('email', e.target.value)}
               error={validationErrors.email}
               required
+              autoComplete="username"
             />
 
             {/* Password Field */}
@@ -158,6 +171,7 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick }) 
               onChange={(e) => handleInputChange('password', e.target.value)}
               error={validationErrors.password}
               required
+              autoComplete="current-password"
             />
 
             {/* Forgot Password Link */}
@@ -190,22 +204,9 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick }) 
 
           {/* Sign Up Link */}
           <div className={styles.footer}>
-            {userRole === 'doctor' ? (
-              <p>
-                Don't have an account?{' '}
-                <button
-                  type="button"
-                  className={styles.signUpLink}
-                  onClick={onSignUpClick}
-                >
-                  Create an account
-                </button>
-              </p>
-            ) : (
-              <p className={styles.helperText}>
-                Don't have an account? Contact your administrator.
-              </p>
-            )}
+            <p className={styles.helperText}>
+              Don't have an account? Contact your administrator for secure provisioning.
+            </p>
           </div>
 
           {/* Info Box */}

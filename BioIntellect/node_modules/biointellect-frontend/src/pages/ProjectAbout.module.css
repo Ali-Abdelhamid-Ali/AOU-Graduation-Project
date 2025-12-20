@@ -1,0 +1,180 @@
+.pageWrapper {
+    min-height: 100vh;
+    background: var(--color-background);
+    color: var(--color-text);
+    padding-bottom: 4rem;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 6rem 2rem 2rem;
+}
+
+.hero {
+    text-align: center;
+    margin-bottom: 4rem;
+    padding: 3rem;
+    background: var(--color-primary-bg);
+    border-radius: 24px;
+    border: 1px solid var(--color-primary-light);
+}
+
+.academicBadge {
+    display: inline-block;
+    padding: 0.5rem 1.5rem;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 100px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    letter-spacing: 1px;
+}
+
+.title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+}
+
+.subtitle {
+    font-size: 1.25rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.contentGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.card {
+    background: var(--color-surface);
+    padding: 2rem;
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-xl);
+}
+
+.card h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.teamMember {
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.teamMember strong {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.teamMember span {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.teamMember small {
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.mainCard {
+    grid-column: span 1;
+}
+
+.wideCard {
+    grid-column: 1 / -1;
+}
+
+.list {
+    padding-left: 1.25rem;
+}
+
+.list li {
+    margin-bottom: 0.75rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.objectivesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.objItem {
+    padding: 1.5rem;
+    background: var(--color-background);
+    border-radius: 12px;
+    position: relative;
+}
+
+.objItem span {
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--color-primary);
+    opacity: 0.1;
+    position: absolute;
+    top: 0.5rem;
+    right: 1rem;
+}
+
+.objItem p {
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.4;
+    position: relative;
+    z-index: 1;
+}
+
+.ackText {
+    font-style: italic;
+    color: var(--color-text-muted);
+    line-height: 1.8;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-text-light);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--color-border);
+    margin-top: 4rem;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding-top: 5rem;
+    }
+
+    .title {
+        font-size: 1.75rem;
+    }
+
+    .hero {
+        padding: 1.5rem;
+    }
+
+    .contentGrid {
+        grid-template-columns: 1fr;
+    }
+}

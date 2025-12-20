@@ -1,80 +1,69 @@
-import { useState, useEffect } from 'react'
-import styles from './TopBar.module.css'
+import { brandingConfig } from '../config/brandingConfig'
 import ThemeToggle from './ThemeToggle'
+import styles from './TopBar.module.css'
 
 /**
  * TopBar Component
  * 
- * Fixed navigation bar at the top of the application
- * Features:
- * - BioIntellect branding
- * - User role display
- * - Professional healthcare design
- * - Responsive layout
+ * Centralized navigation bar with branding, user role status, and global controls.
  */
-
-export const TopBar = ({ userRole = null }) => {
-  const [showUserMenu, setShowUserMenu] = useState(false)
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    // initialize theme from localStorage or OS preference
-    const stored = localStorage.getItem('biointellect_theme')
-    if (stored) {
-      setIsDark(stored === 'dark')
-      document.documentElement.classList.toggle('dark', stored === 'dark')
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setIsDark(true)
-      document.documentElement.classList.add('dark')
-    }
-  }, [])
-
-
-  const [layoutMode, setLayoutMode] = useState(() => localStorage.getItem('layout_mode') === 'true')
-
-  const toggleLayoutMode = () => {
-    const next = !layoutMode
-    setLayoutMode(next)
-    localStorage.setItem('layout_mode', next ? 'true' : 'false')
-    window.dispatchEvent(new CustomEvent('layout_mode_change', { detail: { enabled: next } }))
-  }
-
+export const TopBar = ({ userRole = null, onBack = null, onLogout = null }) => {
   return (
     <header className={styles.topbar}>
       <div className={styles.container}>
-        {/* Logo / Brand */}
-        <div className={styles.brand}>
-          <button
-            className={styles.logo}
-            onClick={() => (window.location.href = '/')}
-            aria-label="Go to home page"
-            type="button"
-          >
-            <img
-              src="/src/images/BioIntellect.png"
-              alt="BioIntellect Logo"
-              className={styles.logoImage}
-            />
-            <span className={styles.logoText}>BioIntellect</span>
-          </button>
+        {/* Navigation & Brand */}
+        <div className={styles.leftSection}>
+          {onBack && (
+            <button
+              className={styles.backButton}
+              onClick={onBack}
+              title="Return to previous page"
+              aria-label="Back"
+            >
+              <span className={styles.backIcon}>←</span>
+              <span className={styles.backText}>Back</span>
+            </button>
+          )}
+
+          <div className={styles.brand}>
+            <button
+              className={styles.logo}
+              onClick={() => (window.location.href = '/')}
+              aria-label="Go to home page"
+              type="button"
+            >
+              <img
+                src={brandingConfig.assets.logo}
+                alt={`${brandingConfig.brandName} - ${brandingConfig.hospitalName}`}
+                className={styles.logoImage}
+              />
+              <span className={styles.logoText}>{brandingConfig.brandName}</span>
+            </button>
+          </div>
         </div>
 
-
-        {/* Center Spacer */}
-        <div className={styles.spacer}>
-          {/* User Info */}
+        {/* Global Controls */}
+        <div className={styles.controls}>
           {userRole && (
             <div className={styles.userSection}>
               <span className={styles.roleLabel}>
-                {userRole === 'doctor' ? '👨‍⚕️ Doctor' : '👤 Patient'}
+                {userRole === 'administrator' ? '🛡️ Admin' : userRole === 'patient' ? '👤 Patient' : '👨‍⚕️ Medical Staff'}
               </span>
             </div>
           )}
-        </div>
 
-        {/* Right Controls */}
-        <div className={styles.controls}>
-            <ThemeToggle />
+          <div className={styles.divider} />
+          <ThemeToggle />
+
+          {onLogout && (
+            <button
+              className={styles.logoutButton}
+              onClick={onLogout}
+              aria-label="Sign out"
+            >
+              Sign Out
+            </button>
+          )}
         </div>
       </div>
     </header>

@@ -17,7 +17,7 @@ import styles from './SelectRole.module.css'
  * - Context-based state management
  */
 
-export const SelectRole = ({ onRoleSelected }) => {
+export const SelectRole = ({ onRoleSelected, onBack }) => {
   const { selectRole } = useAuth()
   const [selectedRole, setSelectedRole] = useState(null)
 
@@ -49,7 +49,7 @@ export const SelectRole = ({ onRoleSelected }) => {
 
   return (
     <div className={styles.pageWrapper}>
-      <TopBar />
+      <TopBar onBack={onBack} />
 
       <div className={styles.container}>
         <motion.div

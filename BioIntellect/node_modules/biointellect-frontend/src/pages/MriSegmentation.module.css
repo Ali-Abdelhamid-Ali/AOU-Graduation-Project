@@ -1,0 +1,264 @@
+.pageWrapper {
+    min-height: 100vh;
+    background: var(--color-background);
+    padding-bottom: 4rem;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 6rem 2rem 2rem;
+}
+
+.header {
+    margin-bottom: 3rem;
+}
+
+.header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+}
+
+.header p {
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.mainGrid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 2rem;
+}
+
+.card {
+    background: var(--color-surface);
+    padding: 2rem;
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    margin-bottom: 2rem;
+}
+
+.card h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--color-text);
+}
+
+.sequenceGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.seqBtn {
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.activeSeq {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.hint {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+}
+
+.uploadBox {
+    border: 2px dashed var(--color-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    background: var(--color-background);
+    transition: 0.3s;
+}
+
+.uploadBox span {
+    font-size: 1.5rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.uploadBox p {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.statList {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.statRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+}
+
+.visualizationPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.vizCard {
+    background: #0a0a0c;
+    border-radius: 24px;
+    padding: 2rem;
+    border: 1px solid #222;
+    color: #eee;
+}
+
+.vizHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.statusBadge {
+    padding: 0.4rem 0.8rem;
+    background: rgba(0, 168, 107, 0.2);
+    color: #00a86b;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.viewport {
+    height: 400px;
+    background: #000;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.brainIcon {
+    font-size: 4rem;
+    opacity: 0.2;
+    margin-bottom: 1rem;
+}
+
+.emptyView {
+    text-align: center;
+}
+
+.scanningLine {
+    width: 100%;
+    height: 2px;
+    background: var(--color-primary);
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-shadow: 0 0 15px var(--color-primary);
+    animation: scan 3s ease-in-out infinite;
+}
+
+@keyframes scan {
+    0% {
+        top: 0;
+    }
+
+    50% {
+        top: 100%;
+    }
+
+    100% {
+        top: 0;
+    }
+}
+
+.brainOverlay {
+    width: 250px;
+    height: 250px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50% 50% 40% 40%;
+    position: relative;
+    box-shadow: 0 0 50px rgba(255, 255, 255, 0.02);
+}
+
+.tumorMask {
+    width: 60px;
+    height: 45px;
+    background: rgba(255, 0, 0, 0.4);
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+    position: absolute;
+    top: 30%;
+    right: 25%;
+    filter: blur(8px);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+}
+
+.vizControls {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.sliderPlaceholder {
+    flex: 1;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    position: relative;
+}
+
+.sliderPlaceholder::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background: #eee;
+    border-radius: 50%;
+}
+
+.reportSection {
+    background: var(--color-surface);
+    padding: 2rem;
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+}
+
+.reportSection h4 {
+    margin-bottom: 1rem;
+    color: var(--color-primary);
+}
+
+.clinicalAdvice {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--color-primary-bg);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: var(--color-primary-dark);
+}
+
+@media (max-width: 900px) {
+    .mainGrid {
+        grid-template-columns: 1fr;
+    }
+}

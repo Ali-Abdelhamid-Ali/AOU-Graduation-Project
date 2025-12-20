@@ -51,9 +51,12 @@ export const InputField = ({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           disabled={disabled}
-          className={`${styles.input} ${error ? styles.error : ''} ${
-            success ? styles.success : ''
-          } ${isFocused ? styles.focused : ''}`}
+          className={`${styles.input} ${error ? styles.error : ''} ${success ? styles.success : ''
+            } ${isFocused ? styles.focused : ''}`}
+          autoComplete={type === 'password' ? 'current-password' : 'on'}
+          spellCheck={type === 'text' ? 'true' : 'false'}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : helperText ? `${id}-helper` : undefined}
           {...rest}
         />
       </div>

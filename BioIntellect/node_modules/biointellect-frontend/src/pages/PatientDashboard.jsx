@@ -6,7 +6,7 @@ import { InputField } from '../components/InputField'
 import { SelectField } from '../components/SelectField'
 import { AnimatedButton } from '../components/AnimatedButton'
 import { supabase } from '../config/supabase'
-import styles from './SignUp.module.css' // Reusing styles for consistency
+import styles from './PatientDashboard.module.css'
 
 export const PatientDashboard = ({ onLogout }) => {
     const { currentUser, userRole, signOut } = useAuth()
@@ -27,7 +27,9 @@ export const PatientDashboard = ({ onLogout }) => {
     })
 
     useEffect(() => {
-        fetchProfile()
+        if (currentUser) {
+            fetchProfile()
+        }
     }, [currentUser])
 
     const fetchProfile = async () => {
@@ -87,6 +89,9 @@ export const PatientDashboard = ({ onLogout }) => {
             setMessage({ type: 'success', text: 'Profile updated successfully!' })
             setEditMode(false)
             fetchProfile()
+
+            // Clear message after 3 seconds
+            setTimeout(() => setMessage({ type: '', text: '' }), 3000)
         } catch (error) {
             setMessage({ type: 'error', text: error.message })
         } finally {
@@ -101,80 +106,83 @@ export const PatientDashboard = ({ onLogout }) => {
 
     if (loading) {
         return (
-            <div className={styles.pageWrapper} style={{ justifyContent: 'center', alignItems: 'center' }}>
-                <p style={{ color: 'white' }}>Loading profile...</p>
+            <div className={styles.loading}>
+                <p>Loading patient profile...</p>
             </div>
         )
     }
 
     return (
         <div className={styles.pageWrapper}>
-            {/* Simple Top Bar for Dashboard */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '1rem', display: 'flex', justifyContent: 'space-between', zIndex: 10 }}>
-                <h2 style={{ color: 'white', margin: 0 }}>BioIntellect Patient Portal</h2>
-                <button
-                    onClick={handleLogout}
-                    style={{
-                        background: 'rgba(255,255,255,0.1)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        color: 'white',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Sign Out
-                </button>
-            </div>
+            <TopBar userRole={userRole} onLogout={onLogout} />
 
-            <div className={styles.container} style={{ marginTop: '60px' }}>
+            <main className={styles.main}>
+                <motion.div
+                    className={styles.hero}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                >
+                    <h1 className={styles.title}>Welcome, {profile?.first_name}</h1>
+                    <div className={styles.mrnWrapper}>
+                        <span className={styles.mrnLabel}>MRN:</span>
+                        <span className={styles.mrnValue}>{profile?.medical_record_number}</span>
+                    </div>
+                </motion.div>
+
+                {message.text && (
+                    <motion.div
+                        className={message.type === 'success' ? styles.alertSuccess : styles.alertError}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                    >
+                        {message.text}
+                    </motion.div>
+                )}
+
                 <motion.div
                     className={styles.card}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{ maxWidth: '800px', width: '100%' }}
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                        hidden: { opacity: 0, y: 30 },
+                        visible: {
+                            opacity: 1,
+                            y: 0,
+                            transition: {
+                                duration: 0.6,
+                                ease: [0.22, 1, 0.36, 1],
+                                staggerChildren: 0.1
+                            }
+                        }
+                    }}
                 >
-                    <div className={styles.header}>
-                        <h1 className={styles.title}>My Health Profile</h1>
-                        <p className={styles.subtitle}>
-                            MRN: <span style={{ fontFamily: 'monospace', background: 'rgba(0,0,0,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{profile?.medical_record_number}</span>
-                        </p>
-                    </div>
-
-                    {message.text && (
-                        <div className={message.type === 'error' ? styles.alertError : styles.alertSuccess} style={{ color: message.type === 'success' ? '#10b981' : '#ef4444', background: message.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center' }}>
-                            {message.text}
+                    <div className={styles.cardHeader}>
+                        <h2 className={styles.cardTitle}>Personal Information</h2>
+                        <div className={styles.headerActions}>
+                            {!editMode ? (
+                                <button className={styles.editButton} onClick={() => setEditMode(true)}>
+                                    Edit Profile
+                                </button>
+                            ) : (
+                                <>
+                                    <button className={styles.cancelButton} onClick={() => { setEditMode(false); fetchProfile(); }}>
+                                        Cancel
+                                    </button>
+                                </>
+                            )}
                         </div>
-                    )}
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                        {!editMode && (
-                            <button
-                                onClick={() => setEditMode(true)}
-                                style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 600 }}
-                            >
-                                Edit Profile
-                            </button>
-                        )}
-                        {editMode && (
-                            <button
-                                onClick={() => { setEditMode(false); fetchProfile(); }}
-                                style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', marginRight: '1rem' }}
-                            >
-                                Cancel
-                            </button>
-                        )}
                     </div>
 
                     <form onSubmit={handleUpdate} className={styles.form}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            {/* Personal Info */}
+                        <div className={styles.grid}>
                             <InputField
                                 id="first_name"
                                 label="First Name"
                                 value={formData.first_name}
                                 onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                                 disabled={!editMode}
+                                required
+                                autoComplete="given-name"
                             />
                             <InputField
                                 id="last_name"
@@ -182,8 +190,9 @@ export const PatientDashboard = ({ onLogout }) => {
                                 value={formData.last_name}
                                 onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                                 disabled={!editMode}
+                                required
+                                autoComplete="family-name"
                             />
-
                             <InputField
                                 id="dob"
                                 label="Date of Birth"
@@ -191,6 +200,8 @@ export const PatientDashboard = ({ onLogout }) => {
                                 value={formData.date_of_birth}
                                 onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
                                 disabled={!editMode}
+                                required
+                                autoComplete="bday"
                             />
                             <SelectField
                                 id="gender"
@@ -202,47 +213,61 @@ export const PatientDashboard = ({ onLogout }) => {
                                     { value: 'female', label: 'Female' },
                                 ]}
                                 disabled={!editMode}
+                                required
+                                autoComplete="sex"
                             />
-
                             <InputField
                                 id="phone"
                                 label="Phone Number"
                                 value={formData.phone_number}
                                 onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                                 disabled={!editMode}
-                                placeholder="+1 234 567 8900"
+                                placeholder="+1 (555) 000-0000"
+                                autoComplete="tel"
                             />
                             <InputField
                                 id="address"
-                                label="Address"
+                                label="Primary Address"
                                 value={formData.address}
                                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                                 disabled={!editMode}
-                                placeholder="123 Health St"
+                                placeholder="123 Medical Way, Health City"
+                                autoComplete="street-address"
                             />
                         </div>
 
-                        {/* Read Only Stats or Info */}
-                        <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
-                            <h3 style={{ fontSize: '1rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>Account Info</h3>
-                            <p style={{ margin: 0 }}>Email: {currentUser?.email}</p>
-                            <p style={{ margin: 0 }}>Role: {userRole}</p>
+                        <div className={styles.section}>
+                            <h3 className={styles.sectionTitle}>Account Details</h3>
+                            <div className={styles.infoRow}>
+                                <span className={styles.infoLabel}>Email Address</span>
+                                <span className={styles.infoValue}>{currentUser?.email}</span>
+                            </div>
+                            <div className={styles.infoRow}>
+                                <span className={styles.infoLabel}>Account Status</span>
+                                <span className={styles.infoValue} style={{ color: 'var(--color-success)' }}>Active</span>
+                            </div>
                         </div>
 
                         {editMode && (
-                            <AnimatedButton
-                                type="submit"
-                                variant="primary"
-                                size="large"
-                                fullWidth
-                                isLoading={uploading}
+                            <motion.div
+                                style={{ marginTop: 'var(--spacing-xl)' }}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
                             >
-                                Save Changes
-                            </AnimatedButton>
+                                <AnimatedButton
+                                    type="submit"
+                                    variant="primary"
+                                    size="large"
+                                    fullWidth
+                                    isLoading={uploading}
+                                >
+                                    Save Changes
+                                </AnimatedButton>
+                            </motion.div>
                         )}
                     </form>
                 </motion.div>
-            </div>
+            </main>
         </div>
     )
 }

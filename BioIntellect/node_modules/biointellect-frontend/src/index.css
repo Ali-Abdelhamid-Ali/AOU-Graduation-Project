@@ -4,6 +4,19 @@
 
 @import './styles/theme.css';
 
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body {
+  background-color: var(--color-background);
+}
+
 /* ============================================================================
    PRINT STYLES
    ============================================================================ */

@@ -19,52 +19,74 @@
      PREMIUM MEDICAL COLOR SYSTEM
      Professional Healthcare Design
      ======================================== */
-  
+
   /* Primary Colors - Premium Medical Blue */
-  --color-primary: #0066cc;            /* Trustworthy Medical Blue */
-  --color-primary-dark: #0052a3;       /* Deep medical blue */
-  --color-primary-light: #4d94ff;     /* Bright medical blue */
-  --color-primary-bg: #e6f2ff;         /* Soft medical blue background */
+  --color-primary: #0066cc;
+  /* Trustworthy Medical Blue */
+  --color-primary-dark: #0052a3;
+  --color-primary-light: #4d94ff;
+  --color-primary-bg: #e6f2ff;
   --color-primary-gradient: linear-gradient(135deg, #0066cc 0%, #004d99 100%);
-  
+
   /* Secondary Colors - Health Green */
-  --color-secondary: #00a86b;          /* Premium health green */
+  --color-secondary: #00a86b;
+  /* Premium health green */
   --color-secondary-dark: #00875a;
   --color-secondary-light: #33cc99;
-  --color-secondary-bg: #e6fff5;      /* Soft health green background */
+  --color-secondary-bg: #e6fff5;
+  /* Soft health green background */
   --color-secondary-gradient: linear-gradient(135deg, #00a86b 0%, #00875a 100%);
-  
+
   /* Background & Surface - Premium Medical */
-  --color-background: #fafbfc;         /* Soft off-white - easy on eyes */
-  --color-surface: #ffffff;            /* Pure white cards */
-  --color-surface-elevated: #ffffff;  /* Elevated surfaces */
-  --color-surface-subtle: #f5f7fa;   /* Subtle background */
-  
+  --color-background: #fafbfc;
+  /* Soft off-white - easy on eyes */
+  --color-surface: #ffffff;
+  /* Pure white cards */
+  --color-surface-elevated: #ffffff;
+  /* Elevated surfaces */
+  --color-surface-subtle: #f5f7fa;
+  /* Subtle background */
+
   /* Text Colors - Premium Readability */
-  --color-text: #1a1f2e;              /* Deep charcoal - premium readability */
-  --color-text-muted: #6b7280;         /* Soft gray - comfortable reading */
-  --color-text-light: #9ca3af;        /* Light gray for hints */
-  --color-text-inverse: #ffffff;      /* White text for dark backgrounds */
-  
+  --color-text: #1a1f2e;
+  /* Deep charcoal - premium readability */
+  --color-text-muted: #6b7280;
+  /* Soft gray - comfortable reading */
+  --color-text-light: #9ca3af;
+  /* Light gray for hints */
+  --color-text-inverse: #ffffff;
+  /* White text for dark backgrounds */
+
   /* Status Colors - Medical Grade */
-  --color-success: #10b981;            /* Premium success green */
-  --color-success-bg: #d1fae5;         /* Soft success background */
+  --color-success: #10b981;
+  /* Premium success green */
+  --color-success-bg: #d1fae5;
+  /* Soft success background */
   --color-success-dark: #059669;
-  --color-error: #ef4444;              /* Premium error red */
-  --color-error-bg: #fee2e2;           /* Soft error background */
+  --color-error: #ef4444;
+  /* Premium error red */
+  --color-error-bg: #fee2e2;
+  /* Soft error background */
   --color-error-dark: #dc2626;
-  --color-warning: #f59e0b;            /* Premium warning amber */
-  --color-warning-bg: #fef3c7;         /* Soft warning background */
+  --color-warning: #f59e0b;
+  /* Premium warning amber */
+  --color-warning-bg: #fef3c7;
+  /* Soft warning background */
   --color-warning-dark: #d97706;
-  --color-info: #3b82f6;               /* Premium info blue */
-  --color-info-bg: #dbeafe;             /* Soft info background */
+  --color-info: #3b82f6;
+  /* Premium info blue */
+  --color-info-bg: #dbeafe;
+  /* Soft info background */
   --color-info-dark: #2563eb;
-  
+
   /* Accent Colors - Premium Medical */
-  --color-alert: #f87171;              /* Soft alert red */
-  --color-accent: #8b5cf6;             /* Premium accent purple */
-  --color-accent-bg: #ede9fe;          /* Soft accent background */
-  
+  --color-alert: #f87171;
+  /* Soft alert red */
+  --color-accent: #8b5cf6;
+  /* Premium accent purple */
+  --color-accent-bg: #ede9fe;
+  /* Soft accent background */
+
   /* Gray Scale - Premium Medical */
   --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
@@ -76,23 +98,42 @@
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
-  
+
+  /* Background Assets & Micro-Textures */
+  --bg-hero: url('/src/images/medical_hero.png');
+  --bg-texture: url('/src/images/medical_texture.png');
+
+  /* Advanced Glassmorphism Tokens */
+  --glass-premium: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.25));
+  --glass-premium-dark: linear-gradient(135deg, rgba(26, 31, 46, 0.8), rgba(26, 31, 46, 0.6));
+  --glass-premium-border: 1.5px solid rgba(255, 255, 255, 0.3);
+  --glass-premium-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  --glass-premium-blur: blur(12px) saturate(180%);
+
   /* Borders - Premium */
-  --color-border: #e5e7eb;             /* Soft border */
-  --color-border-strong: #d1d5db;      /* Stronger border */
-  --color-border-subtle: #f3f4f6;      /* Subtle border */
-  
+  --color-border: #e5e7eb;
+  /* Soft border */
+  --color-border-strong: #d1d5db;
+  /* Stronger border */
+  --color-border-subtle: #f3f4f6;
+  /* Subtle border */
+
   /* Medical Gradients - Premium */
   --gradient-primary: linear-gradient(135deg, #0066cc 0%, #004d99 100%);
   --gradient-secondary: linear-gradient(135deg, #00a86b 0%, #00875a 100%);
   --gradient-soft: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
   --gradient-card: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
-  
+
+  /* Glassmorphism - Premium */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+
   /* Toggle switch background */
   --color-toggle-bg: var(--color-gray-200);
 
-  
   /* Spacing System */
+  --spacing-3xs: 2px;
   --spacing-2xs: 4px;
   --spacing-xs: 8px;
   --spacing-sm: 12px;
@@ -101,52 +142,61 @@
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
   --spacing-3xl: 64px;
-  
+
   /* Typography */
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  --font-family-mono: 'Courier New', monospace;
-  
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
   --font-size-xs: 12px;
   --font-size-sm: 14px;
   --font-size-base: 16px;
   --font-size-lg: 18px;
   --font-size-xl: 20px;
   --font-size-2xl: 24px;
-  --font-size-3xl: 30px;
-  
+  --font-size-3xl: 32px;
+  --font-size-4xl: 40px;
+
   --font-weight-light: 300;
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
-  
+  --font-weight-black: 800;
+
   --line-height-tight: 1.2;
+  --line-height-snug: 1.35;
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.75;
-  
-  /* Shadows - Premium & Professional */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12);
-  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.15);
-  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.18);
-  
+
+  /* Shadows - Theme Aware (Rule 9) */
+  --shadow-color: rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 2px var(--shadow-color);
+  --shadow-md: 0 4px 12px var(--shadow-color);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.12);
+  --shadow-2xl: 0 32px 64px rgba(0, 0, 0, 0.16);
+  --shadow-inset: inset 0 2px 4px 0 var(--shadow-color);
+
   /* Border Radius */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
   --radius-full: 9999px;
-  
+
   /* Transitions */
-  --transition-fast: 150ms ease-in-out;
-  --transition-normal: 200ms ease-in-out;
-  --transition-slow: 300ms ease-in-out;
-  
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 500ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
+
   /* Z-index */
   --z-tooltip: 1000;
+  --z-dropdown: 1050;
   --z-modal: 1100;
   --z-topbar: 1200;
 }
@@ -163,7 +213,9 @@
 
 html {
   font-size: 16px;
-  direction: ltr; /* English LTR */
+  direction: ltr;
+  /* English LTR */
+  scroll-behavior: smooth;
 }
 
 body {
@@ -174,6 +226,7 @@ body {
   background-color: var(--color-background);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 #root {
@@ -182,7 +235,13 @@ body {
 }
 
 /* Smooth theme transitions */
-html, body, #root, .container, .card, .topbar, .roleCard {
+html,
+body,
+#root,
+.container,
+.card,
+.topbar,
+.roleCard {
   transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
 }
 
@@ -193,75 +252,95 @@ html, body, #root, .container, .card, .topbar, .roleCard {
 html.dark,
 .dark {
   /* Primary Colors - Premium Medical Blue Dark */
-  --color-primary: #4d94ff;            /* Bright medical blue */
-  --color-primary-dark: #0066cc;       /* Standard medical blue */
-  --color-primary-light: #80b3ff;     /* Light medical blue */
-  --color-primary-bg: #1a3d66;        /* Dark medical blue background */
-  --color-primary-gradient: linear-gradient(135deg, #4d94ff 0%, #0066cc 100%);
-  
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-primary-light: #60a5fa;
+  --color-primary-bg: rgba(59, 130, 246, 0.15);
+  --color-primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+
   /* Secondary Colors - Health Green Dark */
-  --color-secondary: #33cc99;           /* Bright health green */
-  --color-secondary-dark: #00a86b;
-  --color-secondary-light: #66d9b3;
-  --color-secondary-bg: #0d4d33;        /* Dark health green background */
-  --color-secondary-gradient: linear-gradient(135deg, #33cc99 0%, #00a86b 100%);
-  
-  /* Background & Surface - Premium Medical Dark */
-  --color-background: #0d1117;          /* Deep dark - premium medical */
-  --color-surface: #161b22;            /* Card surface - elegant contrast */
-  --color-surface-elevated: #1c2128;  /* Elevated surfaces */
-  --color-surface-subtle: #0f1419;     /* Subtle background */
-  
-  /* Text Colors - Premium Dark Mode */
-  --color-text: #e6edf3;              /* Soft white - premium readability */
-  --color-text-muted: #8b949e;         /* Comfortable gray */
-  --color-text-light: #6e7681;        /* Light gray for hints */
-  --color-text-inverse: #0d1117;        /* Dark text for light backgrounds */
-  
+  --color-secondary: #10b981;
+  --color-secondary-dark: #059669;
+  --color-secondary-light: #34d399;
+  --color-secondary-bg: rgba(16, 185, 129, 0.15);
+  --color-secondary-gradient: linear-gradient(135deg, #10b981 0%, #047857 100%);
+
+  /* Background & Surface - Ergonomic Dark Mode */
+  --color-background: #111114;
+  /* Soft dark - prevents pure black eye strain (Rule 1) */
+  --color-surface: #1a1a1e;
+  /* Subtle elevation (Rule 7) */
+  --color-surface-elevated: #222226;
+  /* Higher elevation cues (Rule 9) */
+  --color-surface-subtle: #111114;
+
+  /* Glassmorphism - Premium Dark */
+  --glass-bg: rgba(18, 18, 21, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+
+  /* Text Colors - High Readability (Rule 2 & 3) */
+  --color-text: #e1e1e6;
+  /* Dimmed white - reduces glare (Rule 3) */
+  --color-text-muted: #a1a1aa;
+  /* WCAG compliant secondary text */
+  --color-text-light: #71717a;
+  /* Tertiary hierarchy (Rule 4) */
+  --color-text-inverse: #111114;
+
   /* Status Colors - Premium Medical Dark */
-  --color-success: #3fb950;             /* Bright success green */
-  --color-success-bg: #0d4d33;         /* Dark success background */
-  --color-success-dark: #238636;
-  --color-error: #f85149;              /* Bright error red */
-  --color-error-bg: #3d1f1f;          /* Dark error background */
-  --color-error-dark: #da3633;
-  --color-warning: #d29922;            /* Bright warning amber */
-  --color-warning-bg: #3d2f00;         /* Dark warning background */
-  --color-warning-dark: #bb8009;
-  --color-info: #58a6ff;               /* Bright info blue */
-  --color-info-bg: #1a3d66;             /* Dark info background */
-  --color-info-dark: #1f6feb;
-  
+  --color-success: #22c55e;
+  --color-success-bg: rgba(34, 197, 94, 0.15);
+  --color-success-dark: #16a34a;
+  --color-error: #ef4444;
+  --color-error-bg: rgba(239, 68, 68, 0.15);
+  --color-error-dark: #dc2626;
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-warning-dark: #d97706;
+  --color-info: #3b82f6;
+  --color-info-bg: rgba(59, 130, 246, 0.15);
+  --color-info-dark: #2563eb;
+
   /* Accent Colors - Premium Dark */
-  --color-alert: #f85149;              /* Bright alert red */
-  --color-accent: #a5a5ff;             /* Premium accent purple */
-  --color-accent-bg: #2d2d5c;           /* Dark accent background */
-  
+  --color-alert: #f87171;
+  --color-accent: #8b5cf6;
+  --color-accent-bg: rgba(139, 92, 246, 0.15);
+
   /* Gray Scale - Premium Dark Mode */
-  --color-gray-50: #0d1117;
-  --color-gray-100: #161b22;
-  --color-gray-200: #21262d;
-  --color-gray-300: #30363d;
-  --color-gray-400: #484f58;
-  --color-gray-500: #6e7681;
-  --color-gray-600: #8b949e;
-  --color-gray-700: #b1bac4;
-  --color-gray-800: #c9d1d9;
-  --color-gray-900: #f0f6fc;
-  
-  /* Borders - Premium Dark */
-  --color-border: #30363d;             /* Visible border */
-  --color-border-strong: #484f58;      /* Stronger border */
-  --color-border-subtle: #21262d;      /* Subtle border */
-  
+  --color-gray-50: #09090b;
+  --color-gray-100: #18181b;
+  --color-gray-200: #27272a;
+  --color-gray-300: #3f3f46;
+  --color-gray-400: #52525b;
+  --color-gray-500: #71717a;
+  --color-gray-600: #a1a1aa;
+  --color-gray-700: #d4d4d8;
+  --color-gray-800: #e4e4e7;
+  --color-gray-900: #f4f4f5;
+
+  /* Borders - Low Contrast (Rule 8) */
+  --color-border: #2c2c31;
+  --color-border-strong: #3f3f46;
+  --color-border-subtle: #1c1c21;
+
   /* Medical Gradients - Premium Dark */
-  --gradient-primary: linear-gradient(135deg, #4d94ff 0%, #0066cc 100%);
-  --gradient-secondary: linear-gradient(135deg, #33cc99 0%, #00a86b 100%);
-  --gradient-soft: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
-  --gradient-card: linear-gradient(135deg, #161b22 0%, #1c2128 100%);
-  
+  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  --gradient-secondary: linear-gradient(135deg, #10b981 0%, #065f46 100%);
+  --gradient-soft: linear-gradient(135deg, #09090b 0%, #18181b 100%);
+  --gradient-card: linear-gradient(135deg, #18181b 0%, #121215 100%);
+
   /* Toggle switch background */
-  --color-toggle-bg: var(--color-gray-500);
+  --color-toggle-bg: var(--color-gray-400);
+
+  /* Shadow Override for Dark Mode (Rule 9) */
+  --shadow-color: rgba(0, 0, 0, 0.4);
+  /* Deeper, softer shadows for dark surfaces */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.45);
+  --shadow-2xl: 0 32px 64px rgba(0, 0, 0, 0.5);
 }
 
 /* ============================================================================
@@ -444,19 +523,53 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   text-align: left;
 }
 
-.mt-0 { margin-top: 0; }
-.mt-xs { margin-top: var(--spacing-xs); }
-.mt-sm { margin-top: var(--spacing-sm); }
-.mt-md { margin-top: var(--spacing-md); }
-.mt-lg { margin-top: var(--spacing-lg); }
-.mt-xl { margin-top: var(--spacing-xl); }
+.mt-0 {
+  margin-top: 0;
+}
 
-.mb-0 { margin-bottom: 0; }
-.mb-xs { margin-bottom: var(--spacing-xs); }
-.mb-sm { margin-bottom: var(--spacing-sm); }
-.mb-md { margin-bottom: var(--spacing-md); }
-.mb-lg { margin-bottom: var(--spacing-lg); }
-.mb-xl { margin-bottom: var(--spacing-xl); }
+.mt-xs {
+  margin-top: var(--spacing-xs);
+}
+
+.mt-sm {
+  margin-top: var(--spacing-sm);
+}
+
+.mt-md {
+  margin-top: var(--spacing-md);
+}
+
+.mt-lg {
+  margin-top: var(--spacing-lg);
+}
+
+.mt-xl {
+  margin-top: var(--spacing-xl);
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.mb-xs {
+  margin-bottom: var(--spacing-xs);
+}
+
+.mb-sm {
+  margin-bottom: var(--spacing-sm);
+}
+
+.mb-md {
+  margin-bottom: var(--spacing-md);
+}
+
+.mb-lg {
+  margin-bottom: var(--spacing-lg);
+}
+
+.mb-xl {
+  margin-bottom: var(--spacing-xl);
+}
 
 /* ============================================================================
    MEDIA QUERIES
@@ -490,6 +603,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -500,6 +614,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -511,6 +626,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

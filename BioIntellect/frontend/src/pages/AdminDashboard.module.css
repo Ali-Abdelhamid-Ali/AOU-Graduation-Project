@@ -96,7 +96,6 @@
 }
 
 .iconWrapper {
-    font-size: 2.5rem;
     width: 70px;
     height: 70px;
     border-radius: var(--radius-md);
@@ -104,6 +103,14 @@
     align-items: center;
     justify-content: center;
     transition: transform var(--transition-bounce);
+    overflow: hidden;
+}
+
+.cardIconImg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
 }
 
 .card:hover .iconWrapper {

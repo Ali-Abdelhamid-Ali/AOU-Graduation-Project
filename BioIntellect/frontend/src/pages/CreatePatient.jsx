@@ -147,9 +147,12 @@ export const CreatePatient = ({ onBack, onComplete, userRole }) => {
                                 animate={{ opacity: 1, height: 'auto' }}
                                 className={styles.alertSuccess}
                             >
-                                <div className={styles.successTitle}>{success.message}</div>
+                                <div className={styles.successTitle}>✅ {success.message}</div>
                                 <div className={styles.successDetail}>
                                     Assigned MRN: <code className={styles.mrnCode}>{success.mrn}</code>
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--color-primary)' }}>
+                                        ⚠️ <strong>Note:</strong> A verification email has been sent to the patient. They must confirm it before logging in.
+                                    </div>
                                 </div>
                             </motion.div>
                         )}

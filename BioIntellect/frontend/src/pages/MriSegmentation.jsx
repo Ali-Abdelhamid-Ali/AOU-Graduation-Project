@@ -61,7 +61,7 @@ export const MriSegmentation = ({ onBack }) => {
 
                             <AnimatedButton
                                 variant="primary"
-                                loading={analyzing}
+                                isLoading={analyzing}
                                 onClick={runAnalysis}
                                 style={{ width: '100%', marginTop: '2rem' }}
                             >

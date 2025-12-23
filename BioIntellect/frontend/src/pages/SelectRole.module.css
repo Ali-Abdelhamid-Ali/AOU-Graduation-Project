@@ -125,10 +125,19 @@
    ROLE CARD - Content Elements
    ============================================================================ */
 
-.icon {
-  font-size: 64px;
+.iconContainer {
+  width: 100px;
+  height: 100px;
   margin-bottom: var(--spacing-xl);
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roleIconImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .roleLabel {

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { brandingConfig } from '../config/brandingConfig'
 import ThemeToggle from './ThemeToggle'
 import styles from './TopBar.module.css'
@@ -8,6 +9,8 @@ import styles from './TopBar.module.css'
  * Centralized navigation bar with branding, user role status, and global controls.
  */
 export const TopBar = ({ userRole = null, onBack = null, onLogout = null }) => {
+  const navigate = useNavigate()
+
   return (
     <header className={styles.topbar}>
       <div className={styles.container}>
@@ -28,7 +31,7 @@ export const TopBar = ({ userRole = null, onBack = null, onLogout = null }) => {
           <div className={styles.brand}>
             <button
               className={styles.logo}
-              onClick={() => (window.location.href = '/')}
+              onClick={() => navigate('/')}
               aria-label="Go to home page"
               type="button"
             >
@@ -41,6 +44,7 @@ export const TopBar = ({ userRole = null, onBack = null, onLogout = null }) => {
             </button>
           </div>
         </div>
+
 
         {/* Global Controls */}
         <div className={styles.controls}>

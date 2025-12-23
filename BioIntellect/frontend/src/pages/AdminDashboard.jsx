@@ -4,6 +4,14 @@ import { TopBar } from '../components/TopBar'
 import { brandingConfig } from '../config/brandingConfig'
 import styles from './AdminDashboard.module.css'
 
+// Professional Icon Imports
+import analyticsIcon from '../images/icons/analytics.png'
+import securityIcon from '../images/icons/security.png'
+import insightsIcon from '../images/icons/insights.png'
+import cardioIcon from '../images/icons/cardio.png'
+import neuroIcon from '../images/icons/neuro.png'
+import labIcon from '../images/icons/lab.png'
+
 export const AdminDashboard = ({
     userRole,
     onLogout,
@@ -20,7 +28,7 @@ export const AdminDashboard = ({
             id: 'doctors',
             title: 'Medical Staff',
             description: 'Administrative control over medical practitioner credentials and access levels.',
-            icon: '🛡️',
+            icon: securityIcon,
             action: onCreateDoctor,
             color: '#10b981',
             tag: 'NEW'
@@ -29,16 +37,16 @@ export const AdminDashboard = ({
             id: 'reg',
             title: 'Patient Management',
             description: 'Execute high-security patient provisioning and clinical record initialization.',
-            icon: '📋',
+            icon: analyticsIcon,
             action: onCreatePatient,
-            color: 'var(--color-primary)',
+            color: '#0066cc',
             tag: 'CORE'
         },
         {
             id: 'proj',
             title: 'Medical Advisor LLM',
             description: 'Interactive AI-based clinical decision support and medical knowledge retrieval.',
-            icon: '💬',
+            icon: insightsIcon,
             action: onMedicalLlm,
             color: '#6366f1',
             tag: 'LIVE'
@@ -47,7 +55,7 @@ export const AdminDashboard = ({
             id: 'ecg',
             title: 'ECG Cardiac Analysis',
             description: 'CNN-Transformer based arrhythmia classification and temporal signal diagnostics.',
-            icon: '❤️',
+            icon: cardioIcon,
             action: onEcgAnalysis,
             color: '#ef4444',
             tag: 'AI'
@@ -56,7 +64,7 @@ export const AdminDashboard = ({
             id: 'mri',
             title: 'Brain MRI Segmentation',
             description: '3D U-Net powered brain tumor delineation and volumetric segmentation.',
-            icon: '🧠',
+            icon: neuroIcon,
             action: onMriSegmentation,
             color: '#3b82f6',
             tag: 'AI'
@@ -65,7 +73,7 @@ export const AdminDashboard = ({
             id: 'audit',
             title: 'Security Logs',
             description: 'Immutable audit trails and system-wide security event monitoring.',
-            icon: '🔐',
+            icon: labIcon, // Re-purposed as a placeholder for technical logs
             action: () => alert('Audit logs under security review.'),
             color: '#f59e0b'
         }
@@ -121,8 +129,8 @@ export const AdminDashboard = ({
                                 if (card.action) card.action()
                             }}
                         >
-                            <div className={styles.iconWrapper} style={{ background: `${card.color}15` }}>
-                                {card.icon}
+                            <div className={styles.iconWrapper} style={{ backgroundColor: card.color.startsWith('#') ? `${card.color}15` : 'rgba(0, 102, 204, 0.1)' }}>
+                                <img src={card.icon} alt={card.title} className={styles.cardIconImg} />
                             </div>
                             <div className={styles.cardContent}>
                                 <div className={styles.cardHeader}>

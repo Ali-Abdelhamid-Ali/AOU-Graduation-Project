@@ -1,164 +1,180 @@
-import { useState, useEffect, useMemo } from 'react'
+import { Suspense, lazy } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
-
-// Page Imports
-import { SelectRole } from './pages/SelectRole'
-import { Login } from './pages/Login'
-import { SignUp } from './pages/SignUp'
-import { ResetPassword } from './pages/ResetPassword'
-import { EmailConfirmation } from './pages/EmailConfirmation'
-import { HomePage } from './pages/HomePage'
-import { AdminDashboard } from './pages/AdminDashboard'
-import { PatientDashboard } from './pages/PatientDashboard'
-import { CreatePatient } from './pages/CreatePatient'
-import { CreateDoctor } from './pages/CreateDoctor'
-import { ProjectAbout } from './pages/ProjectAbout'
-import { EcgAnalysis } from './pages/EcgAnalysis'
-import { MriSegmentation } from './pages/MriSegmentation'
-import { MedicalLlm } from './pages/MedicalLlm'
+import { ProtectedRoute } from './components/ProtectedRoute'
+import { ScrollToTop } from './components/ScrollToTop'
 import './index.css'
 
-function AppContent() {
-  const { isAuthenticated, userRole, signOut } = useAuth()
-  const [currentPage, setCurrentPage] = useState('home')
-  const [history, setHistory] = useState(['home'])
+// Lazy Load Pages for Production Performance (FCP/TTI Optimization)
+const SelectRole = lazy(() => import('./pages/SelectRole').then(m => ({ default: m.SelectRole })))
+const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
+const SignUp = lazy(() => import('./pages/SignUp').then(m => ({ default: m.SignUp })))
+const ResetPassword = lazy(() => import('./pages/ResetPassword').then(m => ({ default: m.ResetPassword })))
+const EmailConfirmation = lazy(() => import('./pages/EmailConfirmation').then(m => ({ default: m.EmailConfirmation })))
+const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })))
+const PatientDashboard = lazy(() => import('./pages/PatientDashboard').then(m => ({ default: m.PatientDashboard })))
+const CreatePatient = lazy(() => import('./pages/CreatePatient').then(m => ({ default: m.CreatePatient })))
+const CreateDoctor = lazy(() => import('./pages/CreateDoctor').then(m => ({ default: m.CreateDoctor })))
+const ProjectAbout = lazy(() => import('./pages/ProjectAbout').then(m => ({ default: m.ProjectAbout })))
+const EcgAnalysis = lazy(() => import('./pages/EcgAnalysis').then(m => ({ default: m.EcgAnalysis })))
+const MriSegmentation = lazy(() => import('./pages/MriSegmentation').then(m => ({ default: m.MriSegmentation })))
+const MedicalLlm = lazy(() => import('./pages/MedicalLlm').then(m => ({ default: m.MedicalLlm })))
 
-  const navigateTo = (page, options = {}) => {
-    if (options.clear) {
-      setHistory([page])
-    } else if (options.replace) {
-      setHistory(prev => [...prev.slice(0, -1), page])
-    } else {
-      setHistory(prev => [...prev, page])
-    }
-    setCurrentPage(page)
-  }
+const LoadingScreen = () => (
+  <div className="loading-screen" style={{
+    height: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'var(--color-background)',
+    color: 'var(--color-primary)',
+    fontFamily: 'var(--font-family-mono)'
+  }}>
+    INITIALIZING_BIOINTELLECT_MODULES...
+  </div>
+)
 
-  const handleBack = () => {
-    if (history.length > 1) {
-      const newHistory = [...history]
-      newHistory.pop()
-      const prevPage = newHistory[newHistory.length - 1]
-      setHistory(newHistory)
-      setCurrentPage(prevPage)
-    }
-  }
+import { useNavigate } from 'react-router-dom'
 
-  const handleLogout = async () => {
-    await signOut()
-    navigateTo('home', { clear: true })
-  }
+function AppRoutes() {
+  const { userRole, signOut } = useAuth()
+  const navigate = useNavigate()
 
-  // Effect handles redirection logic based on authentication state and URL hashes
-  useEffect(() => {
-    const hash = window.location.hash
-    const isRecovery = hash && hash.includes('type=recovery')
-    const isSignup = hash && hash.includes('type=signup')
-
-    if (isRecovery) {
-      navigateTo('resetPassword', { replace: true })
-      return
-    }
-    if (isSignup) {
-      navigateTo('emailConfirmation', { replace: true })
-      return
-    }
-
-    if (isAuthenticated) {
-      if (userRole === 'patient') {
-        if (!['patientDashboard'].includes(currentPage)) {
-          navigateTo('patientDashboard', { clear: true })
-        }
-      } else if (userRole) {
-        // Staff/Admin roles go to unified AdminDashboard unless already on a specific sub-page
-        const staffPages = ['adminDashboard', 'createPatient', 'createDoctor', 'ecgAnalysis', 'mriSegmentation', 'medicalLlm']
-        if (!staffPages.includes(currentPage)) {
-          navigateTo('adminDashboard', { clear: true })
-        }
-      }
-    } else {
-      const publicPages = ['home', 'login', 'signUp', 'resetPassword', 'selectRole', 'emailConfirmation', 'projectAbout']
-      if (!publicPages.includes(currentPage)) {
-        navigateTo('home', { clear: true })
-      }
-    }
-  }, [isAuthenticated, userRole])
-
-  /**
-   * Page Registry
-   * Organized mapping of page keys to component instances for cleaner rendering logic.
-   */
-  const renderPage = () => {
-    switch (currentPage) {
-      // Public Pages
-      case 'home': return <HomePage onEnter={() => navigateTo('selectRole')} onAboutClick={() => navigateTo('projectAbout')} />
-      case 'selectRole': return <SelectRole onRoleSelected={() => navigateTo('login')} onBack={handleBack} />
-      case 'login': return (
-        <Login
-          onLoginSuccess={(role) => navigateTo(role === 'patient' ? 'patientDashboard' : 'adminDashboard', { clear: true })}
-          onSignUpClick={() => navigateTo('signUp')}
-          onForgotPasswordClick={() => navigateTo('resetPassword')}
-          onBack={handleBack}
-        />
-      )
-      case 'signUp': return (
-        <SignUp
-          onSignUpSuccess={() => navigateTo('login', { replace: true })}
-          onLoginClick={() => navigateTo('login', { replace: true })}
-          onBack={handleBack}
-        />
-      )
-      case 'resetPassword': return (
-        <ResetPassword
-          onResetSuccess={() => navigateTo('login', { clear: true })}
-          onBackToLogin={() => navigateTo('login', { replace: true })}
-          onBack={handleBack}
-        />
-      )
-      case 'emailConfirmation': return <EmailConfirmation onSignInClick={() => navigateTo('selectRole', { clear: true })} />
-      case 'projectAbout': return <ProjectAbout onBack={handleBack} />
-
-      // Protected Dashboards
-      case 'adminDashboard': return (
-        <AdminDashboard
-          userRole={userRole}
-          onLogout={handleLogout}
-          onCreatePatient={() => navigateTo('createPatient')}
-          onCreateDoctor={() => navigateTo('createDoctor')}
-          onEcgAnalysis={() => navigateTo('ecgAnalysis')}
-          onMriSegmentation={() => navigateTo('mriSegmentation')}
-          onMedicalLlm={() => navigateTo('medicalLlm')}
-        />
-      )
-      case 'patientDashboard': return <PatientDashboard onLogout={handleLogout} />
-
-      // Sub-modules
-      case 'createPatient': return <CreatePatient userRole={userRole} onBack={handleBack} onComplete={() => navigateTo('adminDashboard', { clear: true })} />
-      case 'createDoctor': return <CreateDoctor userRole={userRole} onBack={handleBack} onComplete={() => navigateTo('adminDashboard', { clear: true })} />
-      case 'ecgAnalysis': return <EcgAnalysis onBack={handleBack} />
-      case 'mriSegmentation': return <MriSegmentation onBack={handleBack} />
-      case 'medicalLlm': return <MedicalLlm onBack={handleBack} />
-
-      default: return <HomePage onEnter={() => navigateTo('selectRole')} onAboutClick={() => navigateTo('projectAbout')} />
-    }
-  }
+  const handleBack = () => navigate(-1)
 
   return (
-    <div className="app">
-      {renderPage()}
-    </div>
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={
+          <HomePage
+            onEnter={() => navigate('/select-role')}
+            onAboutClick={() => navigate('/project-info')}
+          />
+        } />
+
+        <Route path="/select-role" element={
+          <SelectRole
+            onRoleSelected={(role) => navigate('/login')}
+            onBack={handleBack}
+          />
+        } />
+
+        <Route path="/login" element={
+          <Login
+            onLoginSuccess={(role) => {
+              if (role === 'administrator' || role === 'doctor' || role === 'physician') {
+                navigate('/admin-dashboard')
+              } else {
+                navigate('/patient-dashboard')
+              }
+            }}
+            onSignUpClick={() => navigate('/signup')}
+            onForgotPasswordClick={() => navigate('/reset-password')}
+            onBack={handleBack}
+          />
+        } />
+
+        <Route path="/signup" element={
+          <SignUp
+            onSignUpSuccess={() => navigate('/login')}
+            onLoginClick={() => navigate('/login')}
+            onBack={handleBack}
+          />
+        } />
+
+        <Route path="/reset-password" element={
+          <ResetPassword
+            onBack={handleBack}
+            onBackToLogin={() => navigate('/login')}
+            onResetSuccess={() => navigate('/login')}
+          />
+        } />
+
+        <Route path="/email-confirmation" element={<EmailConfirmation />} />
+        <Route path="/project-info" element={<ProjectAbout onBack={handleBack} />} />
+
+        {/* Protected Dashboard Routes (RBAC) */}
+        <Route path="/admin-dashboard" element={
+          <ProtectedRoute allowedRoles={['administrator', 'doctor', 'physician']}>
+            <AdminDashboard
+              userRole={userRole}
+              onLogout={signOut}
+              onCreatePatient={() => navigate('/create-patient')}
+              onCreateDoctor={() => navigate('/create-doctor')}
+              onEcgAnalysis={() => navigate('/ecg-analysis')}
+              onMriSegmentation={() => navigate('/mri-segmentation')}
+              onMedicalLlm={() => navigate('/medical-llm')}
+            />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/patient-dashboard" element={
+          <ProtectedRoute allowedRoles={['patient']}>
+            <PatientDashboard
+              onLogout={signOut}
+              onEcgAnalysis={() => navigate('/ecg-analysis')}
+              onMriSegmentation={() => navigate('/mri-segmentation')}
+              onMedicalLlm={() => navigate('/medical-llm')}
+            />
+          </ProtectedRoute>
+        } />
+
+        {/* Sub-modules (Protected) */}
+        <Route path="/create-patient" element={
+          <ProtectedRoute allowedRoles={['administrator', 'doctor', 'physician']}>
+            <CreatePatient userRole={userRole} onBack={handleBack} />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/create-doctor" element={
+          <ProtectedRoute allowedRoles={['administrator']}>
+            <CreateDoctor userRole={userRole} onBack={handleBack} />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/ecg-analysis" element={
+          <ProtectedRoute allowedRoles={['administrator', 'doctor', 'physician', 'patient']}>
+            <EcgAnalysis onBack={handleBack} />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/mri-segmentation" element={
+          <ProtectedRoute allowedRoles={['administrator', 'doctor', 'physician', 'patient']}>
+            <MriSegmentation onBack={handleBack} />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/medical-llm" element={
+          <ProtectedRoute allowedRoles={['administrator', 'doctor', 'physician', 'patient']}>
+            <MedicalLlm onBack={handleBack} />
+          </ProtectedRoute>
+        } />
+
+        {/* Catch-all Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   )
 }
+
 
 function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <AppContent />
+        <Router>
+          <ScrollToTop />
+          <div className="app">
+            <AppRoutes />
+          </div>
+        </Router>
       </AuthProvider>
     </ErrorBoundary>
   )
 }
 
 export default App
+

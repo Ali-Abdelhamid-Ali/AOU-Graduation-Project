@@ -111,7 +111,7 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin, onBack }) => {
             <div className={styles.icon}>✓</div>
             <h1 className={styles.title}>Reset Link Sent</h1>
             <p className={styles.subtitle}>Check your email at <strong>{email}</strong></p>
-            <p className={styles.description}>It may take a few minutes to arrive. Check your spam folder if you don't see it.</p>
+            <p className={styles.description}>It may take a few minutes to arrive. Check your spam folder if you don&apos;t see it.</p>
             <AnimatedButton variant="primary" size="large" fullWidth onClick={onBackToLogin}>Back to Sign In</AnimatedButton>
             <button className={styles.sendAgainLink} onClick={() => setView('request')}>Try again?</button>
           </div>
@@ -217,7 +217,7 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin, onBack }) => {
           {renderContent()}
           {view === 'request' && (
             <div className={styles.infoBox}>
-              <p><strong>Tip:</strong> If you don't receive the email, check your spam folder.</p>
+              <p><strong>Tip:</strong> If you don&apos;t receive the email, check your spam folder.</p>
             </div>
           )}
         </motion.div>

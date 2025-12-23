@@ -4,11 +4,19 @@ import { TopBar } from '../components/TopBar'
 import { brandingConfig } from '../config/brandingConfig'
 import styles from './HomePage.module.css'
 
+// Professional Icon Imports
+import analyticsIcon from '../images/icons/analytics.png'
+import securityIcon from '../images/icons/security.png'
+import insightsIcon from '../images/icons/insights.png'
+import cardioIcon from '../images/icons/cardio.png'
+import neuroIcon from '../images/icons/neuro.png'
+import labIcon from '../images/icons/lab.png'
+
 /**
- * HomePage Component - Complete Cinematic Restoration (REVERTED)
+ * HomePage Component - Professional Iconography Restoration
  * 
- * Restores all functional sections (Services, Stats, Features, Contact)
- * with the centered glass portal design.
+ * Replaces emojis with high-fidelity 3D generated icons 
+ * for a premium clinical aesthetic.
  */
 export const HomePage = ({ onEnter, onAboutClick }) => {
     return (
@@ -75,17 +83,23 @@ export const HomePage = ({ onEnter, onAboutClick }) => {
                     </div>
                     <div className={styles.featureGrid}>
                         <div className={styles.featureCard}>
-                            <div className={styles.iconBox}>📊</div>
+                            <div className={styles.iconBox}>
+                                <img src={analyticsIcon} alt="Analytics" className={styles.featureIconImg} />
+                            </div>
                             <h3 className={styles.featureTitle}>Clinical Analytics</h3>
                             <p className={styles.featureDesc}>Deep analysis of patient metrics using advanced neural networks and diagnostic heuristics.</p>
                         </div>
                         <div className={styles.featureCard}>
-                            <div className={styles.iconBox}>🛡️</div>
+                            <div className={styles.iconBox}>
+                                <img src={securityIcon} alt="Security" className={styles.featureIconImg} />
+                            </div>
                             <h3 className={styles.featureTitle}>Secure Provisioning</h3>
                             <p className={styles.featureDesc}>Enterprise-grade security for medical staff and clinical record management.</p>
                         </div>
                         <div className={styles.featureCard}>
-                            <div className={styles.iconBox}>⚡</div>
+                            <div className={styles.iconBox}>
+                                <img src={insightsIcon} alt="Insights" className={styles.featureIconImg} />
+                            </div>
                             <h3 className={styles.featureTitle}>Real-time Insights</h3>
                             <p className={styles.featureDesc}>Instant access to critical patient histories and laboratory results with zero latency.</p>
                         </div>
@@ -126,14 +140,12 @@ export const HomePage = ({ onEnter, onAboutClick }) => {
                     </div>
                     <div className={styles.servicesGrid}>
                         {[
-                            { icon: '🚑', title: 'Emergency Care' },
-                            { icon: '🧪', title: 'Laboratory' },
-                            { icon: '🫀', title: 'Cardiology' },
-                            { icon: '🧠', title: 'Neurology' },
-                            { icon: '🦴', title: 'Orthopedics' },
-                            { icon: '🦷', title: 'Dental Clinic' },
-                            { icon: '🍼', title: 'Pediatrics' },
-                            { icon: '🩺', title: 'Internal Medicine' }
+                            { icon: cardioIcon, title: 'Cardiology' },
+                            { icon: neuroIcon, title: 'Neurology' },
+                            { icon: labIcon, title: 'Laboratory' },
+                            { icon: securityIcon, title: 'Emergency Care' },
+                            { icon: analyticsIcon, title: 'Internal Medicine' },
+                            { icon: insightsIcon, title: 'Diagnostics' },
                         ].map((service, i) => (
                             <motion.div
                                 key={i}
@@ -143,7 +155,9 @@ export const HomePage = ({ onEnter, onAboutClick }) => {
                                 viewport={{ once: true }}
                                 transition={{ delay: i * 0.05 }}
                             >
-                                <span className={styles.serviceIcon}>{service.icon}</span>
+                                <div className={styles.serviceIconContainer}>
+                                    <img src={service.icon} alt={service.title} className={styles.serviceIconImg} />
+                                </div>
                                 <h4 className={styles.serviceTitle}>{service.title}</h4>
                             </motion.div>
                         ))}

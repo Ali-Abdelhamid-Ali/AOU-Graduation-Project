@@ -8,7 +8,18 @@ import { AnimatedButton } from '../components/AnimatedButton'
 import { supabase } from '../config/supabase'
 import styles from './PatientDashboard.module.css'
 
-export const PatientDashboard = ({ onLogout }) => {
+// Professional Icon Imports
+import analyticsIcon from '../images/icons/analytics.png'
+import cardioIcon from '../images/icons/cardio.png'
+import neuroIcon from '../images/icons/neuro.png'
+import insightsIcon from '../images/icons/insights.png'
+
+export const PatientDashboard = ({
+    onLogout,
+    onEcgAnalysis,
+    onMriSegmentation,
+    onMedicalLlm
+}) => {
     const { currentUser, userRole, signOut } = useAuth()
     const [loading, setLoading] = useState(true)
     const [uploading, setUploading] = useState(false)
@@ -26,6 +37,33 @@ export const PatientDashboard = ({ onLogout }) => {
         medical_history: '',
     })
 
+    const modules = [
+        {
+            id: 'ecg',
+            title: 'ECG Analysis',
+            description: 'Monitor your cardiac health with AI-powered arrhythmia detection.',
+            icon: cardioIcon,
+            action: onEcgAnalysis,
+            color: '#ef4444'
+        },
+        {
+            id: 'mri',
+            title: 'Brain Imaging',
+            description: 'View 3D volumetric segmentation of neural MRI scans.',
+            icon: neuroIcon,
+            action: onMriSegmentation,
+            color: '#3b82f6'
+        },
+        {
+            id: 'llm',
+            title: 'Medical Advisor',
+            description: 'Consult with the BioIntellect AI for health-related queries.',
+            icon: insightsIcon,
+            action: onMedicalLlm,
+            color: '#6366f1'
+        }
+    ]
+
     useEffect(() => {
         if (currentUser) {
             fetchProfile()
@@ -35,11 +73,6 @@ export const PatientDashboard = ({ onLogout }) => {
     const fetchProfile = async () => {
         try {
             setLoading(true)
-
-            // We need to fetch from the 'patients' table
-            // The Link is via email or we can search by created user_id if we stored it properly in users table too
-            // But based on logic, we have email in currentUser
-
             const { data, error } = await supabase
                 .from('patients')
                 .select('*')
@@ -73,10 +106,8 @@ export const PatientDashboard = ({ onLogout }) => {
             const { error } = await supabase
                 .from('patients')
                 .update({
-                    // Allowed fields to update
                     phone_number: formData.phone_number,
                     address: formData.address,
-                    // gender/dob usually fixed but allow if needed or restriction logic applied here
                     gender: formData.gender,
                     date_of_birth: formData.date_of_birth,
                     first_name: formData.first_name,
@@ -90,7 +121,6 @@ export const PatientDashboard = ({ onLogout }) => {
             setEditMode(false)
             fetchProfile()
 
-            // Clear message after 3 seconds
             setTimeout(() => setMessage({ type: '', text: '' }), 3000)
         } catch (error) {
             setMessage({ type: 'error', text: error.message })
@@ -99,15 +129,11 @@ export const PatientDashboard = ({ onLogout }) => {
         }
     }
 
-    const handleLogout = async () => {
-        await signOut()
-        if (onLogout) onLogout()
-    }
-
     if (loading) {
         return (
             <div className={styles.loading}>
-                <p>Loading patient profile...</p>
+                <div className={styles.spinner} />
+                <p>Establishing Secure Clinical Session...</p>
             </div>
         )
     }
@@ -122,22 +148,42 @@ export const PatientDashboard = ({ onLogout }) => {
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                 >
+                    <div className={styles.heroBadge}>PATIENT PORTAL</div>
                     <h1 className={styles.title}>Welcome, {profile?.first_name}</h1>
                     <div className={styles.mrnWrapper}>
-                        <span className={styles.mrnLabel}>MRN:</span>
+                        <span className={styles.mrnLabel}>Medical Record Number:</span>
                         <span className={styles.mrnValue}>{profile?.medical_record_number}</span>
                     </div>
                 </motion.div>
 
-                {message.text && (
-                    <motion.div
-                        className={message.type === 'success' ? styles.alertSuccess : styles.alertError}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                    >
-                        {message.text}
-                    </motion.div>
-                )}
+                {/* Clinical Modules Section */}
+                <section className={styles.modulesSection}>
+                    <h2 className={styles.sectionTitle}>Available Medical Modules</h2>
+                    <div className={styles.moduleGrid}>
+                        {modules.map((module) => (
+                            <motion.div
+                                key={module.id}
+                                className={styles.moduleCard}
+                                whileHover={{ y: -5, boxShadow: 'var(--shadow-xl)' }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={module.action}
+                            >
+                                <div className={styles.moduleIconBox} style={{ backgroundColor: `${module.color}15` }}>
+                                    <img src={module.icon} alt={module.title} className={styles.moduleIconImg} />
+                                </div>
+                                <div className={styles.moduleInfo}>
+                                    <h3 className={styles.moduleTitle}>{module.title}</h3>
+                                    <p className={styles.moduleDesc}>{module.description}</p>
+                                </div>
+                                <div className={styles.moduleAction} style={{ color: module.color }}>
+                                    Launch Module &rarr;
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </section>
+
+                <div className={styles.divider} />
 
                 <motion.div
                     className={styles.card}
@@ -157,23 +203,22 @@ export const PatientDashboard = ({ onLogout }) => {
                     }}
                 >
                     <div className={styles.cardHeader}>
-                        <h2 className={styles.cardTitle}>Personal Information</h2>
+                        <h2 className={styles.cardTitle}>Personal Health Identity</h2>
                         <div className={styles.headerActions}>
                             {!editMode ? (
                                 <button className={styles.editButton} onClick={() => setEditMode(true)}>
-                                    Edit Profile
+                                    Edit Information
                                 </button>
                             ) : (
-                                <>
-                                    <button className={styles.cancelButton} onClick={() => { setEditMode(false); fetchProfile(); }}>
-                                        Cancel
-                                    </button>
-                                </>
+                                <button className={styles.cancelButton} onClick={() => { setEditMode(false); fetchProfile(); }}>
+                                    Cancel Changes
+                                </button>
                             )}
                         </div>
                     </div>
 
                     <form onSubmit={handleUpdate} className={styles.form}>
+                        {/* Form contents remain the same as before */}
                         <div className={styles.grid}>
                             <InputField
                                 id="first_name"
@@ -182,7 +227,6 @@ export const PatientDashboard = ({ onLogout }) => {
                                 onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                                 disabled={!editMode}
                                 required
-                                autoComplete="given-name"
                             />
                             <InputField
                                 id="last_name"
@@ -191,7 +235,6 @@ export const PatientDashboard = ({ onLogout }) => {
                                 onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                                 disabled={!editMode}
                                 required
-                                autoComplete="family-name"
                             />
                             <InputField
                                 id="dob"
@@ -201,7 +244,6 @@ export const PatientDashboard = ({ onLogout }) => {
                                 onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
                                 disabled={!editMode}
                                 required
-                                autoComplete="bday"
                             />
                             <SelectField
                                 id="gender"
@@ -214,7 +256,6 @@ export const PatientDashboard = ({ onLogout }) => {
                                 ]}
                                 disabled={!editMode}
                                 required
-                                autoComplete="sex"
                             />
                             <InputField
                                 id="phone"
@@ -222,8 +263,6 @@ export const PatientDashboard = ({ onLogout }) => {
                                 value={formData.phone_number}
                                 onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                                 disabled={!editMode}
-                                placeholder="+1 (555) 000-0000"
-                                autoComplete="tel"
                             />
                             <InputField
                                 id="address"
@@ -231,21 +270,7 @@ export const PatientDashboard = ({ onLogout }) => {
                                 value={formData.address}
                                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                                 disabled={!editMode}
-                                placeholder="123 Medical Way, Health City"
-                                autoComplete="street-address"
                             />
-                        </div>
-
-                        <div className={styles.section}>
-                            <h3 className={styles.sectionTitle}>Account Details</h3>
-                            <div className={styles.infoRow}>
-                                <span className={styles.infoLabel}>Email Address</span>
-                                <span className={styles.infoValue}>{currentUser?.email}</span>
-                            </div>
-                            <div className={styles.infoRow}>
-                                <span className={styles.infoLabel}>Account Status</span>
-                                <span className={styles.infoValue} style={{ color: 'var(--color-success)' }}>Active</span>
-                            </div>
                         </div>
 
                         {editMode && (
@@ -261,7 +286,7 @@ export const PatientDashboard = ({ onLogout }) => {
                                     fullWidth
                                     isLoading={uploading}
                                 >
-                                    Save Changes
+                                    Confirm Update
                                 </AnimatedButton>
                             </motion.div>
                         )}
@@ -271,3 +296,4 @@ export const PatientDashboard = ({ onLogout }) => {
         </div>
     )
 }
+

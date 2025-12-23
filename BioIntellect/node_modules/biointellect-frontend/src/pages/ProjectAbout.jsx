@@ -1,138 +1,132 @@
 import { motion } from 'framer-motion'
 import { TopBar } from '../components/TopBar'
-import { brandingConfig } from '../config/brandingConfig'
+import { Medical3DViewer } from '../components/Medical3DViewer'
 import styles from './ProjectAbout.module.css'
 
+// Professional Icon Imports
+import analyticsIcon from '../images/icons/analytics.png'
+import securityIcon from '../images/icons/security.png'
+import insightsIcon from '../images/icons/insights.png'
+
+/**
+ * ProjectAbout Component - Clinical Gateway
+ * 
+ * redesigns the entry experience to communicate system mission, 
+ * technical stack, and clinical utility.
+ */
 export const ProjectAbout = ({ onBack }) => {
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+        }
+    }
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+        }
+    }
+
     return (
         <div className={styles.pageWrapper}>
             <TopBar onBack={onBack} />
 
-            <div className={styles.container}>
-                <section className={styles.hero}>
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={styles.academicBadge}
-                    >
-                        ARAB OPEN UNIVERSITY - EGYPT
+            <motion.div
+                className={styles.container}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
+                {/* Mission Critical Hero */}
+                <motion.section className={styles.hero} variants={itemVariants}>
+                    <h1 className={styles.title}>BioIntellect<br />Clinical Intelligence</h1>
+                    <p className={styles.subtitle}>
+                        A mission-critical medical platform integrating multi-modal AI diagnostics,
+                        real-time volumetric 3D visualization, and enterprise-grade data security.
+                    </p>
+                </motion.section>
+
+                {/* 3D Volumetric Showreel */}
+                <div className={styles.showreel}>
+                    {/* Cardiac Module */}
+                    <motion.div className={styles.studioWrapper} variants={itemVariants}>
+                        <div className={styles.viewerHeader}>
+                            <span className={styles.modelName}>MODULE_01: CARDIAC_SCAN_3D</span>
+                            <div className={styles.viewStatus}><span className={styles.livePulse} /> LIVE_SYNC</div>
+                        </div>
+                        <div className={styles.volumetricStage}>
+                            <div className={styles.webglCanvasWrapper}>
+                                <Medical3DViewer type="heart" />
+                            </div>
+                        </div>
+                        <div className={styles.studioFooter}>
+                            <h3>Cardiovascular Morphology</h3>
+                            <p>Real-time structural assessment of myocardial integrity and valve kinematics using volumetric simulation synchronized with clinical metrics.</p>
+                        </div>
                     </motion.div>
-                    <motion.h1
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className={styles.title}
-                    >
-                        BioIntellect: An AI-Based Diagnostic System for Heart and Brain Diseases
-                    </motion.h1>
-                    <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className={styles.subtitle}
-                    >
-                        Faculty of Computer Studies | TM471 - Final Year Project, Fall 2025-2026
-                    </motion.p>
-                </section>
 
-                <div className={styles.contentGrid}>
-                    {/* Team Section */}
-                    <motion.section
-                        className={styles.card}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 }}
-                    >
-                        <h3>🎓 Project Team</h3>
-                        <div className={styles.teamMember}>
-                            <strong>Student:</strong>
-                            <span>Ali Abdelhamid Ali</span>
-                            <small>ID: 22510786</small>
+                    {/* Neural Module */}
+                    <motion.div className={styles.studioWrapper} variants={itemVariants}>
+                        <div className={styles.viewerHeader}>
+                            <span className={styles.modelName}>MODULE_02: NEURAL_PATHWAY_3D</span>
+                            <div className={styles.viewStatus}><span className={styles.livePulse} /> ACTIVE</div>
                         </div>
-                        <div className={styles.teamMember}>
-                            <strong>Supervisor:</strong>
-                            <span>Dr. Eid Emary</span>
-                        </div>
-                    </motion.section>
-
-                    {/* Abstract Section */}
-                    <motion.section
-                        className={styles.card + ' ' + styles.mainCard}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 }}
-                    >
-                        <h3>📄 Abstract</h3>
-                        <p>
-                            Cardiovascular and neurological diseases remain among the leading causes of mortality worldwide.
-                            Timely and accurate diagnosis is critical for effective clinical intervention.
-                            BioIntellect is a comprehensive AI-based diagnostic system designed to assist physicians in the early detection and classification of heart and brain diseases through multimodal data analysis.
-                        </p>
-                    </motion.section>
-
-                    {/* Technical Stack */}
-                    <motion.section
-                        className={styles.card}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.5 }}
-                    >
-                        <h3>⚙️ Technical Deliverables</h3>
-                        <ul className={styles.list}>
-                            <li>Deep learning models for ECG arrhythmia classification</li>
-                            <li>3D segmentation models for brain tumor detection</li>
-                            <li>Fine-tuned medical language model for clinical QA</li>
-                            <li>Web-based physician interface</li>
-                        </ul>
-                    </motion.section>
-
-                    {/* Aim and Objectives */}
-                    <motion.section
-                        className={styles.card + ' ' + styles.wideCard}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.6 }}
-                    >
-                        <h3>🎯 Aims and Objectives</h3>
-                        <div className={styles.objectivesGrid}>
-                            <div className={styles.objItem}>
-                                <span>01</span>
-                                <p>Design an AI system processing ECG signals and MRI images.</p>
-                            </div>
-                            <div className={styles.objItem}>
-                                <span>02</span>
-                                <p>Develop deep learning models for cardiac arrhythmia classification.</p>
-                            </div>
-                            <div className={styles.objItem}>
-                                <span>03</span>
-                                <p>Implement 3D segmentation algorithms for brain tumor detection.</p>
-                            </div>
-                            <div className={styles.objItem}>
-                                <span>04</span>
-                                <p>Create a web interface for data upload and result visualization.</p>
+                        <div className={styles.volumetricStage}>
+                            <div className={styles.webglCanvasWrapper}>
+                                <Medical3DViewer type="brain" />
                             </div>
                         </div>
-                    </motion.section>
-
-                    {/* Acknowledgements */}
-                    <motion.section
-                        className={styles.card + ' ' + styles.wideCard}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.7 }}
-                    >
-                        <h3>🙏 Acknowledgements</h3>
-                        <p className={styles.ackText}>
-                            Sincere gratitude to my supervisor, <strong>Dr. Eid Emary</strong>, for his continuous guidance,
-                            and the Faculty of Computer Studies at the <strong>Arab Open University</strong> for enabling this research.
-                        </p>
-                    </motion.section>
+                        <div className={styles.studioFooter}>
+                            <h3>Neural Synaptic Propagation</h3>
+                            <p>Advanced mapping of cortical signal pathways and structural neural architecture for longitudinal diagnostic monitoring.</p>
+                        </div>
+                    </motion.div>
                 </div>
-            </div>
 
-            <footer className={styles.footer}>
-                &copy; {new Date().getFullYear()} BioIntellect - Arab Open University (AOU-Egypt)
-            </footer>
+                {/* Technical Architecture Overview */}
+                <div className={styles.detailsGrid}>
+                    <motion.div className={styles.detailCard} variants={itemVariants}>
+                        <img src={insightsIcon} alt="Clinical LLM" className={styles.cardIcon} />
+                        <h4>Advisor LLM</h4>
+                        <p>Evidence-based clinical decision support trained on peer-reviewed SOPs and medical protocols.</p>
+                    </motion.div>
+                    <motion.div className={styles.detailCard} variants={itemVariants}>
+                        <img src={analyticsIcon} alt="Diagnostics" className={styles.cardIcon} />
+                        <h4>Diagnostic Engine</h4>
+                        <p>Automated feature extraction from multi-source medical data for rapid triage and classification.</p>
+                    </motion.div>
+                    <motion.div className={styles.detailCard} variants={itemVariants}>
+                        <img src={securityIcon} alt="Security" className={styles.cardIcon} />
+                        <h4>Secure Gateway</h4>
+                        <p>RBAC-hardened clinical data infrastructure with end-to-end encryption for patient confidentiality.</p>
+                    </motion.div>
+                </div>
+
+                {/* System Purpose & Workflow */}
+                <motion.section className={styles.servicesInfo} variants={itemVariants}>
+                    <h2 className={styles.sectionTitle}>Integrated Workflow Integration</h2>
+                    <div className={styles.servicesDisplayGrid}>
+                        <div className={styles.serviceInfoCard}>
+                            <h3>Who it is for</h3>
+                            <p>Designed for multi-disciplinary medical teams requiring synchronized data visualization and AI-assisted triage in high-stakes environments.</p>
+                        </div>
+                        <div className={styles.serviceInfoCard}>
+                            <h3>Production Security</h3>
+                            <p>Compliance-first architecture ensuring that authentication persists securely across sessions while blocking manual route manipulation.</p>
+                        </div>
+                    </div>
+                </motion.section>
+
+                <footer className={styles.footer}>
+                    &copy; {new Date().getFullYear()} BioIntellect Medical Intelligence. All Rights Reserved.
+                </footer>
+            </motion.div>
         </div>
     )
 }

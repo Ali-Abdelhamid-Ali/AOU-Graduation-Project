@@ -71,7 +71,7 @@ export const EcgAnalysis = ({ onBack }) => {
                         {file && !result && (
                             <AnimatedButton
                                 variant="primary"
-                                loading={analyzing}
+                                isLoading={analyzing}
                                 onClick={runAnalysis}
                                 style={{ width: '100%', marginTop: '1.5rem' }}
                             >

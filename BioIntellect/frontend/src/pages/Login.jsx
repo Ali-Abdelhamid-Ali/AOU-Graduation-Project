@@ -67,6 +67,7 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick, on
 
   const validateForm = () => {
     const errors = {}
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{16,}$/
 
     if (!formData.email.trim()) {
       errors.email = 'Email is required'
@@ -205,7 +206,7 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick, on
           {/* Sign Up Link */}
           <div className={styles.footer}>
             <p className={styles.helperText}>
-              Don't have an account? Contact your administrator for secure provisioning.
+              Don&apos;t have an account? Contact your administrator for secure provisioning.
             </p>
           </div>
 

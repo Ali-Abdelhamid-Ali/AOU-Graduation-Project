@@ -38,7 +38,7 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
         if (!formData.email.trim()) errors.email = 'Email is required'
         if (!formData.licenseNumber.trim()) errors.licenseNumber = 'License number is required'
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?`~]).{16,}$/
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{16,}$/
         if (!formData.password) {
             errors.password = 'Password is required'
         } else if (!passwordRegex.test(formData.password)) {
@@ -81,15 +81,19 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                             <div className={styles.successIcon}>🛡️</div>
                             <h2 className={styles.title}>Account Provisioned</h2>
                             <p className={styles.subtitle}>
-                                Doctor <strong>{formData.fullName}</strong> has been successfully registered in the staff directory.
+                                Doctor <strong>{formData.fullName}</strong> has been successfully registered.
+                                <br /><br />
+                                <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>
+                                    ⚠️ ACTION REQUIRED: An activation email has been sent. The doctor must confirm their email before they can sign in.
+                                </span>
                             </p>
                             <div className={styles.successActions}>
                                 <AnimatedButton variant="primary" fullWidth onClick={() => {
                                     setSuccess(false); setFormData({
                                         fullName: '', email: '', password: '', confirmPassword: '', specialty: 'physician', phone: '', licenseNumber: ''
                                     })
-                                }}>Register Another</AnimatedButton>
-                                <AnimatedButton variant="secondary" fullWidth onClick={onBack}>Back to Dashboard</AnimatedButton>
+                                }}>Provision Another Staff Member</AnimatedButton>
+                                <AnimatedButton variant="secondary" fullWidth onClick={onBack}>Return to Dashboard</AnimatedButton>
                             </div>
                         </div>
                     </motion.div>

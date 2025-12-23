@@ -4,19 +4,15 @@ import { useAuth } from '../context/AuthContext'
 import { TopBar } from '../components/TopBar'
 import styles from './SelectRole.module.css'
 
-/**
- * SelectRole Page
- * 
- * First step in user onboarding
- * Users select their role (Doctor or Patient)
- * 
- * Features:
- * - Clean role selection interface
- * - Medical-grade design
- * - Smooth animations
- * - Context-based state management
- */
+// Professional Icon Imports
+import securityIcon from '../images/icons/security.png'
+import insightsIcon from '../images/icons/insights.png'
 
+/**
+ * SelectRole Page - Professional Iconography
+ * 
+ * Replaces emojis with high-fidelity 3D generated icons.
+ */
 export const SelectRole = ({ onRoleSelected, onBack }) => {
   const { selectRole } = useAuth()
   const [selectedRole, setSelectedRole] = useState(null)
@@ -34,15 +30,15 @@ export const SelectRole = ({ onRoleSelected, onBack }) => {
     {
       id: 'doctor',
       label: 'Doctor',
-      icon: '👨‍⚕️',
-      description: 'Sign in as a doctor',
+      icon: securityIcon,
+      description: 'Sign in to access clinical AI modules',
       color: 'primary',
     },
     {
       id: 'patient',
       label: 'Patient',
-      icon: '👤',
-      description: 'Sign in as a patient',
+      icon: insightsIcon,
+      description: 'Sign in to access your medical records',
       color: 'secondary',
     },
   ]
@@ -82,7 +78,9 @@ export const SelectRole = ({ onRoleSelected, onBack }) => {
                     } ${styles[role.color]}`}
                   onClick={() => handleRoleSelect(role.id)}
                 >
-                  <div className={styles.icon}>{role.icon}</div>
+                  <div className={styles.iconContainer}>
+                    <img src={role.icon} alt={role.label} className={styles.roleIconImg} />
+                  </div>
                   <h2 className={styles.roleLabel}>{role.label}</h2>
                   <p className={styles.roleDescription}>{role.description}</p>
                   <div className={styles.arrow}>→</div>
@@ -90,9 +88,6 @@ export const SelectRole = ({ onRoleSelected, onBack }) => {
               </motion.div>
             ))}
           </div>
-
-          {/* Info Box */}
-
         </motion.div>
       </div>
     </div>

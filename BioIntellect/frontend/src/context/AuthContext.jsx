@@ -1,27 +1,11 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../config/supabase'
-
-
-/**
- * Mock AuthContext
- *
- * This provider implements a mock authentication flow (no Supabase, no API calls),
- * designed to match the Supabase schema names so the UI can be connected later.
- *
- * Exports:
- * - `signUp(full_name, email, password, role)`
- * - `signIn(email, password)`
- * - `signOut()`
- * - `resetPassword(email)`
- * - `selectRole(role)`
- * - `clearError()`
- *
- * All functions are async (return a Promise) and simulate network latency.
- */
 
 const AuthContext = createContext()
 
 const MOCK_USERS_KEY = 'biointellect_mock_users'
+const CURRENT_USER_KEY = 'biointellect_current_user'
+const USER_ROLE_KEY = 'userRole'
 
 const loadMockUsers = () => {
   try {
@@ -36,27 +20,44 @@ const saveMockUsers = (users) => {
   localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(users))
 }
 
+const CLINICAL_ROLES = ['administrator', 'doctor', 'physician', 'cardiologist', 'neurologist', 'surgeon', 'pediatrician'];
+
 export const AuthProvider = ({ children }) => {
-  const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || null)
-  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('biointellect_current_user'))
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const u = localStorage.getItem('biointellect_current_user')
-      return u ? JSON.parse(u) : null
-    } catch (e) {
-      return null
-    }
-  })
-  const [isLoading, setIsLoading] = useState(false)
+  const [userRole, setUserRole] = useState(null) // Start null
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null)
+  const [isLoading, setIsLoading] = useState(true) // Start true for stability
   const [error, setError] = useState(null)
 
+  // Initialize session from hardware/storage
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        const savedUser = localStorage.getItem(CURRENT_USER_KEY)
+        const savedRole = localStorage.getItem(USER_ROLE_KEY)
 
+        if (savedUser) {
+          const user = JSON.parse(savedUser)
+          const rawRole = savedRole || user.user_role
+          const normalizedRole = CLINICAL_ROLES.includes(rawRole) ? 'administrator' : rawRole
 
-
+          setCurrentUser(user)
+          setIsAuthenticated(true)
+          setUserRole(normalizedRole)
+        }
+      } catch (err) {
+        console.error('Session Init Error:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    initSession()
+  }, [])
 
   useEffect(() => {
     if (currentUser && currentUser.user_role) setUserRole(currentUser.user_role)
   }, [currentUser])
+
 
   // ============================================================================
   // Session Timeout Logic (15 Minutes)
@@ -244,9 +245,12 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: newUser }
     } catch (err) {
       console.error('SignUp Exception:', err)
-      setError(err.message)
+      const msg = err.message === 'Email not confirmed'
+        ? 'Please check your inbox and confirm your email before logging in.'
+        : err.message;
+      setError(msg)
       setIsLoading(false)
-      return { success: false, error: err.message }
+      return { success: false, error: msg }
     }
   }
 
@@ -269,14 +273,15 @@ export const AuthProvider = ({ children }) => {
           return { success: false, error: 'Invalid credentials' }
         }
 
+        const finalRole = found.user_role === 'admin' ? 'administrator' : found.user_role
         localStorage.setItem('biointellect_current_user', JSON.stringify(found))
         setCurrentUser(found)
         setIsAuthenticated(true)
-        setUserRole(found.user_role)
-        localStorage.setItem('userRole', found.user_role)
+        setUserRole(finalRole)
+        localStorage.setItem('userRole', finalRole)
 
         setIsLoading(false)
-        return { success: true, user: found }
+        return { success: true, user: found, role: finalRole }
       }
 
       // Use Supabase
@@ -357,17 +362,31 @@ export const AuthProvider = ({ children }) => {
       }
 
       localStorage.setItem('biointellect_current_user', JSON.stringify(userData))
+      const rawRole = userData.user_role
+      const finalRole = CLINICAL_ROLES.includes(rawRole) ? 'administrator' : rawRole
+
       setCurrentUser(userData)
       setIsAuthenticated(true)
-      setUserRole(userData.user_role)
-      localStorage.setItem('userRole', userData.user_role)
+      setUserRole(finalRole)
+      localStorage.setItem('userRole', finalRole)
 
       setIsLoading(false)
-      return { success: true, user: userData, role: userData.user_role }
+      return { success: true, user: userData, role: finalRole }
     } catch (err) {
-      setError(err.message)
+      console.error('SignIn Exception:', err)
+      let msg = err.message
+
+      if (msg === 'Email not confirmed' || msg === 'Email not verified') {
+        msg = 'Your clinical account requires email verification. Please check your hospital inbox for the confirmation link before attempting to sign in.'
+      } else if (msg === 'Invalid login credentials' || msg.includes('invalid_credentials')) {
+        msg = 'Authentication failed: Incorrect email or password. Please verify your clinical credentials and try again.'
+      } else if (msg.includes('user_not_found')) {
+        msg = 'No clinical account found with this email address. Please contact your system administrator.'
+      }
+
+      setError(msg)
       setIsLoading(false)
-      return { success: false, error: err.message }
+      return { success: false, error: msg }
     }
   }
 
@@ -488,10 +507,12 @@ export const AuthProvider = ({ children }) => {
       const { email, password, fullName, specialty, phone, licenseNumber } = doctorData
 
       // 1. Create Auth User
+      console.log(`[Admin] Initiating enrollmnt for doctor: ${email}`);
       const { data: authData, error: authError } = await tempSupabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             full_name: fullName,
             user_role: specialty || 'physician',
@@ -572,10 +593,12 @@ export const AuthProvider = ({ children }) => {
       const full_name = `${firstName} ${lastName}`
 
       // 1. Create User via Temp Client (to handle Supabase Auth without logging out Admin)
+      console.log(`[Admin] Initiating enrollment for patient: ${email}`);
       const { data: authData, error: authError } = await tempSupabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             full_name,
             user_role: 'patient',
@@ -661,6 +684,8 @@ export const AuthProvider = ({ children }) => {
     updatePassword,
     registerPatient,
     registerDoctor,
+    isClinicalRole: (role) => CLINICAL_ROLES.includes(role),
+    CLINICAL_ROLES,
     clearError,
   }
 

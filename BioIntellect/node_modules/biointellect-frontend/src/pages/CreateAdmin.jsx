@@ -26,6 +26,8 @@ export const CreateAdmin = ({ onBack, userRole }) => {
         role: '',
         password: '',
         confirmPassword: '',
+        phone: '',
+        department: '',
         countryId: '',
         regionId: '',
         hospitalId: ''
@@ -93,7 +95,17 @@ export const CreateAdmin = ({ onBack, userRole }) => {
         e.preventDefault()
         if (!validateForm()) return
 
-        const result = await registerAdmin(formData)
+        // Resolve IDs to Names
+        const selectedCountry = countries.find(c => c.country_id === formData.countryId);
+        const selectedRegion = regions.find(r => r.region_id === formData.regionId);
+
+        const adminData = {
+            ...formData,
+            country: selectedCountry ? selectedCountry.country_name : formData.countryId,
+            region: selectedRegion ? selectedRegion.region_name : formData.regionId
+        }
+
+        const result = await registerAdmin(adminData)
         if (result.success) {
             setSuccess(true)
         }
@@ -105,7 +117,7 @@ export const CreateAdmin = ({ onBack, userRole }) => {
                 <TopBar userRole="admin" onBack={() => {
                     setSuccess(false); setFormData({
                         fullName: '', email: '', role: '', password: '', confirmPassword: '',
-                        countryId: '', regionId: '', hospitalId: ''
+                        phone: '', department: '', countryId: '', regionId: '', hospitalId: ''
                     })
                 }} />
                 <div className={styles.container}>
@@ -124,7 +136,7 @@ export const CreateAdmin = ({ onBack, userRole }) => {
                                 <AnimatedButton variant="primary" fullWidth onClick={() => {
                                     setSuccess(false); setFormData({
                                         fullName: '', email: '', role: '', password: '', confirmPassword: '',
-                                        countryId: '', regionId: '', hospitalId: ''
+                                        phone: '', department: '', countryId: '', regionId: '', hospitalId: ''
                                     })
                                 }}>Provision Another Administrator</AnimatedButton>
                                 <AnimatedButton variant="secondary" fullWidth onClick={onBack}>Back to Dashboard</AnimatedButton>
@@ -177,6 +189,18 @@ export const CreateAdmin = ({ onBack, userRole }) => {
                                 options={adminOptions}
                                 required
                                 error={validationErrors.role}
+                            />
+                            <InputField
+                                label="Phone Number"
+                                placeholder="+20 1XX XXX XXXX"
+                                value={formData.phone}
+                                onChange={(e) => handleInputChange('phone', e.target.value)}
+                            />
+                            <InputField
+                                label="Department"
+                                placeholder="IT / Engineering"
+                                value={formData.department}
+                                onChange={(e) => handleInputChange('department', e.target.value)}
                             />
                             <SearchableSelect
                                 label="Country"

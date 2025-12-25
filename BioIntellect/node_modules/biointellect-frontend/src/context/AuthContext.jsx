@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
           if (userRoleFromAuth === 'patient') {
             const { data: patientData } = await supabase
               .from('patients')
-              .select('*, hospitals(hospital_name_en)')
+              .select('*')
               .eq('user_id', authUser.id)
               .maybeSingle()
 
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }) => {
           } else if (userRoleFromAuth === 'doctor') {
             const { data: doctorData } = await supabase
               .from('doctors')
-              .select('*, hospitals(hospital_name_en)')
+              .select('*')
               .eq('user_id', authUser.id)
               .maybeSingle()
 
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
           } else if (userRoleFromAuth === 'admin' || userRoleFromAuth === 'super_admin') {
             const { data: adminData } = await supabase
               .from('administrators')
-              .select('*, hospitals(hospital_name_en)')
+              .select('*')
               .eq('user_id', authUser.id)
               .maybeSingle()
 
@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
           } else if (userRoleFromAuth === 'nurse') {
             const { data: nurseData } = await supabase
               .from('nurses')
-              .select('*, hospitals(hospital_name_en)')
+              .select('*')
               .eq('user_id', authUser.id)
               .maybeSingle()
 
@@ -216,14 +216,16 @@ export const AuthProvider = ({ children }) => {
     console.log("━━━━ [PROTOCOL] INPUT VERIFICATION: SIGNUP ━━━━");
     console.log("1. Input Data:", JSON.stringify(signUpData, null, 2));
 
-    const { email, password, firstName, lastName, role, dateOfBirth, gender } = signUpData
-
+    const { email, password, role, dateOfBirth, gender } = signUpData
+    // Support both camelCase and snake_case field names
+    const first_name = signUpData.first_name || signUpData.firstName || ''
+    const last_name = signUpData.last_name || signUpData.lastName || ''
     // Validate types and content
     assert(email && typeof email === 'string' && email.includes('@'), "EMAIL IS INVALID OR MISSING!");
     assert(password && typeof password === 'string' && password.length >= 6, "PASSWORD DOES NOT MEET SECURITY REQUIREMENTS!");
     assert(role && CLINICAL_ROLES.includes(role), `ROLE "${role}" IS NOT ALLOWED BY SYSTEM!`);
 
-    const derivedName = (firstName && lastName) ? `${firstName} ${lastName}` : (signUpData.full_name || 'System User')
+    const derivedName = (first_name && last_name) ? `${first_name} ${last_name}` : (signUpData.full_name || 'System User')
     const full_name = derivedName.trim() || 'System User'
 
     console.log("2. Resolved Name:", full_name, "| Type:", typeof full_name);
@@ -234,12 +236,16 @@ export const AuthProvider = ({ children }) => {
       const payloadMetadata = {
         full_name: full_name,
         role: role, // SQL trigger expects 'role'
-        first_name: firstName,
-        last_name: lastName,
+        first_name: first_name,
+        last_name: last_name,
         date_of_birth: dateOfBirth,
         gender: gender || 'male',
-        hospital_id: signUpData.hospitalId || null,
-        license_number: signUpData.licenseNumber || 'PENDING'
+        // Safety Check: If hospital_id is our custom string, do NOT send it as UUID.
+        hospital_id: (signUpData.hospitalId && signUpData.hospitalId.length > 20) ? signUpData.hospitalId : null,
+        hospital_name: (signUpData.hospitalId && signUpData.hospitalId.length <= 20) ? 'BioIntellect Medical Center' : null,
+        license_number: signUpData.licenseNumber || 'PENDING',
+        country: signUpData.country || null,
+        region: signUpData.region || null
       };
 
       console.log("━━━━ [PROTOCOL] SQL/METADATA MAPPING ━━━━");
@@ -328,7 +334,7 @@ export const AuthProvider = ({ children }) => {
       if (userRoleFromAuth === 'patient') {
         const { data: patientData, error: patientError } = await supabase
           .from('patients')
-          .select('*, hospitals(hospital_name_en)')
+          .select('id, first_name, last_name, user_id, hospital_id')
           .eq('user_id', authData.user.id)
           .maybeSingle()
 
@@ -345,7 +351,7 @@ export const AuthProvider = ({ children }) => {
       } else if (userRoleFromAuth === 'doctor') {
         const { data: doctorData, error: doctorError } = await supabase
           .from('doctors')
-          .select('*, hospitals(hospital_name_en)')
+          .select('id, first_name, last_name, user_id, hospital_id')
           .eq('user_id', authData.user.id)
           .maybeSingle()
 
@@ -361,7 +367,7 @@ export const AuthProvider = ({ children }) => {
       } else if (userRoleFromAuth === 'admin' || userRoleFromAuth === 'super_admin') {
         const { data: adminData, error: adminError } = await supabase
           .from('administrators')
-          .select('*, hospitals(hospital_name_en)')
+          .select('id, first_name, last_name, user_id, hospital_id')
           .eq('user_id', authData.user.id)
           .maybeSingle()
 
@@ -377,7 +383,7 @@ export const AuthProvider = ({ children }) => {
       } else if (userRoleFromAuth === 'nurse') {
         const { data: nurseData, error: nurseError } = await supabase
           .from('nurses')
-          .select('*, hospitals(hospital_name_en)')
+          .select('id, first_name, last_name, user_id, hospital_id')
           .eq('user_id', authData.user.id)
           .maybeSingle()
 
@@ -400,6 +406,7 @@ export const AuthProvider = ({ children }) => {
       setUserRole(userRoleFromAuth)
       localStorage.setItem(USER_ROLE_KEY, userRoleFromAuth)
 
+      const finalRole = userData.user_role;
       console.log("✅ [SUCCESS]: Login Verified for role:", finalRole);
       setIsLoading(false)
       return { success: true, user: userData, role: finalRole }
@@ -558,7 +565,7 @@ export const AuthProvider = ({ children }) => {
         }
       })
 
-      const { email, password, fullName, specialty, phone, licenseNumber, hospitalId } = doctorData
+      const { email, password, fullName, specialty, phone, licenseNumber, hospitalId, gender, dateOfBirth } = doctorData
 
       // EXTREME CHECKS
       assert(email && typeof email === 'string' && email.includes('@'), "STAFF EMAIL IS INVALID!");
@@ -570,8 +577,13 @@ export const AuthProvider = ({ children }) => {
         role: specialty || 'doctor', // Trigger expects 'role'
         first_name: fullName.split(' ')[0] || 'Unknown',
         last_name: fullName.split(' ').slice(1).join(' ') || 'Unknown',
-        hospital_id: hospitalId,
-        license_number: licenseNumber || 'PENDING'
+        // Safety Check: If hospital_id is our custom string, do NOT send it as UUID.
+        hospital_id: (hospitalId && hospitalId.length > 20) ? hospitalId : null,
+        hospital_name: (hospitalId && hospitalId.length <= 20) ? 'BioIntellect Medical Center' : null,
+        license_number: licenseNumber || 'PENDING',
+        phone: phone || null,
+        country: doctorData.country || null,
+        region: doctorData.region || null
       };
 
       console.log("2. Metadata Mapping:", JSON.stringify(payloadMetadata, null, 2));
@@ -592,16 +604,53 @@ export const AuthProvider = ({ children }) => {
         console.error("📤 [API ERROR]:", authError.message);
         throw authError;
       }
-      assert(authData.user, "AUTH USER CREATION FAILED - NO USER RETURNED!");
+      assert(authData.user, "AUTH USER CREATION FAILED - NO USER OBJECT RETURNED!");
 
-      // Trigger handle_new_user in DB will create the profile automatically.
-      // We only update additional fields if necessary.
+      // 2. HARDENED UPDATE: Ensure all fields are persisted to the doctors table
+      // The trigger creates the row, but we manually update to guarantee all extended fields are set.
+      const userId = authData.user.id;
+      if (userId) {
+        const updatePayload = {
+          date_of_birth: dateOfBirth || null,
+          gender: gender || 'male',
+          phone: phone || null,
+          license_number: licenseNumber || 'PENDING',
+        };
+
+        if (hospitalId && hospitalId.length > 20) {
+          updatePayload.hospital_id = hospitalId;
+        }
+
+        const { error: updateError } = await supabase
+          .from('doctors')
+          .update(updatePayload)
+          .eq('user_id', userId);
+
+        if (updateError) {
+          console.error("🚨 [CRITICAL]: Failed to update doctor profile details:", updateError.message);
+          // We don't throw here to avoid failing the whole registration if the user is already created,
+          // but we log it as critical.
+        }
+      }
+
+      // 3. Insert Specialty
       if (specialty) {
-        await supabase.from('doctor_specialties').insert({
-          doctor_id: (await supabase.from('doctors').select('id').eq('user_id', authData.user.id).single()).data.id,
-          specialty_id: (await supabase.from('specialty_types').select('id').eq('specialty_code', specialty).single()).data.id,
-          is_primary: true
-        })
+        // First get the doctor ID from the users table (or wait for trigger)
+        // Since we just updated, we can assume the row exists or will exist shortly.
+        // We'll try to fetch the doctor record.
+        const { data: doctorRecord } = await supabase.from('doctors').select('id').eq('user_id', userId).single();
+
+        if (doctorRecord) {
+          const { data: specialtyRecord } = await supabase.from('specialty_types').select('id').eq('specialty_code', specialty).single();
+
+          if (specialtyRecord) {
+            await supabase.from('doctor_specialties').insert({
+              doctor_id: doctorRecord.id,
+              specialty_id: specialtyRecord.id,
+              is_primary: true
+            });
+          }
+        }
       }
 
       setIsLoading(false)
@@ -667,7 +716,10 @@ export const AuthProvider = ({ children }) => {
         last_name: lastName,
         date_of_birth: dateOfBirth,
         gender: gender || 'male',
-        hospital_id: hospitalId
+        // Safety Check
+        hospital_id: (hospitalId && hospitalId.length > 20) ? hospitalId : null,
+        hospital_name: (hospitalId && hospitalId.length <= 20) ? 'BioIntellect Medical Center' : null,
+        country: patientData.country || null,
       };
 
       console.log("2. Metadata Mapping:", JSON.stringify(payloadMetadata, null, 2));
@@ -756,7 +808,7 @@ export const AuthProvider = ({ children }) => {
         }
       })
 
-      const { email, password, fullName, role, hospitalId } = adminData
+      const { email, password, fullName, role, hospitalId, phone, department } = adminData
       const finalRole = role || 'administrator'
 
       // EXTREME CHECKS
@@ -769,7 +821,12 @@ export const AuthProvider = ({ children }) => {
         role: finalRole, // Trigger expects 'role'
         first_name: fullName.split(' ')[0] || 'Unknown',
         last_name: fullName.split(' ').slice(1).join(' ') || 'Unknown',
-        hospital_id: hospitalId
+        // Safety Check
+        hospital_id: (hospitalId && hospitalId.length > 20) ? hospitalId : null,
+        hospital_name: (hospitalId && hospitalId.length <= 20) ? 'BioIntellect Medical Center' : null,
+        country: adminData.country || null,
+        phone: phone || null,
+        department: department || null
       };
 
       console.log("2. Metadata Mapping:", JSON.stringify(payloadMetadata, null, 2));
@@ -791,6 +848,27 @@ export const AuthProvider = ({ children }) => {
         throw authError;
       }
       assert(authData.user, "ADMIN AUTH CREATION FAILED!");
+
+      // 2. HARDENED UPDATE: Ensure extended fields are persisted
+      const userId = authData.user.id;
+      if (userId) {
+        const updatePayload = {
+          phone: phone || null,
+          department: department || null
+        };
+        if (hospitalId && hospitalId.length > 20) {
+          updatePayload.hospital_id = hospitalId;
+        }
+
+        const { error: updateError } = await supabase
+          .from('administrators')
+          .update(updatePayload)
+          .eq('user_id', userId);
+
+        if (updateError) {
+          console.error("🚨 [CRITICAL]: Failed to update admin profile details:", updateError.message);
+        }
+      }
 
       console.log("✅ [SUCCESS]: Admin Created:", authData.user.id);
       setIsLoading(false)

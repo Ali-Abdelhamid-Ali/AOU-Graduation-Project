@@ -132,10 +132,16 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
     }
 
     // Prepare data for AuthContext
+    // Resolve IDs to Names for DB storage (User Requirement: "Names instead of IDs")
+    const selectedCountry = countries.find(c => c.country_id === formData.countryId);
+    const selectedRegion = regions.find(r => r.region_id === formData.regionId);
+
     const signUpData = {
       ...formData,
       first_name: formData.firstName,
-      last_name: formData.lastName
+      last_name: formData.lastName,
+      country: selectedCountry ? selectedCountry.country_name : formData.countryId,
+      region: selectedRegion ? selectedRegion.region_name : formData.regionId
     }
 
     const result = await signUp(signUpData)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useGeography } from '../hooks/useGeography'
@@ -103,17 +103,23 @@ export const CreatePatient = ({ onBack, userRole }) => {
         setError(null)
 
         // Split lists by comma
-        const allergiesArr = formData.allergies ? formData.allergies.split(',').map(s => s.trim()).filter(Boolean) : []
-        const conditionsArr = formData.chronicConditions ? formData.chronicConditions.split(',').map(s => s.trim()).filter(Boolean) : []
 
-        const payload = {
+
+
+        // Resolve IDs to Names
+        const selectedCountry = countries.find(c => c.country_id === formData.countryId);
+        const selectedRegion = regions.find(r => r.region_id === formData.regionId);
+
+        const patientData = {
             ...formData,
-            allergies: allergiesArr,
-            chronicConditions: conditionsArr,
-            currentMedications: formData.currentMedications ? [formData.currentMedications] : []
+            country: selectedCountry ? selectedCountry.country_name : formData.countryId,
+            region: selectedRegion ? selectedRegion.region_name : formData.regionId,
+            allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
+            chronicConditions: formData.chronicConditions ? formData.chronicConditions.split(',').map(s => s.trim()) : [],
+            currentMedications: formData.currentMedications ? formData.currentMedications.split(',').map(s => s.trim()) : []
         }
 
-        const result = await registerPatient(payload)
+        const result = await registerPatient(patientData)
 
         if (result.success) {
             setSuccess({

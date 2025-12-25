@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext'
 import { useGeography } from '../hooks/useGeography'
 import { TopBar } from '../components/TopBar'
 import { InputField } from '../components/InputField'
+import { SelectField } from '../components/SelectField'
 import SearchableSelect from '../components/SearchableSelect'
 import { AnimatedButton } from '../components/AnimatedButton'
-import { specialtyOptions } from '../constants/options'
+import { specialtyOptions, genderOptions } from '../constants/options'
 import styles from './CreateDoctor.module.css'
 
 export const CreateDoctor = ({ onBack, userRole }) => {
@@ -27,6 +28,8 @@ export const CreateDoctor = ({ onBack, userRole }) => {
         specialty: '',
         phone: '',
         licenseNumber: '',
+        gender: 'male',
+        dateOfBirth: '',
         countryId: '',
         regionId: '',
         hospitalId: ''
@@ -36,7 +39,6 @@ export const CreateDoctor = ({ onBack, userRole }) => {
     const [success, setSuccess] = useState(false)
 
     // Set default country (Egypt) once countries are loaded
-    // Set default country (Egypt) once countries are loaded
     useEffect(() => {
         if (countries.length > 0 && !formData.countryId) {
             const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
@@ -45,7 +47,7 @@ export const CreateDoctor = ({ onBack, userRole }) => {
                 selectCountry(egypt.country_id)
             }
         }
-    }, [countries, formData.countryId, handleInputChange, selectCountry])
+    }, [countries, formData.countryId, selectCountry])
 
     const onCountryChange = (e) => {
         const val = e.target.value
@@ -62,7 +64,7 @@ export const CreateDoctor = ({ onBack, userRole }) => {
         selectRegion(val)
     }
 
-    const handleInputChange = useCallback((field, value) => {
+    const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }))
         setValidationErrors(prev => {
             if (prev[field]) {
@@ -71,7 +73,7 @@ export const CreateDoctor = ({ onBack, userRole }) => {
             return prev
         })
         clearError()
-    }, [clearError])
+    }
 
     const validateForm = () => {
         const errors = {}
@@ -80,6 +82,8 @@ export const CreateDoctor = ({ onBack, userRole }) => {
         if (!formData.specialty) errors.specialty = 'Specialty selection is required'
         if (!formData.licenseNumber.trim()) errors.licenseNumber = 'License number is required'
         if (!formData.hospitalId) errors.hospitalId = 'Hospital selection is required'
+        if (!formData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required'
+        if (!formData.gender) errors.gender = 'Gender is required'
 
         if (!formData.password) {
             errors.password = 'Password is required'
@@ -99,7 +103,17 @@ export const CreateDoctor = ({ onBack, userRole }) => {
         e.preventDefault()
         if (!validateForm()) return
 
-        const result = await registerDoctor(formData)
+        // Resolve IDs to Names
+        const selectedCountry = countries.find(c => c.country_id === formData.countryId);
+        const selectedRegion = regions.find(r => r.region_id === formData.regionId);
+
+        const docData = {
+            ...formData,
+            country: selectedCountry ? selectedCountry.country_name : formData.countryId,
+            region: selectedRegion ? selectedRegion.region_name : formData.regionId
+        }
+
+        const result = await registerDoctor(docData)
         if (result.success) {
             setSuccess(true)
         }
@@ -111,7 +125,7 @@ export const CreateDoctor = ({ onBack, userRole }) => {
                 <TopBar userRole="admin" onBack={() => {
                     setSuccess(false); setFormData({
                         fullName: '', email: '', password: '', confirmPassword: '', specialty: '', phone: '', licenseNumber: '',
-                        countryId: '', regionId: '', hospitalId: ''
+                        gender: 'male', dateOfBirth: '', countryId: '', regionId: '', hospitalId: ''
                     })
                 }} />
                 <div className={styles.container}>
@@ -130,7 +144,7 @@ export const CreateDoctor = ({ onBack, userRole }) => {
                                 <AnimatedButton variant="primary" fullWidth onClick={() => {
                                     setSuccess(false); setFormData({
                                         fullName: '', email: '', password: '', confirmPassword: '', specialty: '', phone: '', licenseNumber: '',
-                                        countryId: '', regionId: '', hospitalId: ''
+                                        gender: 'male', dateOfBirth: '', countryId: '', regionId: '', hospitalId: ''
                                     })
                                 }}>Provision Another Staff Member</AnimatedButton>
                                 <AnimatedButton variant="secondary" fullWidth onClick={onBack}>Return to Dashboard</AnimatedButton>
@@ -182,7 +196,6 @@ export const CreateDoctor = ({ onBack, userRole }) => {
                                 onChange={(e) => handleInputChange('specialty', e.target.value)}
                                 options={specialtyOptions}
                                 required
-                                placeholder="Search medical specialty..."
                             />
                             <InputField
                                 label="Medical License Number"
@@ -190,6 +203,22 @@ export const CreateDoctor = ({ onBack, userRole }) => {
                                 value={formData.licenseNumber}
                                 onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
                                 error={validationErrors.licenseNumber}
+                                required
+                            />
+                            <SelectField
+                                label="Gender"
+                                value={formData.gender}
+                                onChange={(e) => handleInputChange('gender', e.target.value)}
+                                options={genderOptions}
+                                required
+                                error={validationErrors.gender}
+                            />
+                            <InputField
+                                label="Date of Birth"
+                                type="date"
+                                value={formData.dateOfBirth}
+                                onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                                error={validationErrors.dateOfBirth}
                                 required
                             />
                             <SearchableSelect

@@ -4,13 +4,12 @@ import { useAuth } from '../context/AuthContext'
 import { useGeography } from '../hooks/useGeography'
 import { TopBar } from '../components/TopBar'
 import { InputField } from '../components/InputField'
-import { SelectField } from '../components/SelectField'
 import SearchableSelect from '../components/SearchableSelect'
 import { AnimatedButton } from '../components/AnimatedButton'
 import { specialtyOptions } from '../constants/options'
 import styles from './CreateDoctor.module.css'
 
-export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
+export const CreateDoctor = ({ onBack, userRole }) => {
     const { registerDoctor, isLoading, error, clearError } = useAuth()
     const {
         countries,
@@ -29,10 +28,7 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
         phone: '',
         licenseNumber: '',
         countryId: '',
-        countryCode: '',
-        countryName: '',
         regionId: '',
-        regionName: '',
         hospitalId: ''
     })
 
@@ -40,38 +36,42 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
     const [success, setSuccess] = useState(false)
 
     // Set default country (Egypt) once countries are loaded
+    // Set default country (Egypt) once countries are loaded
     useEffect(() => {
         if (countries.length > 0 && !formData.countryId) {
-            const defaultCountry = countries.find(c => c.country_name === 'Egypt') || countries[0]
-            handleInputChange('countryId', defaultCountry.country_id)
-            handleInputChange('countryCode', defaultCountry.country_code)
-            handleInputChange('countryName', defaultCountry.country_name)
-            selectCountry(defaultCountry.country_id)
+            const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
+            if (egypt) {
+                handleInputChange('countryId', egypt.country_id)
+                selectCountry(egypt.country_id)
+            }
         }
-    }, [countries])
+    }, [countries, formData.countryId, handleInputChange, selectCountry])
 
     const onCountryChange = (e) => {
-        const selected = countries.find(c => c.country_id === e.target.value)
-        handleInputChange('countryId', e.target.value)
-        handleInputChange('countryCode', selected?.country_code || '')
-        handleInputChange('countryName', selected?.country_name || '')
-        selectCountry(e.target.value)
+        const val = e.target.value
+        handleInputChange('countryId', val)
+        handleInputChange('regionId', '')
+        handleInputChange('hospitalId', '')
+        selectCountry(val)
     }
 
     const onRegionChange = (e) => {
-        const selected = regions.find(r => r.region_id === e.target.value)
-        handleInputChange('regionId', e.target.value)
-        handleInputChange('regionName', selected?.region_name || '')
-        selectRegion(e.target.value)
+        const val = e.target.value
+        handleInputChange('regionId', val)
+        handleInputChange('hospitalId', '')
+        selectRegion(val)
     }
 
-    const handleInputChange = (field, value) => {
+    const handleInputChange = useCallback((field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }))
-        if (validationErrors[field]) {
-            setValidationErrors(prev => ({ ...prev, [field]: '' }))
-        }
+        setValidationErrors(prev => {
+            if (prev[field]) {
+                return { ...prev, [field]: '' }
+            }
+            return prev
+        })
         clearError()
-    }
+    }, [clearError])
 
     const validateForm = () => {
         const errors = {}
@@ -81,11 +81,10 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
         if (!formData.licenseNumber.trim()) errors.licenseNumber = 'License number is required'
         if (!formData.hospitalId) errors.hospitalId = 'Hospital selection is required'
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{16,}$/
         if (!formData.password) {
             errors.password = 'Password is required'
-        } else if (!passwordRegex.test(formData.password)) {
-            errors.password = 'Password must be 16+ chars with mixed cases, digits & symbols'
+        } else if (formData.password.length < 6) {
+            errors.password = 'Password must be at least 6 characters'
         }
 
         if (formData.password !== formData.confirmPassword) {
@@ -109,18 +108,14 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
     if (success) {
         return (
             <div className={styles.pageWrapper}>
-                <TopBar userRole="administrator" onBack={() => {
+                <TopBar userRole="admin" onBack={() => {
                     setSuccess(false); setFormData({
                         fullName: '', email: '', password: '', confirmPassword: '', specialty: '', phone: '', licenseNumber: '',
-                        countryId: '', countryCode: '', countryName: '', regionId: '', regionName: '', hospitalId: ''
+                        countryId: '', regionId: '', hospitalId: ''
                     })
                 }} />
                 <div className={styles.container}>
-                    <motion.div
-                        className={styles.card}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                    >
+                    <motion.div className={styles.card} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                         <div className={styles.successView}>
                             <div className={styles.successIcon}>🛡️</div>
                             <h2 className={styles.title}>Account Provisioned</h2>
@@ -128,14 +123,14 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                                 Doctor <strong>{formData.fullName}</strong> has been successfully registered.
                                 <br /><br />
                                 <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>
-                                    ⚠️ ACTION REQUIRED: An activation email has been sent. The doctor must confirm their email before they can sign in.
+                                    ⚠️ Activation email sent. The doctor must confirm their email before signing in.
                                 </span>
                             </p>
                             <div className={styles.successActions}>
                                 <AnimatedButton variant="primary" fullWidth onClick={() => {
                                     setSuccess(false); setFormData({
                                         fullName: '', email: '', password: '', confirmPassword: '', specialty: '', phone: '', licenseNumber: '',
-                                        countryId: '', countryCode: '', countryName: '', regionId: '', regionName: '', hospitalId: ''
+                                        countryId: '', regionId: '', hospitalId: ''
                                     })
                                 }}>Provision Another Staff Member</AnimatedButton>
                                 <AnimatedButton variant="secondary" fullWidth onClick={onBack}>Return to Dashboard</AnimatedButton>
@@ -151,26 +146,13 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
         <div className={styles.pageWrapper}>
             <TopBar userRole={userRole} onBack={onBack} />
             <div className={styles.container}>
-                <motion.div
-                    className={styles.card}
-                    initial="hidden"
-                    animate="visible"
-                    variants={{
-                        hidden: { opacity: 0, scale: 0.98 },
-                        visible: {
-                            opacity: 1,
-                            scale: 1,
-                            transition: {
-                                duration: 0.8,
-                                ease: [0.22, 1, 0.36, 1],
-                                staggerChildren: 0.15
-                            }
-                        }
-                    }}
-                >
+                <motion.div className={styles.card} initial="hidden" animate="visible" variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+                }}>
                     <div className={styles.header}>
                         <h1 className={styles.title}>Provision Medical Staff</h1>
-                        <p className={styles.subtitle}>Add a new healthcare practitioner to the clinical network according to system schema.</p>
+                        <p className={styles.subtitle}>Add a new healthcare practitioner to the clinical network.</p>
                     </div>
 
                     {error && <div className={styles.alertError}>{error}</div>}
@@ -184,7 +166,6 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                                 onChange={(e) => handleInputChange('fullName', e.target.value)}
                                 error={validationErrors.fullName}
                                 required
-                                autoComplete="name"
                             />
                             <InputField
                                 label="Medical Email"
@@ -194,10 +175,9 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                                 onChange={(e) => handleInputChange('email', e.target.value)}
                                 error={validationErrors.email}
                                 required
-                                autoComplete="username"
                             />
                             <SearchableSelect
-                                label="Specialty / System Role"
+                                label="Specialty"
                                 value={formData.specialty}
                                 onChange={(e) => handleInputChange('specialty', e.target.value)}
                                 options={specialtyOptions}
@@ -216,23 +196,17 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                                 label="Country"
                                 value={formData.countryId}
                                 onChange={onCountryChange}
-                                options={countries.map(c => ({
-                                    value: c.country_id,
-                                    label: c.country_name,
-                                    code: c.country_code
-                                }))}
+                                options={countries.map(c => ({ value: c.country_id, label: c.country_name, flag_url: c.flag_url }))}
+                                isCountry
                                 required
-                                isCountry={true}
-                                placeholder="Search country..."
                             />
                             <SearchableSelect
-                                label="Region / State"
+                                label="Region"
                                 value={formData.regionId}
                                 onChange={onRegionChange}
                                 options={regions.map(r => ({ value: r.region_id, label: r.region_name }))}
                                 required
                                 disabled={!formData.countryId}
-                                placeholder={!formData.countryId ? "Select country first" : "Search region..."}
                             />
                             <SearchableSelect
                                 label="Clinical Hospital"
@@ -242,27 +216,22 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                                 required
                                 disabled={!formData.regionId}
                                 error={validationErrors.hospitalId}
-                                placeholder={!formData.regionId ? "Select region first" : "Search hospitals..."}
                             />
                             <InputField
                                 label="Security Password"
                                 type="password"
-                                placeholder="••••••••••••••••"
                                 value={formData.password}
                                 onChange={(e) => handleInputChange('password', e.target.value)}
                                 error={validationErrors.password}
                                 required
-                                autoComplete="new-password"
                             />
                             <InputField
                                 label="Confirm Password"
                                 type="password"
-                                placeholder="••••••••••••••••"
                                 value={formData.confirmPassword}
                                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                                 error={validationErrors.confirmPassword}
                                 required
-                                autoComplete="new-password"
                             />
                             <div className={styles.fullGrid}>
                                 <InputField
@@ -281,7 +250,7 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                             fullWidth
                             isLoading={isLoading}
                         >
-                            Provision Account & Grant Access
+                            Provision Account
                         </AnimatedButton>
                     </form>
                 </motion.div>

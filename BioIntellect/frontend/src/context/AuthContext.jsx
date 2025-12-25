@@ -6,7 +6,7 @@ const AuthContext = createContext()
 const CURRENT_USER_KEY = 'biointellect_current_user'
 const USER_ROLE_KEY = 'userRole'
 
-const CLINICAL_ROLES = ['administrator', 'mini_administrator', 'Cardiologist', 'Neurologist', 'General Physician', 'Pediatrician', 'General Surgeon'];
+const CLINICAL_ROLES = ['super_admin', 'admin', 'doctor', 'nurse', 'patient'];
 
 /**
  * EXTREME VERIFICATION PROTOCOL - CLINICAL ASSERTION HELPER
@@ -44,41 +44,78 @@ export const AuthProvider = ({ children }) => {
         if (authUser) {
           console.log("🔓 [SESSION]: Active session verified for:", authUser.id);
 
-          // 2. Resolve Clinical Profile
-          const userRoleFromAuth = authUser.user_metadata?.user_role
+          // 2. Resolve Clinical Profile using the new schema
+          const userRoleFromAuth = authUser.user_metadata?.role || authUser.user_metadata?.user_role
           let userData = null
 
           if (userRoleFromAuth === 'patient') {
             const { data: patientData } = await supabase
               .from('patients')
-              .select('*')
-              .eq('patient_id', authUser.id)
+              .select('*, hospitals(hospital_name_en)')
+              .eq('user_id', authUser.id)
               .maybeSingle()
 
             if (patientData) {
               userData = {
                 ...patientData,
-                id: authUser.id,
+                id: patientData.id,
                 full_name: `${patientData.first_name} ${patientData.last_name}`,
-                user_role: 'patient'
+                user_role: 'patient',
+                hospital_name: patientData.hospitals?.hospital_name_en
               }
             }
-          } else {
-            const { data: staffData } = await supabase
-              .from('users')
-              .select('*')
+          } else if (userRoleFromAuth === 'doctor') {
+            const { data: doctorData } = await supabase
+              .from('doctors')
+              .select('*, hospitals(hospital_name_en)')
               .eq('user_id', authUser.id)
               .maybeSingle()
 
-            if (staffData) {
-              userData = staffData
+            if (doctorData) {
+              userData = {
+                ...doctorData,
+                id: doctorData.id,
+                full_name: `${doctorData.first_name} ${doctorData.last_name}`,
+                user_role: 'doctor',
+                hospital_name: doctorData.hospitals?.hospital_name_en
+              }
+            }
+          } else if (userRoleFromAuth === 'admin' || userRoleFromAuth === 'super_admin') {
+            const { data: adminData } = await supabase
+              .from('administrators')
+              .select('*, hospitals(hospital_name_en)')
+              .eq('user_id', authUser.id)
+              .maybeSingle()
+
+            if (adminData) {
+              userData = {
+                ...adminData,
+                id: adminData.id,
+                full_name: `${adminData.first_name} ${adminData.last_name}`,
+                user_role: userRoleFromAuth,
+                hospital_name: adminData.hospitals?.hospital_name_en
+              }
+            }
+          } else if (userRoleFromAuth === 'nurse') {
+            const { data: nurseData } = await supabase
+              .from('nurses')
+              .select('*, hospitals(hospital_name_en)')
+              .eq('user_id', authUser.id)
+              .maybeSingle()
+
+            if (nurseData) {
+              userData = {
+                ...nurseData,
+                id: nurseData.id,
+                full_name: `${nurseData.first_name} ${nurseData.last_name}`,
+                user_role: 'nurse',
+                hospital_name: nurseData.hospitals?.hospital_name_en
+              }
             }
           }
 
           if (userData) {
-            const rawRole = userData.user_role
-            const finalRole = CLINICAL_ROLES.includes(rawRole) ? rawRole : (rawRole === 'patient' ? 'patient' : 'administrator')
-
+            const finalRole = userData.user_role
             setCurrentUser(userData)
             setIsAuthenticated(true)
             setUserRole(finalRole)
@@ -153,7 +190,7 @@ export const AuthProvider = ({ children }) => {
   }, [isAuthenticated])
 
   const selectRole = useCallback((role) => {
-    if (!['doctor', 'patient', 'administrator'].includes(role)) {
+    if (!['doctor', 'patient', 'admin', 'super_admin', 'nurse'].includes(role)) {
       setError('Invalid role')
       return
     }
@@ -184,7 +221,7 @@ export const AuthProvider = ({ children }) => {
     // Validate types and content
     assert(email && typeof email === 'string' && email.includes('@'), "EMAIL IS INVALID OR MISSING!");
     assert(password && typeof password === 'string' && password.length >= 6, "PASSWORD DOES NOT MEET SECURITY REQUIREMENTS!");
-    assert(role && ['patient', 'doctor', 'administrator'].includes(role), `ROLE "${role}" IS NOT ALLOWED BY SYSTEM!`);
+    assert(role && CLINICAL_ROLES.includes(role), `ROLE "${role}" IS NOT ALLOWED BY SYSTEM!`);
 
     const derivedName = (firstName && lastName) ? `${firstName} ${lastName}` : (signUpData.full_name || 'System User')
     const full_name = derivedName.trim() || 'System User'
@@ -196,17 +233,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const payloadMetadata = {
         full_name: full_name,
-        user_role: role,
+        role: role, // SQL trigger expects 'role'
         first_name: firstName,
         last_name: lastName,
         date_of_birth: dateOfBirth,
         gender: gender || 'male',
-        v_creator_id: 'SELF',
-        v_creator_role: 'SELF',
         hospital_id: signUpData.hospitalId || null,
-        country_id: signUpData.countryId || null,
-        region_id: signUpData.regionId || null,
-        country_code: signUpData.countryCode || null
+        license_number: signUpData.licenseNumber || 'PENDING'
       };
 
       console.log("━━━━ [PROTOCOL] SQL/METADATA MAPPING ━━━━");
@@ -276,18 +309,17 @@ export const AuthProvider = ({ children }) => {
       console.log("2. Auth Success:", authData.user.id);
 
       // 2. Resolve Profile - Direct lookup in the appropriate table based on role
-      const userRoleFromAuth = authData.user.user_metadata?.user_role
+      const userRoleFromAuth = authData.user.user_metadata?.role || authData.user.user_metadata?.user_role
       console.log("3. Role Verification:", { selectedRole: userRole, authRole: userRoleFromAuth });
 
       // Enforce Strict Login Separation:
-      if (userRole === 'patient') {
-        if (userRoleFromAuth !== 'patient') {
-          await supabase.auth.signOut()
-          throw new Error('Access Denied: This login portal is restricted to patients only. Medical staff must use the Staff Portal.');
-        }
-      } else if (userRoleFromAuth === 'patient') {
+      if (userRole === 'patient' && userRoleFromAuth !== 'patient') {
         await supabase.auth.signOut()
-        throw new Error('Access Denied: Patients cannot access the Medical Staff Portal. Please use the Patient Login.');
+        throw new Error('Access Denied: This login portal is restricted to patients only.');
+      }
+      if (userRole !== 'patient' && userRoleFromAuth === 'patient') {
+        await supabase.auth.signOut()
+        throw new Error('Access Denied: Patients cannot access the Staff Portal.');
       }
 
       let userData = null
@@ -296,8 +328,8 @@ export const AuthProvider = ({ children }) => {
       if (userRoleFromAuth === 'patient') {
         const { data: patientData, error: patientError } = await supabase
           .from('patients')
-          .select('*')
-          .eq('patient_id', authData.user.id)
+          .select('*, hospitals(hospital_name_en)')
+          .eq('user_id', authData.user.id)
           .maybeSingle()
 
         if (patientError) throw patientError
@@ -305,32 +337,68 @@ export const AuthProvider = ({ children }) => {
 
         userData = {
           ...patientData,
-          id: authData.user.id,
+          id: patientData.id,
           full_name: `${patientData.first_name} ${patientData.last_name}`,
-          user_role: 'patient'
+          user_role: 'patient',
+          hospital_name: patientData.hospitals?.hospital_name_en
         }
-      } else {
-        const { data: staffData, error: staffError } = await supabase
-          .from('users')
-          .select('*')
+      } else if (userRoleFromAuth === 'doctor') {
+        const { data: doctorData, error: doctorError } = await supabase
+          .from('doctors')
+          .select('*, hospitals(hospital_name_en)')
           .eq('user_id', authData.user.id)
           .maybeSingle()
 
-        if (staffError) throw staffError
-        assert(staffData, "STAFF PROFILE RECORD NOT FOUND.");
-        userData = staffData
+        if (doctorError) throw doctorError
+        assert(doctorData, "DOCTOR PROFILE RECORD NOT FOUND.");
+        userData = {
+          ...doctorData,
+          id: doctorData.id,
+          full_name: `${doctorData.first_name} ${doctorData.last_name}`,
+          user_role: 'doctor',
+          hospital_name: doctorData.hospitals?.hospital_name_en
+        }
+      } else if (userRoleFromAuth === 'admin' || userRoleFromAuth === 'super_admin') {
+        const { data: adminData, error: adminError } = await supabase
+          .from('administrators')
+          .select('*, hospitals(hospital_name_en)')
+          .eq('user_id', authData.user.id)
+          .maybeSingle()
+
+        if (adminError) throw adminError
+        assert(adminData, "ADMIN PROFILE RECORD NOT FOUND.");
+        userData = {
+          ...adminData,
+          id: adminData.id,
+          full_name: `${adminData.first_name} ${adminData.last_name}`,
+          user_role: userRoleFromAuth,
+          hospital_name: adminData.hospitals?.hospital_name_en
+        }
+      } else if (userRoleFromAuth === 'nurse') {
+        const { data: nurseData, error: nurseError } = await supabase
+          .from('nurses')
+          .select('*, hospitals(hospital_name_en)')
+          .eq('user_id', authData.user.id)
+          .maybeSingle()
+
+        if (nurseError) throw nurseError
+        assert(nurseData, "NURSE PROFILE RECORD NOT FOUND.");
+        userData = {
+          ...nurseData,
+          id: nurseData.id,
+          full_name: `${nurseData.first_name} ${nurseData.last_name}`,
+          user_role: 'nurse',
+          hospital_name: nurseData.hospitals?.hospital_name_en
+        }
       }
 
       console.log("5. Profile Resolved:", JSON.stringify(userData, null, 2));
       localStorage.setItem('biointellect_current_user', JSON.stringify(userData))
 
-      const rawRole = userData.user_role
-      const finalRole = CLINICAL_ROLES.includes(rawRole) ? 'administrator' : rawRole
-
       setCurrentUser(userData)
       setIsAuthenticated(true)
-      setUserRole(finalRole)
-      localStorage.setItem('userRole', finalRole)
+      setUserRole(userRoleFromAuth)
+      localStorage.setItem(USER_ROLE_KEY, userRoleFromAuth)
 
       console.log("✅ [SUCCESS]: Login Verified for role:", finalRole);
       setIsLoading(false)
@@ -490,27 +558,20 @@ export const AuthProvider = ({ children }) => {
         }
       })
 
-      const { email, password, fullName, specialty, phone, licenseNumber, hospitalId, countryId, regionId } = doctorData
-
-      const creatorRole = currentUser?.user_role || userRole || 'SELF'
+      const { email, password, fullName, specialty, phone, licenseNumber, hospitalId } = doctorData
 
       // EXTREME CHECKS
       assert(email && typeof email === 'string' && email.includes('@'), "STAFF EMAIL IS INVALID!");
       assert(fullName && typeof fullName === 'string' && fullName.length >= 2, "STAFF FULL NAME IS INVALID!");
       assert(CLINICAL_ROLES.includes(specialty), `STAFF ROLE "${specialty}" IS NOT RECOGNIZED BY SYSTEM!`);
 
-      // Ensure Creator ID is explicit
-      const creatorId = currentUser?.id || currentUser?.user_id || 'SELF'
-
       const payloadMetadata = {
-        full_name: fullName || 'Medical Staff', // FRONTEND FIX: Fallback to prevent DB error
-        user_role: specialty || 'General Physician',
+        full_name: fullName || 'Medical Staff',
+        role: specialty || 'doctor', // Trigger expects 'role'
+        first_name: fullName.split(' ')[0] || 'Unknown',
+        last_name: fullName.split(' ').slice(1).join(' ') || 'Unknown',
         hospital_id: hospitalId,
-        country_id: countryId,
-        region_id: regionId,
-        country_code: doctorData.countryCode || null,
-        v_creator_id: creatorId,
-        v_creator_role: creatorRole
+        license_number: licenseNumber || 'PENDING'
       };
 
       console.log("2. Metadata Mapping:", JSON.stringify(payloadMetadata, null, 2));
@@ -533,18 +594,15 @@ export const AuthProvider = ({ children }) => {
       }
       assert(authData.user, "AUTH USER CREATION FAILED - NO USER RETURNED!");
 
-      // Record in public.users is handled by SQL trigger handle_secure_user_creation
-      // However, we might need to update details if the trigger is missing some fields
-      const { error: updateError } = await supabase.from('users').update({
-        phone_number: phone || null,
-        license_number: licenseNumber || null,
-        specialty: specialty || null,
-        hospital_id: hospitalId || null,
-        country_id: countryId || null,
-        region_id: regionId || null
-      }).eq('user_id', authData.user.id)
-
-      if (updateError) console.warn('User table update warning:', updateError.message)
+      // Trigger handle_new_user in DB will create the profile automatically.
+      // We only update additional fields if necessary.
+      if (specialty) {
+        await supabase.from('doctor_specialties').insert({
+          doctor_id: (await supabase.from('doctors').select('id').eq('user_id', authData.user.id).single()).data.id,
+          specialty_id: (await supabase.from('specialty_types').select('id').eq('specialty_code', specialty).single()).data.id,
+          is_primary: true
+        })
+      }
 
       setIsLoading(false)
       return { success: true, user: authData.user }
@@ -554,7 +612,7 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(false)
       return { success: false, error: err.message }
     }
-  }, [currentUser])
+  }, [currentUser, userRole])
 
   /**
    * @param {Object} patientData
@@ -593,12 +651,10 @@ export const AuthProvider = ({ children }) => {
         email, password, firstName, lastName, dateOfBirth, gender,
         phone, address, city, bloodType, allergies,
         chronicConditions, emergencyContactName, emergencyContactPhone,
-        emergencyContactRelation, currentMedications, consentGiven,
-        dataRetentionUntil, hospitalId, countryId, regionId
+        emergencyContactRelation, currentMedications, hospitalId
       } = patientData
 
       const full_name = `${firstName || ''} ${lastName || ''}`.trim() || 'Anonymous Patient'
-      const creatorRole = currentUser?.user_role || userRole || 'SELF'
 
       // EXTREME CHECKS
       assert(email && typeof email === 'string' && email.includes('@'), "PATIENT EMAIL IS INVALID!");
@@ -606,16 +662,12 @@ export const AuthProvider = ({ children }) => {
 
       const payloadMetadata = {
         full_name: full_name,
-        user_role: 'patient',
+        role: 'patient', // Trigger expects 'role'
         first_name: firstName,
         last_name: lastName,
         date_of_birth: dateOfBirth,
         gender: gender || 'male',
-        hospital_id: hospitalId,
-        country_id: countryId,
-        region_id: regionId,
-        v_creator_id: currentUser?.id || currentUser?.user_id || 'SELF',
-        v_creator_role: creatorRole
+        hospital_id: hospitalId
       };
 
       console.log("2. Metadata Mapping:", JSON.stringify(payloadMetadata, null, 2));
@@ -638,39 +690,23 @@ export const AuthProvider = ({ children }) => {
       }
       assert(authData.user, "PATIENT AUTH CREATION FAILED!");
 
-      // 2. Additional patient details update
+      // Additional patient details update
       const { data: patientRecord, error: patientError } = await supabase.from('patients').update({
-        phone_number: phone || null,
+        phone: phone || null,
         address: address || null,
         city: city || null,
         emergency_contact_name: emergencyContactName || null,
         emergency_contact_phone: emergencyContactPhone || null,
         emergency_contact_relation: emergencyContactRelation || null,
-        blood_type: bloodType || null,
+        blood_type: bloodType || 'unknown',
         allergies: allergies || [],
         chronic_conditions: chronicConditions || [],
-        current_medications: currentMedications || {},
-        created_by: currentUser?.user_id || currentUser?.id,
-        is_active: true,
-        consent_given: consentGiven || false,
-        consent_date: consentGiven ? new Date().toISOString() : null,
-        data_retention_until: dataRetentionUntil || null,
-        hospital_id: hospitalId || null,
-        country_id: countryId || null,
-        region_id: regionId || null
-      }).eq('patient_id', authData.user.id).select().single()
+        current_medications: currentMedications || [],
+        is_active: true
+      }).eq('user_id', authData.user.id).select().single()
 
       if (patientError) {
-        console.warn('Patient extended update failed, trying email secondary fallback:', patientError.message)
-        const { error: secondError } = await supabase.from('patients').update({
-          phone_number: phone || null,
-          address: address || null,
-          hospital_id: hospitalId || null,
-          country_id: countryId || null,
-          region_id: regionId || null
-        }).eq('email', email)
-
-        if (secondError) console.error("Patient fallback update also failed:", secondError.message);
+        console.error("Patient update failed:", patientError.message);
       }
 
       setIsLoading(false)
@@ -685,7 +721,7 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(false)
       return { success: false, error: error.message }
     }
-  }, [currentUser])
+  }, [currentUser, userRole])
 
   /**
    * @param {Object} adminData
@@ -720,25 +756,20 @@ export const AuthProvider = ({ children }) => {
         }
       })
 
-      const { email, password, fullName, role, hospitalId, countryId, regionId } = adminData
+      const { email, password, fullName, role, hospitalId } = adminData
       const finalRole = role || 'administrator'
-      const creatorRole = currentUser?.user_role || userRole || 'SELF'
 
       // EXTREME CHECKS
       assert(email && typeof email === 'string' && email.includes('@'), "ADMIN EMAIL IS INVALID!");
       assert(fullName && typeof fullName === 'string' && fullName.length >= 2, "ADMIN NAME IS INVALID!");
       assert(['administrator', 'mini_administrator'].includes(finalRole), `ADMIN ROLE "${finalRole}" IS PROHIBITED!`);
 
-      const creatorId = currentUser?.id || currentUser?.user_id || 'SELF'
-
       const payloadMetadata = {
-        full_name: fullName || 'Administrator', // FRONTEND FIX: Prevent null value
-        user_role: finalRole,
-        hospital_id: hospitalId,
-        country_id: countryId,
-        region_id: regionId,
-        v_creator_id: creatorId,
-        v_creator_role: creatorRole
+        full_name: fullName || 'Administrator',
+        role: finalRole, // Trigger expects 'role'
+        first_name: fullName.split(' ')[0] || 'Unknown',
+        last_name: fullName.split(' ').slice(1).join(' ') || 'Unknown',
+        hospital_id: hospitalId
       };
 
       console.log("2. Metadata Mapping:", JSON.stringify(payloadMetadata, null, 2));
@@ -770,149 +801,133 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(false)
       return { success: false, error: err.message }
     }
-  }, [currentUser])
+  }, [currentUser, userRole])
 
   /**
    * WORLDWIDE GEOGRAPHY INTEGRATION - RESTCOUNTRIES
    * @returns {Promise<Array>} List of global countries
    */
+  /**
+   * WORLDWIDE GEOGRAPHY INTEGRATION - RESTCOUNTRIES API
+   * @returns {Promise<Array>} List of global countries with flags and ISO codes
+   */
   const fetchCountries = useCallback(async () => {
     if (cache.current.countries) return cache.current.countries
 
     try {
-      console.log("━━━━ [PROTOCOL] API INSPECTION: FETCH_COUNTRIES ━━━━");
-      console.log("URL: https://restcountries.com/v3.1/all?fields=name,cca2,flags");
+      console.log("━━━━ [PROTOCOL] API INSPECTION: FETCH_COUNTRIES (RestCountries) ━━━━");
+      const response = await fetch('https://restcountries.com/v3.1/all?fields=name,flags,cca2,idd');
+      if (!response.ok) throw new Error('Failed to fetch countries');
 
-      const response = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2,flags');
-      console.log("🌐 Response Status:", response.status);
+      const data = await response.json();
 
-      assert(response.ok, `COUNTRIES API FAILED: ${response.status}`);
+      const formattedData = data.map(c => ({
+        country_id: c.cca2, // Use ISO code as ID for API consistency
+        country_name: c.name.common,
+        country_code: c.cca2,
+        phone_code: c.idd.root ? `${c.idd.root}${c.idd.suffixes?.[0] || ''}` : '',
+        flag_url: c.flags.svg
+      })).sort((a, b) => a.country_name.localeCompare(b.country_name));
 
-      const rawData = await response.json();
-      console.log("📦 Received Payload Sample (First 1):", JSON.stringify(rawData[0], null, 2));
-
-      // Structure Validation
-      assert(Array.isArray(rawData), "COUNTRIES API DID NOT RETURN AN ARRAY!");
-      assert(rawData.length > 0, "COUNTRIES API RETURNED EMPTY SET!");
-
-      // Transform into BioIntellect standard format
-      const formattedData = rawData.map(c => {
-        assert(c.cca2 && c.name?.common, "MALFORMED COUNTRY DATA IN PAYLOAD!");
-        return {
-          country_id: c.cca2,
-          country_name: c.name.common,
-          country_code: c.cca2,
-          flag_url: c.flags?.png || ''
-        };
-      }).sort((a, b) => a.country_name.localeCompare(b.country_name));
-
-      console.log(`✅ [SUCCESS]: Global load verified: ${formattedData.length} entries.`);
       cache.current.countries = formattedData;
       return formattedData;
     } catch (err) {
       console.error("🚨 [CRITICAL]: Geography API Error:", err.message);
-      // Failover to essential clinical regions if API is down
-      const failover = [
-        { country_id: 'EG', country_name: 'Egypt', country_code: 'EG' },
-        { country_id: 'SA', country_name: 'Saudi Arabia', country_code: 'SA' },
-        { country_id: 'US', country_name: 'United States', country_code: 'US' }
-      ];
-      console.log("♻️  [FAILOVER]: Loading essential regions instead.");
-      return failover;
+      return [];
     }
   }, [])
 
   /**
-   * REGION FETCHING - COUNTRIESNOW
+   * REGION FETCHING - COUNTRIESNOW API
    * @param {string} countryName 
    */
   const fetchRegions = useCallback(async (countryName) => {
     if (!countryName) return []
+    // Use countryName as key for cache since we work with API names/codes
     if (cache.current.regions[countryName]) return cache.current.regions[countryName]
 
     try {
-      console.log("━━━━ [PROTOCOL] API INSPECTION: FETCH_REGIONS ━━━━");
-      console.log("Input (countryName):", countryName);
+      console.log(`━━━━ [PROTOCOL] API INSPECTION: FETCH_REGIONS (${countryName}) ━━━━`);
 
-      const response = await fetch('https://countriesnow.space/api/v0.1/countries/states', {
+      // CountriesNow requires POST with country name
+      const response = await fetch('https://countriesnow.space/api/v0.1/countries/cities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ country: countryName })
       });
 
-      console.log("🌐 Response Status:", response.status);
-      assert(response.ok, `REGIONS API FAILED: ${response.status}`);
-
       const result = await response.json();
-      console.log("📦 Payload Status:", result.error ? 'API_ERROR' : 'SUCCESS');
 
-      if (result.error) {
-        console.warn(`[API Warning]: ${result.msg}`);
-        throw new Error(result.msg);
+      // Handle API variations (cities vs states). Using "cities" endpoint for now as requested "Region/City"
+      // If result.error is true, it might be because the country name doesn't match exactly.
+
+      let regionsList = [];
+      if (!result.error && result.data) {
+        regionsList = result.data.map((city, index) => ({
+          region_id: `${countryName}-${city}-${index}`, // Generate unique ID
+          region_name: city,
+          region_code: city.substring(0, 3).toUpperCase()
+        }));
       }
 
-      assert(result.data?.states, "API RESPONSE MISSING STATES PROPERTY!");
-
-      const formattedRegions = result.data.states.map((s, index) => ({
-        region_id: `${countryName}-${index}`, // Derived ID
-        region_name: s.name,
-        country_name: countryName
-      }));
-
-      console.log(`✅ [SUCCESS]: Resolved ${formattedRegions.length} regions for ${countryName}.`);
-      cache.current.regions[countryName] = formattedRegions;
-      return formattedRegions;
+      cache.current.regions[countryName] = regionsList;
+      return regionsList;
     } catch (err) {
-      console.error("🚨 [Data] Regions Extraction Error:", err.message);
+      console.error("🚨 [Data] Regions API Error:", err.message);
       return [];
     }
   }, [])
 
   /**
    * HOSPITAL FETCHING - SUPABASE PRIVATE NETWORK
-   * @param {Object|string} locationData 
+   * Note: This remains DB-bound. Since we switched to Global API for regions,
+   * strict region_id filtering will interpret the string ID as invalid UUID.
+   * We will modify to fetch ALL active hospitals if regionId looks like an API string,
+   * or implement a smarter filter later. For now, we fetch all and let UI filter or return strict.
    */
-  const fetchHospitals = useCallback(async (locationData) => {
-    // locationData can be a string (regionName) or object { regionName, countryName }
-    const regionName = typeof locationData === 'string' ? locationData : locationData?.regionName;
-    const countryName = typeof locationData === 'object' ? locationData?.countryName : null;
-
-    const cacheKey = regionName || countryName || 'global';
-    if (cache.current.hospitals[cacheKey]) return cache.current.hospitals[cacheKey]
+  const fetchHospitals = useCallback(async (regionId) => {
+    if (!regionId) return []
+    // Simple in-memory cache check
+    if (cache.current.hospitals['global']) return cache.current.hospitals['global']
 
     try {
       console.log("━━━━ [PROTOCOL] DB INSPECTION: FETCH_HOSPITALS ━━━━");
-      console.log("Location Param:", cacheKey);
+      const { data, error } = await supabase
+        .from('hospitals')
+        .select('*')
+        .eq('is_active', true)
+        .order('hospital_name_en');
 
-      // Query our private hospital network
-      let query = supabase.from('hospitals').select('*').order('hospital_name');
+      if (error) throw error;
 
-      if (regionName) {
-        query = query.ilike('address', `%${regionName}%`);
-      } else if (countryName) {
-        query = query.ilike('address', `%${countryName}%`);
-      }
+      const formattedHospitals = data.map(h => ({
+        hospital_id: h.id,
+        hospital_name: h.hospital_name_en,
+        hospital_code: h.hospital_code,
+        region_id: h.region_id // Keep for potential local filtering
+      }));
 
-      console.log("SQL Equivalent: SELECT * FROM hospitals WHERE address ILIKE ...");
-      const { data, error } = await query;
+      // Cache globally since we can't key by dynamic API region names easily
+      const defaultHospital = {
+        hospital_id: 'biointellect-main-hq',
+        hospital_name: 'BioIntellect Medical Center',
+        hospital_code: 'BIO-HQ',
+        region_id: 'global'
+      };
 
-      if (error) {
-        console.error("📥 [DB ERROR]:", error.message);
-        throw error;
-      }
+      const finalHospitals = [defaultHospital, ...formattedHospitals];
 
-      assert(Array.isArray(data), "HOSPITALS QUERY RETURNED INVALID RESULT!");
-
-      const results = (data && data.length > 0) ? data : [
-        { hospital_id: 'central-hub', hospital_name: 'BioIntellect Central Clinical Hub', address: 'Global Virtual Care' }
-      ];
-
-      console.log(`✅ [SUCCESS]: Found ${data?.length || 0} local facilities. Results:`, results.length);
-      cache.current.hospitals[cacheKey] = results;
-      return results;
+      cache.current.hospitals['global'] = finalHospitals;
+      return finalHospitals;
     } catch (err) {
-      console.error("🚨 [Data] Hospital Discovery Error:", err.message);
-      return [{ hospital_id: 'central-hub', hospital_name: 'BioIntellect Central Clinical Hub' }];
+      console.error("🚨 [Data] Hospital DB Error:", err.message);
+      // Fallback if DB fails
+      return [{
+        hospital_id: 'biointellect-main-hq',
+        hospital_name: 'BioIntellect Medical Center',
+        hospital_code: 'BIO-HQ',
+        region_id: 'global'
+      }];
     }
   }, [])
 

@@ -9,7 +9,6 @@ import { supabase } from '../config/supabase'
 import styles from './PatientDashboard.module.css'
 
 // Professional Icon Imports
-import analyticsIcon from '../images/icons/analytics.png'
 import cardioIcon from '../images/icons/cardio.png'
 import neuroIcon from '../images/icons/neuro.png'
 import insightsIcon from '../images/icons/insights.png'
@@ -20,7 +19,7 @@ export const PatientDashboard = ({
     onMriSegmentation,
     onMedicalLlm
 }) => {
-    const { currentUser, userRole, signOut } = useAuth()
+    const { currentUser, userRole } = useAuth()
     const [loading, setLoading] = useState(true)
     const [uploading, setUploading] = useState(false)
     const [profile, setProfile] = useState(null)
@@ -32,7 +31,7 @@ export const PatientDashboard = ({
         last_name: '',
         date_of_birth: '',
         gender: '',
-        phone_number: '',
+        phone: '',
         address: '',
         medical_history: '',
     })
@@ -64,22 +63,18 @@ export const PatientDashboard = ({
         }
     ]
 
-    useEffect(() => {
-        if (currentUser) {
-            fetchProfile()
-        }
-    }, [currentUser])
-
     const fetchProfile = async () => {
         try {
             setLoading(true)
+            // Use user_id for authoritative lookup linked to auth.users
             const { data, error } = await supabase
                 .from('patients')
-                .select('*')
-                .eq('email', currentUser.email)
-                .single()
+                .select('*, hospitals(hospital_name_en)')
+                .eq('user_id', currentUser.user_id || currentUser.id)
+                .maybeSingle()
 
             if (error) throw error
+            if (!data) throw new Error('Clinical profile not found.')
 
             setProfile(data)
             setFormData({
@@ -87,17 +82,23 @@ export const PatientDashboard = ({
                 last_name: data.last_name || '',
                 date_of_birth: data.date_of_birth || '',
                 gender: data.gender || '',
-                phone_number: data.phone_number || '',
+                phone: data.phone || '',
                 address: data.address || '',
                 medical_history: data.medical_history || '',
             })
         } catch (error) {
             console.error('Error loading patient data:', error.message)
-            setMessage({ type: 'error', text: 'Failed to load profile data.' })
+            setMessage({ type: 'error', text: 'Failed to synchronize clinical profile.' })
         } finally {
             setLoading(false)
         }
     }
+
+    useEffect(() => {
+        if (currentUser) {
+            fetchProfile()
+        }
+    }, [currentUser])
 
     const handleUpdate = async (e) => {
         e.preventDefault()
@@ -106,18 +107,18 @@ export const PatientDashboard = ({
             const { error } = await supabase
                 .from('patients')
                 .update({
-                    phone_number: formData.phone_number,
+                    phone: formData.phone,
                     address: formData.address,
                     gender: formData.gender,
                     date_of_birth: formData.date_of_birth,
                     first_name: formData.first_name,
                     last_name: formData.last_name
                 })
-                .eq('patient_id', profile.patient_id)
+                .eq('id', profile.id)
 
             if (error) throw error
 
-            setMessage({ type: 'success', text: 'Profile updated successfully!' })
+            setMessage({ type: 'success', text: 'Clinical record updated successfully!' })
             setEditMode(false)
             fetchProfile()
 
@@ -143,6 +144,19 @@ export const PatientDashboard = ({
             <TopBar userRole={userRole} onLogout={onLogout} />
 
             <main className={styles.main}>
+                {message.text && (
+                    <div style={{
+                        padding: '1rem',
+                        margin: '1rem auto',
+                        maxWidth: '1200px',
+                        borderRadius: '8px',
+                        backgroundColor: message.type === 'error' ? '#fee2e2' : '#dcfce7',
+                        color: message.type === 'error' ? '#ef4444' : '#16a34a',
+                        border: `1px solid ${message.type === 'error' ? '#fca5a5' : '#86efac'}`
+                    }}>
+                        {message.text}
+                    </div>
+                )}
                 <motion.div
                     className={styles.hero}
                     initial={{ opacity: 0, y: -20 }}
@@ -260,8 +274,8 @@ export const PatientDashboard = ({
                             <InputField
                                 id="phone"
                                 label="Phone Number"
-                                value={formData.phone_number}
-                                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 disabled={!editMode}
                             />
                             <InputField

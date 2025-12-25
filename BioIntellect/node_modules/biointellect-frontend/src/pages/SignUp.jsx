@@ -10,19 +10,6 @@ import { AnimatedButton } from '../components/AnimatedButton'
 import { specialtyOptions, adminOptions } from '../constants/options'
 import styles from './SignUp.module.css'
 
-/**
- * SignUp Page
- * 
- * User registration interface
- * Features:
- * - Full name, email, password fields
- * - Form validation
- * - Schema-aligned field names (matching Supabase users table)
- * - Error handling
- * - Loading state
- * - Login link
- */
-
 export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
   const { signUp, isLoading, error, clearError, userRole } = useAuth()
   const {
@@ -39,14 +26,11 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'patient',
+    role: 'admin',
     dateOfBirth: '',
-    gender: '',
+    gender: 'male',
     countryId: '',
-    countryCode: '',
-    countryName: '',
     regionId: '',
-    regionName: '',
     hospitalId: ''
   })
   const [validationErrors, setValidationErrors] = useState({})
@@ -54,40 +38,38 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
   // Set default country (Egypt) once countries are loaded
   useEffect(() => {
     if (countries.length > 0 && !formData.countryId) {
-      const defaultCountry = countries.find(c => c.country_name === 'Egypt') || countries[0]
-      handleInputChange('countryId', defaultCountry.country_id)
-      handleInputChange('countryCode', defaultCountry.country_code)
-      handleInputChange('countryName', defaultCountry.country_name)
-      selectCountry(defaultCountry.country_id)
+      const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
+      if (egypt) {
+        handleInputChange('countryId', egypt.country_id)
+        selectCountry(egypt.country_id)
+      }
     }
   }, [countries])
 
   const onCountryChange = (e) => {
-    const selected = countries.find(c => c.country_id === e.target.value)
-    handleInputChange('countryId', e.target.value)
-    handleInputChange('countryCode', selected?.country_code || '')
-    handleInputChange('countryName', selected?.country_name || '')
-    selectCountry(e.target.value)
+    const val = e.target.value
+    handleInputChange('countryId', val)
+    handleInputChange('regionId', '')
+    handleInputChange('hospitalId', '')
+    selectCountry(val)
   }
 
   const onRegionChange = (e) => {
-    const selected = regions.find(r => r.region_id === e.target.value)
-    handleInputChange('regionId', e.target.value)
-    handleInputChange('regionName', selected?.region_name || '')
-    selectRegion(e.target.value)
+    const val = e.target.value
+    handleInputChange('regionId', val)
+    handleInputChange('hospitalId', '')
+    selectRegion(val)
   }
 
   // Determine available roles based on main role selection
   const roleOptions = useMemo(() => {
     if (userRole === 'doctor') {
-      return specialtyOptions.filter(opt =>
-        !['administrator', 'mini_administrator'].includes(opt.value)
-      )
+      return specialtyOptions
     }
     if (userRole === 'administrator') {
       return adminOptions
     }
-    return [{ value: 'patient', label: 'Patient' }]
+    return adminOptions
   }, [userRole])
 
   const genderOptions = [
@@ -133,10 +115,8 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
 
     if (!formData.hospitalId) errors.hospitalId = 'Clinical hospital selection is required'
 
-    // Patient specific validation
     if (userRole === 'patient') {
       if (!formData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required'
-      if (!formData.gender) errors.gender = 'Gender is required'
     }
 
     return errors
@@ -153,18 +133,9 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
 
     // Prepare data for AuthContext
     const signUpData = {
-      email: formData.email,
-      password: formData.password,
+      ...formData,
       first_name: formData.firstName,
-      last_name: formData.lastName,
-      role: formData.role,
-      date_of_birth: formData.dateOfBirth,
-      gender: formData.gender,
-      phone: formData.phone,
-      licenseNumber: formData.licenseNumber,
-      hospitalId: formData.hospitalId,
-      countryId: formData.countryId,
-      regionId: formData.regionId
+      last_name: formData.lastName
     }
 
     const result = await signUp(signUpData)
@@ -188,7 +159,7 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
           <div className={styles.header}>
             <h1 className={styles.title}>Create Account</h1>
             <p className={styles.subtitle}>
-              Join BioIntellect as a {userRole === 'doctor' ? 'Medical Professional' : userRole === 'administrator' ? 'System Administrator' : 'Patient'}
+              Join BioIntellect as a {userRole === 'doctor' ? 'Medical Professional' : 'System Administrator'}
             </p>
           </div>
 
@@ -203,10 +174,8 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
           )}
 
           <form onSubmit={handleSubmit} className={styles.form}>
-            {/* Name Fields Row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <InputField
-                id="firstName"
                 label="First Name"
                 placeholder="Ali"
                 value={formData.firstName}
@@ -215,7 +184,6 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
                 required
               />
               <InputField
-                id="lastName"
                 label="Last Name"
                 placeholder="Abdelhamid"
                 value={formData.lastName}
@@ -226,95 +194,72 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
             </div>
 
             <InputField
-              id="email"
               label="Email"
               type="email"
-              placeholder="example@hospital.com"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
               error={validationErrors.email}
               required
             />
 
-            {/* Role Dropdown */}
             <SelectField
-              id="role"
-              label={userRole === 'doctor' ? 'Specialty / Role' : userRole === 'administrator' ? 'System Role' : 'Role'}
+              label={userRole === 'doctor' ? 'Specialty' : ['admin', 'administrator', 'super_admin'].includes(userRole) ? 'System Role' : 'Role'}
               value={formData.role}
               onChange={(e) => handleInputChange('role', e.target.value)}
               options={roleOptions}
               error={validationErrors.role}
               required
-              placeholder="Select your specific role"
             />
 
-            {/* Clinical Location Row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <SearchableSelect
-                id="countryId"
                 label="Country"
                 value={formData.countryId}
                 onChange={onCountryChange}
-                options={countries.map(c => ({
-                  value: c.country_id,
-                  label: c.country_name,
-                  code: c.country_code
-                }))}
+                options={countries.map(c => ({ value: c.country_id, label: c.country_name, flag_url: c.flag_url }))}
+                isCountry
                 required
-                isCountry={true}
-                placeholder="Search for your country..."
               />
               <SearchableSelect
-                id="regionId"
-                label="Region / State"
+                label="Region"
                 value={formData.regionId}
                 onChange={onRegionChange}
                 options={regions.map(r => ({ value: r.region_id, label: r.region_name }))}
                 required
                 disabled={!formData.countryId}
-                placeholder={!formData.countryId ? "Select country first" : "Search regions..."}
               />
             </div>
 
             <SearchableSelect
-              id="hospitalId"
-              label="Assigned Clinical Hospital"
+              label="Hospital"
               value={formData.hospitalId}
               onChange={(e) => handleInputChange('hospitalId', e.target.value)}
               options={hospitals.map(h => ({ value: h.hospital_id, label: h.hospital_name }))}
               required
               disabled={!formData.regionId}
               error={validationErrors.hospitalId}
-              placeholder={!formData.regionId ? "Select region first" : "Search hospitals..."}
             />
 
-            {/* Doctor Specific Fields */}
             {userRole === 'doctor' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <InputField
-                  id="licenseNumber"
                   label="Medical License #"
                   placeholder="LIC-XXXXX"
                   value={formData.licenseNumber}
                   onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
-                  error={validationErrors.licenseNumber}
                   required
                 />
                 <InputField
-                  id="phone"
                   label="Phone Number"
-                  placeholder="+20 1XX..."
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                 />
               </div>
             )}
 
-            {/* Patient Specific Fields */}
             {userRole === 'patient' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <InputField
-                  id="dateOfBirth"
                   label="Date of Birth"
                   type="date"
                   value={formData.dateOfBirth}
@@ -323,35 +268,27 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
                   required
                 />
                 <SelectField
-                  id="gender"
                   label="Gender"
                   value={formData.gender}
                   onChange={(e) => handleInputChange('gender', e.target.value)}
                   options={genderOptions}
-                  error={validationErrors.gender}
                   required
-                  placeholder="Select gender"
                 />
               </div>
             )}
 
             <InputField
-              id="password"
               label="Password"
               type="password"
-              placeholder="••••••••"
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
               error={validationErrors.password}
               required
-              helperText="Use at least 6 characters"
             />
 
             <InputField
-              id="confirmPassword"
               label="Confirm Password"
               type="password"
-              placeholder="••••••••"
               value={formData.confirmPassword}
               onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
               error={validationErrors.confirmPassword}
@@ -382,7 +319,7 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
             </p>
           </div>
         </motion.div>
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }

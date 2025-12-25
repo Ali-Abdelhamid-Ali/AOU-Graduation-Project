@@ -22,8 +22,6 @@ export const AdminDashboard = ({
     onMriSegmentation,
     onMedicalLlm
 }) => {
-    const { currentUser, signOut } = useAuth()
-
     const cards = [
         {
             id: 'admins',
@@ -42,7 +40,8 @@ export const AdminDashboard = ({
             icon: securityIcon,
             action: onCreateDoctor,
             color: '#10b981',
-            tag: 'NEW'
+            tag: 'NEW',
+            restricted: true
         },
         {
             id: 'reg',
@@ -84,19 +83,14 @@ export const AdminDashboard = ({
             id: 'audit',
             title: 'Security Logs',
             description: 'Immutable audit trails and system-wide security event monitoring.',
-            icon: labIcon, // Re-purposed as a placeholder for technical logs
+            icon: labIcon,
             action: () => alert('Audit logs under security review.'),
             color: '#f59e0b'
         }
     ].filter(card => {
-        if (card.restricted && userRole !== 'administrator') return false;
+        if (card.restricted && !['super_admin', 'admin'].includes(userRole)) return false;
         return true;
     })
-
-    const handleLogout = async () => {
-        await signOut()
-        onLogout()
-    }
 
     return (
         <div className={styles.pageWrapper}>

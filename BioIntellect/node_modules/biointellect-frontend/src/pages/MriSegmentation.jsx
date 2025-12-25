@@ -21,7 +21,7 @@ export const MriSegmentation = ({ onBack }) => {
     useEffect(() => {
         if (userRole !== 'patient') {
             const loadPatients = async () => {
-                const { data, error } = await supabase.from('patients').select('patient_id, first_name, last_name, medical_record_number')
+                const { data, error } = await supabase.from('patients').select('id, first_name, last_name, medical_record_number')
                 if (!error) setPatients(data)
             }
             loadPatients()
@@ -45,7 +45,7 @@ export const MriSegmentation = ({ onBack }) => {
         try {
             // 1. Determine IDs
             const isPatient = userRole === 'patient'
-            const patientId = isPatient ? currentUser.patient_id : selectedPatientId
+            const patientId = isPatient ? currentUser.id : selectedPatientId
 
             if (!patientId) {
                 setError('Please select a patient before running analysis.')
@@ -53,7 +53,7 @@ export const MriSegmentation = ({ onBack }) => {
                 return
             }
 
-            const docId = isPatient ? null : (currentUser.user_id || currentUser.id)
+            const docId = isPatient ? null : (currentUser.id)
 
             // 2. Clinical Case
             const medicalCase = await medicalService.createCase({
@@ -65,7 +65,7 @@ export const MriSegmentation = ({ onBack }) => {
 
             // 3. Upload Scan File
             await medicalService.uploadFile({
-                caseId: medicalCase.case_id,
+                caseId: medicalCase.id,
                 patientId: patientId,
                 userId: currentUser.user_id || currentUser.id,
                 file: file,
@@ -89,7 +89,7 @@ export const MriSegmentation = ({ onBack }) => {
 
             // 5. Save Results
             await medicalService.saveMriAnalysis({
-                caseId: medicalCase.case_id,
+                caseId: medicalCase.id,
                 patientId: patientId,
                 userId: currentUser.user_id || currentUser.id,
                 scanInfo: { quality: 'excellent' },
@@ -124,7 +124,7 @@ export const MriSegmentation = ({ onBack }) => {
                                     value={selectedPatientId}
                                     onChange={(e) => setSelectedPatientId(e.target.value)}
                                     options={patients.map(p => ({
-                                        value: p.patient_id,
+                                        value: p.id,
                                         label: `${p.first_name} ${p.last_name} (${p.medical_record_number})`
                                     }))}
                                     required

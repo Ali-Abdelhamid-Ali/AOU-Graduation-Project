@@ -21,7 +21,7 @@ export const EcgAnalysis = ({ onBack }) => {
     useEffect(() => {
         if (userRole !== 'patient') {
             const loadPatients = async () => {
-                const { data, error } = await supabase.from('patients').select('patient_id, first_name, last_name, medical_record_number')
+                const { data, error } = await supabase.from('patients').select('id, first_name, last_name, medical_record_number')
                 if (!error) setPatients(data)
             }
             loadPatients()
@@ -45,7 +45,7 @@ export const EcgAnalysis = ({ onBack }) => {
         try {
             // 1. Determine Patient and Doctor IDs
             const isPatient = userRole === 'patient'
-            const patientId = isPatient ? currentUser.patient_id : selectedPatientId
+            const patientId = isPatient ? currentUser.id : selectedPatientId
 
             if (!patientId) {
                 setError('Please select a patient before running analysis.')
@@ -53,9 +53,9 @@ export const EcgAnalysis = ({ onBack }) => {
                 return
             }
 
-            const docId = isPatient ? null : (currentUser.user_id || currentUser.id)
+            const docId = isPatient ? null : (currentUser.id)
 
-            // 2. Create a Clinical Case (for demo, we create one per analysis)
+            // 2. Create a Clinical Case
             const medicalCase = await medicalService.createCase({
                 patientId: patientId,
                 doctorId: docId,
@@ -65,14 +65,14 @@ export const EcgAnalysis = ({ onBack }) => {
 
             // 3. Upload File
             const fileRecord = await medicalService.uploadFile({
-                caseId: medicalCase.case_id,
+                caseId: medicalCase.id,
                 patientId: patientId,
                 userId: currentUser.user_id || currentUser.id,
                 file: file,
                 fileType: 'ecg_signal'
             })
 
-            // 4. Simulate AI Pattern Recognition (Pattern: AFib detected in Lead II)
+            // 4. Simulate AI Pattern Recognition
             await new Promise(resolve => setTimeout(resolve, 3000))
 
             const analysisResult = {
@@ -84,8 +84,8 @@ export const EcgAnalysis = ({ onBack }) => {
 
             // 5. Save Results to Database
             await medicalService.saveEcgAnalysis({
-                fileId: fileRecord.file_id,
-                caseId: medicalCase.case_id,
+                fileId: fileRecord.id,
+                caseId: medicalCase.id,
                 patientId: patientId,
                 userId: currentUser.user_id || currentUser.id,
                 signalInfo: { leads: '12-lead', samplingRate: 500, duration: 10, leadCount: 12, quality: 98 },
@@ -120,7 +120,7 @@ export const EcgAnalysis = ({ onBack }) => {
                                     value={selectedPatientId}
                                     onChange={(e) => setSelectedPatientId(e.target.value)}
                                     options={patients.map(p => ({
-                                        value: p.patient_id,
+                                        value: p.id,
                                         label: `${p.first_name} ${p.last_name} (${p.medical_record_number})`
                                     }))}
                                     required

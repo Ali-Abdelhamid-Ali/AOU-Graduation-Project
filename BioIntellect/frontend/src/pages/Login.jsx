@@ -67,7 +67,6 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick, on
 
   const validateForm = () => {
     const errors = {}
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{16,}$/
 
     if (!formData.email.trim()) {
       errors.email = 'Email is required'

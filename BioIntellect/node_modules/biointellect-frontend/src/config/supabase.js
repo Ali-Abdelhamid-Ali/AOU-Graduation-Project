@@ -30,4 +30,18 @@ export const getCurrentUser = async () => {
   }
 }
 
+/**
+ * Diagnostic tool to verify database connectivity.
+ * Aligned with 2024 SQL Schema.
+ */
+export const testSupabaseConnection = async () => {
+  try {
+    const { error } = await supabase.from('countries').select('id', { head: true, count: 'exact' }).limit(1)
+    if (error) throw error
+    console.log('🛡️ [SYSTEM]: Clinical Database Connection Verified.')
+  } catch (err) {
+    console.error('🚨 [CRITICAL]: Database Connection Failed:', err.message)
+  }
+}
+
 export default supabase

@@ -34,33 +34,32 @@ export const useGeography = () => {
         setSelectedRegionId(''); // reset region & hospital
         setRegions([]);
         setHospitals([]);
-        const country = countries.find(c => c.country_id === countryId);
-        if (!country) return;
+        if (!countryId) return;
+
+        // Resolve country name from ID (ISO code) API requirement
+        const countryObj = countries.find(c => c.country_id === countryId);
+        const countryName = countryObj ? countryObj.country_name : countryId;
+
         try {
-            const regionList = await fetchRegions(country.country_name);
+            const regionList = await fetchRegions(countryName);
             setRegions(regionList);
         } catch (e) {
             console.error('Failed to load regions', e);
         }
-    }, [countries, fetchRegions]);
+    }, [fetchRegions, countries]);
 
     // When a region is selected, load its hospitals
     const selectRegion = useCallback(async (regionId) => {
         setSelectedRegionId(regionId);
         setHospitals([]);
-        const country = countries.find(c => c.country_id === selectedCountryId);
-        const region = regions.find(r => r.region_id === regionId);
-        if (!country || !region) return;
+        if (!regionId) return;
         try {
-            const hospitalList = await fetchHospitals({
-                countryName: country.country_name,
-                regionName: region.region_name,
-            });
+            const hospitalList = await fetchHospitals(regionId);
             setHospitals(hospitalList);
         } catch (e) {
             console.error('Failed to load hospitals', e);
         }
-    }, [countries, regions, selectedCountryId, fetchHospitals]);
+    }, [fetchHospitals]);
 
     // Helper objects for UI components
     const selectedCountry = countries.find(c => c.country_id === selectedCountryId) || null;

@@ -59,7 +59,7 @@ function AppRoutes() {
         <Route path="/select-role" element={
           <SelectRole
             onRoleSelected={(role) => {
-              if (role === 'administrator') {
+              if (['admin', 'administrator', 'super_admin'].includes(role)) {
                 navigate('/signup')
               } else {
                 navigate('/login')
@@ -72,7 +72,7 @@ function AppRoutes() {
         <Route path="/login" element={
           <Login
             onLoginSuccess={(role) => {
-              if (role === 'administrator' || role === 'doctor' || role === 'physician') {
+              if (['super_admin', 'admin', 'doctor', 'nurse'].includes(role)) {
                 navigate('/admin-dashboard')
               } else {
                 navigate('/patient-dashboard')
@@ -105,7 +105,7 @@ function AppRoutes() {
 
         {/* Protected Dashboard Routes (RBAC) */}
         <Route path="/admin-dashboard" element={
-          <ProtectedRoute allowedRoles={['administrator', 'doctor', 'physician']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'doctor', 'nurse']}>
             <AdminDashboard
               userRole={userRole}
               onLogout={signOut}
@@ -132,37 +132,37 @@ function AppRoutes() {
 
         {/* Sub-modules (Protected) */}
         <Route path="/create-patient" element={
-          <ProtectedRoute allowedRoles={['administrator', 'doctor', 'physician']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'doctor', 'nurse']}>
             <CreatePatient userRole={userRole} onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/create-doctor" element={
-          <ProtectedRoute allowedRoles={['administrator']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
             <CreateDoctor userRole={userRole} onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/create-admin" element={
-          <ProtectedRoute allowedRoles={['administrator']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
             <CreateAdmin userRole={userRole} onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/ecg-analysis" element={
-          <ProtectedRoute allowedRoles={['administrator', 'doctor', 'physician', 'patient']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'doctor', 'nurse', 'patient']}>
             <EcgAnalysis onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/mri-segmentation" element={
-          <ProtectedRoute allowedRoles={['administrator', 'doctor', 'physician', 'patient']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'doctor', 'nurse', 'patient']}>
             <MriSegmentation onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/medical-llm" element={
-          <ProtectedRoute allowedRoles={['administrator', 'doctor', 'physician', 'patient']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'doctor', 'nurse', 'patient']}>
             <MedicalLlm onBack={handleBack} />
           </ProtectedRoute>
         } />

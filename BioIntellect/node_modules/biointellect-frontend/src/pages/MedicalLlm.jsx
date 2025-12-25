@@ -27,8 +27,8 @@ export const MedicalLlm = ({ onBack }) => {
         const initConversation = async () => {
             try {
                 const isPatient = userRole === 'patient'
-                const pId = isPatient ? currentUser.patient_id : null
-                const dId = isPatient ? null : (currentUser.user_id || currentUser.id)
+                const pId = isPatient ? currentUser.id : null
+                const dId = isPatient ? null : (currentUser.id)
 
                 const convo = await medicalService.startConversation({
                     patientId: pId,
@@ -55,8 +55,8 @@ export const MedicalLlm = ({ onBack }) => {
         try {
             // 1. Save User Message
             await medicalService.saveLlmMessage({
-                conversationId: conversation.conversation_id,
-                senderId: userRole === 'patient' ? currentUser.patient_id : (currentUser.user_id || currentUser.id),
+                conversationId: conversation.id,
+                senderId: currentUser.id,
                 senderRole: userRole === 'patient' ? 'patient' : 'doctor',
                 content: userContent
             })
@@ -64,17 +64,17 @@ export const MedicalLlm = ({ onBack }) => {
             // 2. Simulate Medical LLM Response logic
             await new Promise(resolve => setTimeout(resolve, 2000))
 
-            let response = "I've analyzed your query against current clinical guidelines. Regarding this condition, medical literature suggests that early intervention combined with multimodal diagnostic analysis (ECG/MRI) significantly improves patient outcomes."
+            let response = "I've analyzed your query against clinical guidelines. Regarding this condition, medical literature suggests early intervention significantly improves outcomes."
 
             if (userContent.toLowerCase().includes('heart') || userContent.toLowerCase().includes('ecg')) {
-                response = "For suspected cardiac arrhythmia, BioIntellect utilizes a CNN-Transformer architecture. Studies show these models achieve >97% accuracy on the MIT-BIH dataset. I recommend reviewing the latest lead II waveform analysis."
+                response = "For suspected cardiac arrhythmia, our CNN-Transformer architecture achieves high accuracy. I recommend reviewing latest lead II data."
             } else if (userContent.toLowerCase().includes('brain') || userContent.toLowerCase().includes('mri')) {
-                response = "Brain tumor segmentation in BioIntellect is handled by a 36-layer 3D U-Net. For enhancing core tumors, volumetric quantification is essential. I can analyze the DICOM metadata once a sequence is uploaded."
+                response = "Brain tumor segmentation via 3D U-Net is highly precise. DICOM metadata analysis is recommended for volumetric quantification."
             }
 
             // 3. Save AI Message
             await medicalService.saveLlmMessage({
-                conversationId: conversation.conversation_id,
+                conversationId: conversation.id,
                 senderId: 'ai',
                 senderRole: 'ai',
                 content: response

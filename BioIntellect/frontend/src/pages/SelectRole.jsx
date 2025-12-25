@@ -43,7 +43,7 @@ export const SelectRole = ({ onRoleSelected, onBack }) => {
       color: 'secondary',
     },
     {
-      id: 'administrator',
+      id: 'admin',
       label: 'Administrator',
       icon: analyticsIcon,
       description: 'System governance and staff management',

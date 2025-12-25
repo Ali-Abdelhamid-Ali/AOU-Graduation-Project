@@ -1,14 +1,18 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '../context/AuthContext'
+import { medicalService } from '../services/medicalService'
 import { TopBar } from '../components/TopBar'
 import styles from './MedicalLlm.module.css'
 
 export const MedicalLlm = ({ onBack }) => {
+    const { currentUser, userRole } = useAuth()
     const [messages, setMessages] = useState([
         { role: 'assistant', content: 'Welcome to BioIntellect Clinical QA. I am an AI assistant fine-tuned on medical literature to support your diagnostic decision-making. How can I assist you today?' }
     ])
     const [input, setInput] = useState('')
     const [isTyping, setIsTyping] = useState(false)
+    const [conversation, setConversation] = useState(null)
     const chatEndRef = useRef(null)
 
     const scrollToBottom = () => {
@@ -19,27 +23,69 @@ export const MedicalLlm = ({ onBack }) => {
         scrollToBottom()
     }, [messages, isTyping])
 
-    const handleSend = () => {
-        if (!input.trim()) return
+    useEffect(() => {
+        const initConversation = async () => {
+            try {
+                const isPatient = userRole === 'patient'
+                const pId = isPatient ? currentUser.patient_id : null
+                const dId = isPatient ? null : (currentUser.user_id || currentUser.id)
 
-        const userMsg = { role: 'user', content: input }
+                const convo = await medicalService.startConversation({
+                    patientId: pId,
+                    doctorId: dId,
+                    title: 'BioIntellect AI Consultation'
+                })
+                setConversation(convo)
+            } catch (err) {
+                console.error('Failed to init LLM conversation:', err)
+            }
+        }
+        initConversation()
+    }, [currentUser, userRole])
+
+    const handleSend = async () => {
+        if (!input.trim() || !conversation) return
+
+        const userContent = input
+        const userMsg = { role: 'user', content: userContent }
         setMessages(prev => [...prev, userMsg])
         setInput('')
         setIsTyping(true)
 
-        // Simulate Medical LLM Response
-        setTimeout(() => {
+        try {
+            // 1. Save User Message
+            await medicalService.saveLlmMessage({
+                conversationId: conversation.conversation_id,
+                senderId: userRole === 'patient' ? currentUser.patient_id : (currentUser.user_id || currentUser.id),
+                senderRole: userRole === 'patient' ? 'patient' : 'doctor',
+                content: userContent
+            })
+
+            // 2. Simulate Medical LLM Response logic
+            await new Promise(resolve => setTimeout(resolve, 2000))
+
             let response = "I've analyzed your query against current clinical guidelines. Regarding this condition, medical literature suggests that early intervention combined with multimodal diagnostic analysis (ECG/MRI) significantly improves patient outcomes."
 
-            if (input.toLowerCase().includes('heart') || input.toLowerCase().includes('ecg')) {
+            if (userContent.toLowerCase().includes('heart') || userContent.toLowerCase().includes('ecg')) {
                 response = "For suspected cardiac arrhythmia, BioIntellect utilizes a CNN-Transformer architecture. Studies show these models achieve >97% accuracy on the MIT-BIH dataset. I recommend reviewing the latest lead II waveform analysis."
-            } else if (input.toLowerCase().includes('brain') || input.toLowerCase().includes('mri')) {
+            } else if (userContent.toLowerCase().includes('brain') || userContent.toLowerCase().includes('mri')) {
                 response = "Brain tumor segmentation in BioIntellect is handled by a 36-layer 3D U-Net. For enhancing core tumors, volumetric quantification is essential. I can analyze the DICOM metadata once a sequence is uploaded."
             }
 
+            // 3. Save AI Message
+            await medicalService.saveLlmMessage({
+                conversationId: conversation.conversation_id,
+                senderId: 'ai',
+                senderRole: 'ai',
+                content: response
+            })
+
             setMessages(prev => [...prev, { role: 'assistant', content: response }])
+        } catch (err) {
+            console.error('LLM Message Error:', err)
+        } finally {
             setIsTyping(false)
-        }, 2000)
+        }
     }
 
     return (

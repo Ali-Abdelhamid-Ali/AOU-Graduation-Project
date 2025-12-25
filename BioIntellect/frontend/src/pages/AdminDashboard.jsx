@@ -17,6 +17,7 @@ export const AdminDashboard = ({
     onLogout,
     onCreatePatient,
     onCreateDoctor,
+    onCreateAdmin,
     onEcgAnalysis,
     onMriSegmentation,
     onMedicalLlm
@@ -24,6 +25,16 @@ export const AdminDashboard = ({
     const { currentUser, signOut } = useAuth()
 
     const cards = [
+        {
+            id: 'admins',
+            title: 'Create Administrator',
+            description: 'Provision secondary administrative accounts and manage system-wide security policies.',
+            icon: securityIcon,
+            action: onCreateAdmin,
+            color: '#f43f5e',
+            tag: 'ROOT',
+            restricted: true // Only for administrator
+        },
         {
             id: 'doctors',
             title: 'Medical Staff',
@@ -77,7 +88,10 @@ export const AdminDashboard = ({
             action: () => alert('Audit logs under security review.'),
             color: '#f59e0b'
         }
-    ]
+    ].filter(card => {
+        if (card.restricted && userRole !== 'administrator') return false;
+        return true;
+    })
 
     const handleLogout = async () => {
         await signOut()

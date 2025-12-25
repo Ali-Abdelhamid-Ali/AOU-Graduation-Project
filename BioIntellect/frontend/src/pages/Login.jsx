@@ -129,9 +129,13 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick, on
         >
           {/* Header */}
           <div className={styles.header}>
-            <h1 className={styles.title}>Sign In</h1>
+            <h1 className={styles.title}>
+              {userRole === 'patient' ? 'Patient Portal' : 'Medical Staff Portal'}
+            </h1>
             <p className={styles.subtitle}>
-              Enter your account credentials to access BioIntellect
+              {userRole === 'patient'
+                ? 'Secure access to your personal health records'
+                : 'Enter your clinical credentials to access BioIntellect'}
             </p>
           </div>
 

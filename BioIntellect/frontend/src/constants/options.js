@@ -12,6 +12,11 @@ export const specialtyOptions = [
     { value: 'pediatrician', label: 'Pediatrician' }
 ];
 
+export const adminOptions = [
+    { value: 'administrator', label: 'Administrator' },
+    { value: 'mini_administrator', label: 'Mini Administrator' }
+];
+
 export const genderOptions = [
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },

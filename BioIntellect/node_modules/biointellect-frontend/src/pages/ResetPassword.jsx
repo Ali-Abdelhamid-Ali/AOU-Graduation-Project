@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../config/supabase'
 import { TopBar } from '../components/TopBar'
 import { InputField } from '../components/InputField'
 import { AnimatedButton } from '../components/AnimatedButton'
@@ -26,11 +27,34 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin, onBack }) => {
 
   const [validationError, setValidationError] = useState('')
 
-  // Detect recovery mode from URL hash
+  // Detect recovery mode from URL hash, search params, or Supabase event
   useEffect(() => {
-    const hash = window.location.hash
-    if (hash && hash.includes('type=recovery')) {
-      setView('update')
+    const checkRecovery = () => {
+      const href = window.location.href
+      const isRecovery = href.includes('type=recovery') ||
+        href.includes('access_token=') ||
+        window.location.hash.includes('type=recovery')
+
+      if (isRecovery) {
+        console.log('[ResetPassword] Recovery mode detected via URL sensing.')
+        setView('update')
+        return true
+      }
+      return false
+    }
+
+    // 1. Initial Check
+    const detected = checkRecovery()
+
+    // 2. Listen for Supabase PASSWORD_RECOVERY event
+    if (supabase && !detected) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          console.log('[ResetPassword] Recovery mode detected via Auth Event.')
+          setView('update')
+        }
+      })
+      return () => subscription.unsubscribe()
     }
   }, [])
 

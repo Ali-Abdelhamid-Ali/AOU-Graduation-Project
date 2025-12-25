@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
+import { useGeography } from '../hooks/useGeography'
 import { TopBar } from '../components/TopBar'
 import { InputField } from '../components/InputField'
 import { SelectField } from '../components/SelectField'
+import SearchableSelect from '../components/SearchableSelect'
 import { AnimatedButton } from '../components/AnimatedButton'
+import { specialtyOptions, adminOptions } from '../constants/options'
 import styles from './SignUp.module.css'
 
 /**
@@ -22,28 +25,70 @@ import styles from './SignUp.module.css'
 
 export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
   const { signUp, isLoading, error, clearError, userRole } = useAuth()
+  const {
+    countries,
+    regions,
+    hospitals,
+    selectCountry,
+    selectRegion
+  } = useGeography()
+
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
-    password_confirm: '',
-    specific_role: '',
-    date_of_birth: '',
+    confirmPassword: '',
+    role: 'patient',
+    dateOfBirth: '',
     gender: '',
+    countryId: '',
+    countryCode: '',
+    countryName: '',
+    regionId: '',
+    regionName: '',
+    hospitalId: ''
   })
   const [validationErrors, setValidationErrors] = useState({})
 
+  // Set default country (Egypt) once countries are loaded
+  useEffect(() => {
+    if (countries.length > 0 && !formData.countryId) {
+      const defaultCountry = countries.find(c => c.country_name === 'Egypt') || countries[0]
+      handleInputChange('countryId', defaultCountry.country_id)
+      handleInputChange('countryCode', defaultCountry.country_code)
+      handleInputChange('countryName', defaultCountry.country_name)
+      selectCountry(defaultCountry.country_id)
+    }
+  }, [countries])
+
+  const onCountryChange = (e) => {
+    const selected = countries.find(c => c.country_id === e.target.value)
+    handleInputChange('countryId', e.target.value)
+    handleInputChange('countryCode', selected?.country_code || '')
+    handleInputChange('countryName', selected?.country_name || '')
+    selectCountry(e.target.value)
+  }
+
+  const onRegionChange = (e) => {
+    const selected = regions.find(r => r.region_id === e.target.value)
+    handleInputChange('regionId', e.target.value)
+    handleInputChange('regionName', selected?.region_name || '')
+    selectRegion(e.target.value)
+  }
+
   // Determine available roles based on main role selection
-  const roleOptions = userRole === 'doctor'
-    ? [
-      { value: 'physician', label: 'Physician' },
-      { value: 'cardiologist', label: 'Cardiologist' },
-      { value: 'neurologist', label: 'Neurologist' },
-    ]
-    : [
-      { value: 'patient', label: 'Patient' },
-    ]
+  const roleOptions = useMemo(() => {
+    if (userRole === 'doctor') {
+      return specialtyOptions.filter(opt =>
+        !['administrator', 'mini_administrator'].includes(opt.value)
+      )
+    }
+    if (userRole === 'administrator') {
+      return adminOptions
+    }
+    return [{ value: 'patient', label: 'Patient' }]
+  }, [userRole])
 
   const genderOptions = [
     { value: 'male', label: 'Male' },
@@ -67,8 +112,8 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
   const validateForm = () => {
     const errors = {}
 
-    if (!formData.first_name.trim()) errors.first_name = 'First name is required'
-    if (!formData.last_name.trim()) errors.last_name = 'Last name is required'
+    if (!formData.firstName.trim()) errors.firstName = 'First name is required'
+    if (!formData.lastName.trim()) errors.lastName = 'Last name is required'
 
     if (!formData.email.trim()) {
       errors.email = 'Email is required'
@@ -82,17 +127,15 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
       errors.password = 'Password must be at least 6 characters'
     }
 
-    if (formData.password !== formData.password_confirm) {
-      errors.password_confirm = 'Passwords do not match'
+    if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match'
     }
 
-    if (!formData.specific_role) {
-      errors.specific_role = 'Please select a specific role'
-    }
+    if (!formData.hospitalId) errors.hospitalId = 'Clinical hospital selection is required'
 
     // Patient specific validation
     if (userRole === 'patient') {
-      if (!formData.date_of_birth) errors.date_of_birth = 'Date of birth is required'
+      if (!formData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required'
       if (!formData.gender) errors.gender = 'Gender is required'
     }
 
@@ -112,12 +155,16 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
     const signUpData = {
       email: formData.email,
       password: formData.password,
-      firstName: formData.first_name,
-      lastName: formData.last_name,
-      role: formData.specific_role,
-      // Optional fields for patient
-      dateOfBirth: formData.date_of_birth,
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      role: formData.role,
+      date_of_birth: formData.dateOfBirth,
       gender: formData.gender,
+      phone: formData.phone,
+      licenseNumber: formData.licenseNumber,
+      hospitalId: formData.hospitalId,
+      countryId: formData.countryId,
+      regionId: formData.regionId
     }
 
     const result = await signUp(signUpData)
@@ -141,7 +188,7 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
           <div className={styles.header}>
             <h1 className={styles.title}>Create Account</h1>
             <p className={styles.subtitle}>
-              Join BioIntellect as a {userRole === 'doctor' ? 'Medical Professional' : 'Patient'}
+              Join BioIntellect as a {userRole === 'doctor' ? 'Medical Professional' : userRole === 'administrator' ? 'System Administrator' : 'Patient'}
             </p>
           </div>
 
@@ -159,21 +206,21 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
             {/* Name Fields Row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <InputField
-                id="first_name"
+                id="firstName"
                 label="First Name"
                 placeholder="Ali"
-                value={formData.first_name}
-                onChange={(e) => handleInputChange('first_name', e.target.value)}
-                error={validationErrors.first_name}
+                value={formData.firstName}
+                onChange={(e) => handleInputChange('firstName', e.target.value)}
+                error={validationErrors.firstName}
                 required
               />
               <InputField
-                id="last_name"
+                id="lastName"
                 label="Last Name"
                 placeholder="Abdelhamid"
-                value={formData.last_name}
-                onChange={(e) => handleInputChange('last_name', e.target.value)}
-                error={validationErrors.last_name}
+                value={formData.lastName}
+                onChange={(e) => handleInputChange('lastName', e.target.value)}
+                error={validationErrors.lastName}
                 required
               />
             </div>
@@ -191,26 +238,88 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
 
             {/* Role Dropdown */}
             <SelectField
-              id="specific_role"
-              label={userRole === 'doctor' ? 'Specialty / Role' : 'Role'}
-              value={formData.specific_role}
-              onChange={(e) => handleInputChange('specific_role', e.target.value)}
+              id="role"
+              label={userRole === 'doctor' ? 'Specialty / Role' : userRole === 'administrator' ? 'System Role' : 'Role'}
+              value={formData.role}
+              onChange={(e) => handleInputChange('role', e.target.value)}
               options={roleOptions}
-              error={validationErrors.specific_role}
+              error={validationErrors.role}
               required
               placeholder="Select your specific role"
             />
+
+            {/* Clinical Location Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <SearchableSelect
+                id="countryId"
+                label="Country"
+                value={formData.countryId}
+                onChange={onCountryChange}
+                options={countries.map(c => ({
+                  value: c.country_id,
+                  label: c.country_name,
+                  code: c.country_code
+                }))}
+                required
+                isCountry={true}
+                placeholder="Search for your country..."
+              />
+              <SearchableSelect
+                id="regionId"
+                label="Region / State"
+                value={formData.regionId}
+                onChange={onRegionChange}
+                options={regions.map(r => ({ value: r.region_id, label: r.region_name }))}
+                required
+                disabled={!formData.countryId}
+                placeholder={!formData.countryId ? "Select country first" : "Search regions..."}
+              />
+            </div>
+
+            <SearchableSelect
+              id="hospitalId"
+              label="Assigned Clinical Hospital"
+              value={formData.hospitalId}
+              onChange={(e) => handleInputChange('hospitalId', e.target.value)}
+              options={hospitals.map(h => ({ value: h.hospital_id, label: h.hospital_name }))}
+              required
+              disabled={!formData.regionId}
+              error={validationErrors.hospitalId}
+              placeholder={!formData.regionId ? "Select region first" : "Search hospitals..."}
+            />
+
+            {/* Doctor Specific Fields */}
+            {userRole === 'doctor' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <InputField
+                  id="licenseNumber"
+                  label="Medical License #"
+                  placeholder="LIC-XXXXX"
+                  value={formData.licenseNumber}
+                  onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
+                  error={validationErrors.licenseNumber}
+                  required
+                />
+                <InputField
+                  id="phone"
+                  label="Phone Number"
+                  placeholder="+20 1XX..."
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                />
+              </div>
+            )}
 
             {/* Patient Specific Fields */}
             {userRole === 'patient' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <InputField
-                  id="date_of_birth"
+                  id="dateOfBirth"
                   label="Date of Birth"
                   type="date"
-                  value={formData.date_of_birth}
-                  onChange={(e) => handleInputChange('date_of_birth', e.target.value)}
-                  error={validationErrors.date_of_birth}
+                  value={formData.dateOfBirth}
+                  onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                  error={validationErrors.dateOfBirth}
                   required
                 />
                 <SelectField
@@ -239,13 +348,13 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
             />
 
             <InputField
-              id="password_confirm"
+              id="confirmPassword"
               label="Confirm Password"
               type="password"
               placeholder="••••••••"
-              value={formData.password_confirm}
-              onChange={(e) => handleInputChange('password_confirm', e.target.value)}
-              error={validationErrors.password_confirm}
+              value={formData.confirmPassword}
+              onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+              error={validationErrors.confirmPassword}
               required
             />
 

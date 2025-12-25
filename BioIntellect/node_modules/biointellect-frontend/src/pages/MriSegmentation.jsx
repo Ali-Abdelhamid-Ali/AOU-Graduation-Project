@@ -1,18 +1,81 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useAuth } from '../context/AuthContext'
+import { medicalService } from '../services/medicalService'
+import { supabase } from '../config/supabase'
 import { TopBar } from '../components/TopBar'
+import { SelectField } from '../components/SelectField'
 import { AnimatedButton } from '../components/AnimatedButton'
 import styles from './MriSegmentation.module.css'
 
 export const MriSegmentation = ({ onBack }) => {
+    const { currentUser, userRole } = useAuth()
+    const [file, setFile] = useState(null)
     const [analyzing, setAnalyzing] = useState(false)
     const [result, setResult] = useState(null)
     const [selectedSequence, setSelectedSequence] = useState('T1ce')
+    const [error, setError] = useState(null)
+    const [patients, setPatients] = useState([])
+    const [selectedPatientId, setSelectedPatientId] = useState('')
 
-    const runAnalysis = () => {
+    useEffect(() => {
+        if (userRole !== 'patient') {
+            const loadPatients = async () => {
+                const { data, error } = await supabase.from('patients').select('patient_id, first_name, last_name, medical_record_number')
+                if (!error) setPatients(data)
+            }
+            loadPatients()
+        }
+    }, [userRole])
+
+    const handleFileUpload = (e) => {
+        const uploadedFile = e.target.files[0]
+        if (uploadedFile) {
+            setFile(uploadedFile)
+            setResult(null)
+            setError(null)
+        }
+    }
+
+    const runAnalysis = async () => {
+        if (!file) return
+
         setAnalyzing(true)
-        setTimeout(() => {
-            setResult({
+        setError(null)
+        try {
+            // 1. Determine IDs
+            const isPatient = userRole === 'patient'
+            const patientId = isPatient ? currentUser.patient_id : selectedPatientId
+
+            if (!patientId) {
+                setError('Please select a patient before running analysis.')
+                setAnalyzing(false)
+                return
+            }
+
+            const docId = isPatient ? null : (currentUser.user_id || currentUser.id)
+
+            // 2. Clinical Case
+            const medicalCase = await medicalService.createCase({
+                patientId: patientId,
+                doctorId: docId,
+                caseType: 'mri_segmentation',
+                chiefComplaint: `Brain MRI Volumetric Study (${selectedSequence})`
+            })
+
+            // 3. Upload Scan File
+            await medicalService.uploadFile({
+                caseId: medicalCase.case_id,
+                patientId: patientId,
+                userId: currentUser.user_id || currentUser.id,
+                file: file,
+                fileType: 'mri_scan'
+            })
+
+            // 4. AI Segmentation Simulation (3D U-Net)
+            await new Promise(resolve => setTimeout(resolve, 4000))
+
+            const analysisResult = {
                 type: 'Glioblastoma Multiforme',
                 volume: '42.5 cm³',
                 location: 'Right Frontal Lobe',
@@ -22,9 +85,24 @@ export const MriSegmentation = ({ onBack }) => {
                     necrosis: '6.3 cm³'
                 },
                 recommendation: 'Urgent neurosurgical consultation. The tumor shows significant mass effect on the lateral ventricles.'
+            }
+
+            // 5. Save Results
+            await medicalService.saveMriAnalysis({
+                caseId: medicalCase.case_id,
+                patientId: patientId,
+                userId: currentUser.user_id || currentUser.id,
+                scanInfo: { quality: 'excellent' },
+                resultInfo: analysisResult
             })
+
+            setResult(analysisResult)
+        } catch (err) {
+            console.error('MRI Segmentation Error:', err)
+            setError(err.message || 'Clinical neuro-imaging analysis failed.')
+        } finally {
             setAnalyzing(false)
-        }, 4000)
+        }
     }
 
     return (
@@ -39,6 +117,20 @@ export const MriSegmentation = ({ onBack }) => {
 
                 <div className={styles.mainGrid}>
                     <section className={styles.controlPanel}>
+                        {userRole !== 'patient' && (
+                            <div className={styles.patientSelector} style={{ marginBottom: '1.5rem' }}>
+                                <SelectField
+                                    label="Select Patient"
+                                    value={selectedPatientId}
+                                    onChange={(e) => setSelectedPatientId(e.target.value)}
+                                    options={patients.map(p => ({
+                                        value: p.patient_id,
+                                        label: `${p.first_name} ${p.last_name} (${p.medical_record_number})`
+                                    }))}
+                                    required
+                                />
+                            </div>
+                        )}
                         <div className={styles.card}>
                             <h3>Sequence Selection</h3>
                             <div className={styles.sequenceGrid}>
@@ -54,9 +146,27 @@ export const MriSegmentation = ({ onBack }) => {
                             </div>
                             <p className={styles.hint}>Multi-modal integration required for precise volumetric calculation.</p>
 
-                            <div className={styles.uploadBox}>
-                                <span>📥</span>
-                                <p>Upload NIfTI / DICOM</p>
+                            <div className={`${styles.uploadBox} ${file ? styles.hasFile : ''}`}>
+                                <input
+                                    type="file"
+                                    id="mri-upload"
+                                    className={styles.hiddenInput}
+                                    onChange={handleFileUpload}
+                                    accept=".nii,.nii.gz,.dcm,image/*"
+                                />
+                                <label htmlFor="mri-upload" className={styles.uploadLabel}>
+                                    {file ? (
+                                        <div className={styles.fileSelected}>
+                                            <span>📄</span>
+                                            <p>{file.name}</p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span>📥</span>
+                                            <p>Upload NIfTI / DICOM</p>
+                                        </>
+                                    )}
+                                </label>
                             </div>
 
                             <AnimatedButton

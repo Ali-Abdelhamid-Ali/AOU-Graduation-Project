@@ -16,17 +16,17 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 /**
- * Test connection to Supabase
+ * React equivalent to Next.js getServerComponentClient logic
+ * Fetches the currently authenticated user from Supabase.
  */
-export const testSupabaseConnection = async () => {
+export const getCurrentUser = async () => {
   try {
-    const { data, error } = await supabase.from('users').select('count')
+    const { data: { user }, error } = await supabase.auth.getUser()
     if (error) throw error
-    console.log('✅ Supabase connected successfully')
-    return true
+    return { data: user, error: null }
   } catch (error) {
-    console.error('❌ Supabase connection failed:', error.message)
-    return false
+    console.error('🔑 Auth Error:', error.message)
+    return { data: null, error }
   }
 }
 

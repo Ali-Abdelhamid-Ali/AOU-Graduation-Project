@@ -17,6 +17,7 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(m => ({ 
 const PatientDashboard = lazy(() => import('./pages/PatientDashboard').then(m => ({ default: m.PatientDashboard })))
 const CreatePatient = lazy(() => import('./pages/CreatePatient').then(m => ({ default: m.CreatePatient })))
 const CreateDoctor = lazy(() => import('./pages/CreateDoctor').then(m => ({ default: m.CreateDoctor })))
+const CreateAdmin = lazy(() => import('./pages/CreateAdmin').then(m => ({ default: m.CreateAdmin })))
 const ProjectAbout = lazy(() => import('./pages/ProjectAbout').then(m => ({ default: m.ProjectAbout })))
 const EcgAnalysis = lazy(() => import('./pages/EcgAnalysis').then(m => ({ default: m.EcgAnalysis })))
 const MriSegmentation = lazy(() => import('./pages/MriSegmentation').then(m => ({ default: m.MriSegmentation })))
@@ -57,7 +58,13 @@ function AppRoutes() {
 
         <Route path="/select-role" element={
           <SelectRole
-            onRoleSelected={(role) => navigate('/login')}
+            onRoleSelected={(role) => {
+              if (role === 'administrator') {
+                navigate('/signup')
+              } else {
+                navigate('/login')
+              }
+            }}
             onBack={handleBack}
           />
         } />
@@ -104,6 +111,7 @@ function AppRoutes() {
               onLogout={signOut}
               onCreatePatient={() => navigate('/create-patient')}
               onCreateDoctor={() => navigate('/create-doctor')}
+              onCreateAdmin={() => navigate('/create-admin')}
               onEcgAnalysis={() => navigate('/ecg-analysis')}
               onMriSegmentation={() => navigate('/mri-segmentation')}
               onMedicalLlm={() => navigate('/medical-llm')}
@@ -132,6 +140,12 @@ function AppRoutes() {
         <Route path="/create-doctor" element={
           <ProtectedRoute allowedRoles={['administrator']}>
             <CreateDoctor userRole={userRole} onBack={handleBack} />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/create-admin" element={
+          <ProtectedRoute allowedRoles={['administrator']}>
+            <CreateAdmin userRole={userRole} onBack={handleBack} />
           </ProtectedRoute>
         } />
 

@@ -7,11 +7,13 @@ import { InputField } from '../components/InputField'
 import { SelectField } from '../components/SelectField'
 import SearchableSelect from '../components/SearchableSelect'
 import { AnimatedButton } from '../components/AnimatedButton'
-import { specialtyOptions } from '../constants/options'
-import styles from './CreateDoctor.module.css'
+import styles from './CreateDoctor.module.css' // Reusing styles for consistency
 
-export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
-    const { registerDoctor, isLoading, error, clearError } = useAuth()
+import { adminOptions } from '../constants/options'
+
+
+export const CreateAdmin = ({ onBack, userRole }) => {
+    const { registerAdmin, isLoading, error, clearError } = useAuth()
     const {
         countries,
         regions,
@@ -23,11 +25,9 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
+        role: '',
         password: '',
         confirmPassword: '',
-        specialty: '',
-        phone: '',
-        licenseNumber: '',
         countryId: '',
         countryCode: '',
         countryName: '',
@@ -75,11 +75,10 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
 
     const validateForm = () => {
         const errors = {}
-        if (!formData.fullName.trim()) errors.fullName = 'Full name is required'
-        if (!formData.email.trim()) errors.email = 'Email is required'
-        if (!formData.specialty) errors.specialty = 'Specialty selection is required'
-        if (!formData.licenseNumber.trim()) errors.licenseNumber = 'License number is required'
-        if (!formData.hospitalId) errors.hospitalId = 'Hospital selection is required'
+        if (!formData.fullName.trim()) errors.fullName = 'System name is required'
+        if (!formData.email.trim()) errors.email = 'Administrative email is required'
+        if (!formData.role) errors.role = 'System Role is required'
+        if (!formData.hospitalId) errors.hospitalId = 'Assigned hospital is required'
 
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{16,}$/
         if (!formData.password) {
@@ -100,7 +99,7 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
         e.preventDefault()
         if (!validateForm()) return
 
-        const result = await registerDoctor(formData)
+        const result = await registerAdmin(formData)
         if (result.success) {
             setSuccess(true)
         }
@@ -111,7 +110,7 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
             <div className={styles.pageWrapper}>
                 <TopBar userRole="administrator" onBack={() => {
                     setSuccess(false); setFormData({
-                        fullName: '', email: '', password: '', confirmPassword: '', specialty: '', phone: '', licenseNumber: '',
+                        fullName: '', email: '', role: '', password: '', confirmPassword: '',
                         countryId: '', countryCode: '', countryName: '', regionId: '', regionName: '', hospitalId: ''
                     })
                 }} />
@@ -122,23 +121,23 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                         animate={{ opacity: 1, scale: 1 }}
                     >
                         <div className={styles.successView}>
-                            <div className={styles.successIcon}>🛡️</div>
-                            <h2 className={styles.title}>Account Provisioned</h2>
+                            <div className={styles.successIcon}>🔑</div>
+                            <h2 className={styles.title}>Admin Access Granted</h2>
                             <p className={styles.subtitle}>
-                                Doctor <strong>{formData.fullName}</strong> has been successfully registered.
+                                <strong>{formData.fullName}</strong> has been provisioned as an {formData.role === 'administrator' ? 'Administrator' : 'Mini Administrator'}.
                                 <br /><br />
                                 <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>
-                                    ⚠️ ACTION REQUIRED: An activation email has been sent. The doctor must confirm their email before they can sign in.
+                                    ⚠️ IMPORTANT: The new administrator must confirm their email address before their system credentials become active.
                                 </span>
                             </p>
                             <div className={styles.successActions}>
                                 <AnimatedButton variant="primary" fullWidth onClick={() => {
                                     setSuccess(false); setFormData({
-                                        fullName: '', email: '', password: '', confirmPassword: '', specialty: '', phone: '', licenseNumber: '',
+                                        fullName: '', email: '', role: '', password: '', confirmPassword: '',
                                         countryId: '', countryCode: '', countryName: '', regionId: '', regionName: '', hospitalId: ''
                                     })
-                                }}>Provision Another Staff Member</AnimatedButton>
-                                <AnimatedButton variant="secondary" fullWidth onClick={onBack}>Return to Dashboard</AnimatedButton>
+                                }}>Provision Another Administrator</AnimatedButton>
+                                <AnimatedButton variant="secondary" fullWidth onClick={onBack}>Back to Command Center</AnimatedButton>
                             </div>
                         </div>
                     </motion.div>
@@ -169,8 +168,8 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                     }}
                 >
                     <div className={styles.header}>
-                        <h1 className={styles.title}>Provision Medical Staff</h1>
-                        <p className={styles.subtitle}>Add a new healthcare practitioner to the clinical network according to system schema.</p>
+                        <h1 className={styles.title}>Provision Secondary Administrator</h1>
+                        <p className={styles.subtitle}>Grant full administrative access to the clinical management infrastructure of BioIntellect.</p>
                     </div>
 
                     {error && <div className={styles.alertError}>{error}</div>}
@@ -178,39 +177,30 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                     <form onSubmit={handleSubmit} className={styles.form}>
                         <div className={styles.grid}>
                             <InputField
-                                label="Professional Full Name"
-                                placeholder="Dr. Ahmed Ali"
+                                label="Administrator Full Name"
+                                placeholder="E.g. Engineering Lead"
                                 value={formData.fullName}
                                 onChange={(e) => handleInputChange('fullName', e.target.value)}
                                 error={validationErrors.fullName}
                                 required
-                                autoComplete="name"
                             />
                             <InputField
-                                label="Medical Email"
+                                label="System Email"
                                 type="email"
-                                placeholder="a.ali@biointellect.com"
+                                placeholder="admin@biointellect.com"
                                 value={formData.email}
                                 onChange={(e) => handleInputChange('email', e.target.value)}
                                 error={validationErrors.email}
                                 required
-                                autoComplete="username"
                             />
-                            <SearchableSelect
-                                label="Specialty / System Role"
-                                value={formData.specialty}
-                                onChange={(e) => handleInputChange('specialty', e.target.value)}
-                                options={specialtyOptions}
+                            <SelectField
+                                label="System Role"
+                                value={formData.role}
+                                onChange={(e) => handleInputChange('role', e.target.value)}
+                                options={adminOptions}
                                 required
-                                placeholder="Search medical specialty..."
-                            />
-                            <InputField
-                                label="Medical License Number"
-                                placeholder="LIC-XXXXXX"
-                                value={formData.licenseNumber}
-                                onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
-                                error={validationErrors.licenseNumber}
-                                required
+                                placeholder="Select your specific role"
+                                error={validationErrors.role}
                             />
                             <SearchableSelect
                                 label="Country"
@@ -223,7 +213,7 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                                 }))}
                                 required
                                 isCountry={true}
-                                placeholder="Search country..."
+                                placeholder="Search for your country..."
                             />
                             <SearchableSelect
                                 label="Region / State"
@@ -232,46 +222,36 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                                 options={regions.map(r => ({ value: r.region_id, label: r.region_name }))}
                                 required
                                 disabled={!formData.countryId}
-                                placeholder={!formData.countryId ? "Select country first" : "Search region..."}
+                                placeholder={!formData.countryId ? "Select country first" : "Search for your region..."}
                             />
                             <SearchableSelect
-                                label="Clinical Hospital"
+                                label="Assigned Clinical Hospital"
                                 value={formData.hospitalId}
                                 onChange={(e) => handleInputChange('hospitalId', e.target.value)}
                                 options={hospitals.map(h => ({ value: h.hospital_id, label: h.hospital_name }))}
                                 required
                                 disabled={!formData.regionId}
                                 error={validationErrors.hospitalId}
-                                placeholder={!formData.regionId ? "Select region first" : "Search hospitals..."}
+                                placeholder={!formData.regionId ? "Select region first" : "Search for hospitals..."}
                             />
                             <InputField
-                                label="Security Password"
+                                label="Master Security Password"
                                 type="password"
                                 placeholder="••••••••••••••••"
                                 value={formData.password}
                                 onChange={(e) => handleInputChange('password', e.target.value)}
                                 error={validationErrors.password}
                                 required
-                                autoComplete="new-password"
                             />
                             <InputField
-                                label="Confirm Password"
+                                label="Confirm Master Password"
                                 type="password"
                                 placeholder="••••••••••••••••"
                                 value={formData.confirmPassword}
                                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                                 error={validationErrors.confirmPassword}
                                 required
-                                autoComplete="new-password"
                             />
-                            <div className={styles.fullGrid}>
-                                <InputField
-                                    label="Phone Number"
-                                    placeholder="+20 1XX XXX XXXX"
-                                    value={formData.phone}
-                                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                                />
-                            </div>
                         </div>
 
                         <AnimatedButton
@@ -280,8 +260,9 @@ export const CreateDoctor = ({ onBack, onComplete, userRole }) => {
                             size="large"
                             fullWidth
                             isLoading={isLoading}
+                            style={{ marginTop: '1.5rem' }}
                         >
-                            Provision Account & Grant Access
+                            Authorize Administrator Credentials
                         </AnimatedButton>
                     </form>
                 </motion.div>

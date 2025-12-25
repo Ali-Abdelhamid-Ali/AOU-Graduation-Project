@@ -7,6 +7,7 @@ import styles from './SelectRole.module.css'
 // Professional Icon Imports
 import securityIcon from '../images/icons/security.png'
 import insightsIcon from '../images/icons/insights.png'
+import analyticsIcon from '../images/icons/analytics.png'
 
 /**
  * SelectRole Page - Professional Iconography
@@ -40,6 +41,13 @@ export const SelectRole = ({ onRoleSelected, onBack }) => {
       icon: insightsIcon,
       description: 'Sign in to access your medical records',
       color: 'secondary',
+    },
+    {
+      id: 'administrator',
+      label: 'Administrator',
+      icon: analyticsIcon,
+      description: 'System governance and staff management',
+      color: 'accent',
     },
   ]
 

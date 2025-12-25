@@ -1,14 +1,25 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
+import { useGeography } from '../hooks/useGeography'
 import { TopBar } from '../components/TopBar'
 import { InputField } from '../components/InputField'
 import { SelectField } from '../components/SelectField'
+import SearchableSelect from '../components/SearchableSelect'
 import { AnimatedButton } from '../components/AnimatedButton'
+import { genderOptions, bloodTypeOptions } from '../constants/options'
 import styles from './CreatePatient.module.css'
 
 export const CreatePatient = ({ onBack, onComplete, userRole }) => {
     const { registerPatient, isLoading: authLoading } = useAuth()
+    const {
+        countries,
+        regions,
+        hospitals,
+        selectCountry,
+        selectRegion
+    } = useGeography()
+
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [success, setSuccess] = useState(null)
@@ -32,7 +43,12 @@ export const CreatePatient = ({ onBack, onComplete, userRole }) => {
         phone: '',
         address: '',
         city: '',
-        country: 'Egypt',
+        countryName: '',
+        countryId: '',
+        countryCode: '',
+        regionId: '',
+        regionName: '',
+        hospitalId: '',
         allergies: '',
         chronicConditions: '',
         emergencyContactName: '',
@@ -42,6 +58,32 @@ export const CreatePatient = ({ onBack, onComplete, userRole }) => {
         consentGiven: false,
         dataRetentionUntil: getDefaultRetentionDate()
     })
+
+    // Set default country (Egypt) once countries are loaded
+    useEffect(() => {
+        if (countries.length > 0 && !formData.countryId) {
+            const defaultCountry = countries.find(c => c.country_name === 'Egypt') || countries[0]
+            handleInputChange('countryId', defaultCountry.country_id)
+            handleInputChange('countryCode', defaultCountry.country_code)
+            handleInputChange('countryName', defaultCountry.country_name)
+            selectCountry(defaultCountry.country_id)
+        }
+    }, [countries])
+
+    const onCountryChange = (e) => {
+        const selected = countries.find(c => c.country_id === e.target.value)
+        handleInputChange('countryId', e.target.value)
+        handleInputChange('countryCode', selected?.country_code || '')
+        handleInputChange('countryName', selected?.country_name || '')
+        selectCountry(e.target.value)
+    }
+
+    const onRegionChange = (e) => {
+        const selected = regions.find(r => r.region_id === e.target.value)
+        handleInputChange('regionId', e.target.value)
+        handleInputChange('regionName', selected?.region_name || '')
+        selectRegion(e.target.value)
+    }
 
     const validatePassword = (pass) => {
         if (pass.length < 16) return "Password must be at least 16 characters long."
@@ -66,6 +108,11 @@ export const CreatePatient = ({ onBack, onComplete, userRole }) => {
             return
         }
 
+        if (!formData.hospitalId) {
+            setError("Hospital selection is required for clinical provisioning.")
+            return
+        }
+
         setLoading(true)
         setError(null)
         setSuccess(null)
@@ -85,19 +132,59 @@ export const CreatePatient = ({ onBack, onComplete, userRole }) => {
                 message: 'Clinical record initialized and account provisioned!',
                 mrn: result.mrn
             })
-            // Reset form
-            setFormData({
+            // Reset forms but keep IDs
+            setFormData(prev => ({
+                ...prev,
                 email: '', password: '', firstName: '', lastName: '',
                 dateOfBirth: '', gender: 'male', bloodType: '', phone: '',
-                address: '', city: '', country: 'Egypt', allergies: '',
+                address: '', city: '', allergies: '',
                 chronicConditions: '', emergencyContactName: '',
                 emergencyContactPhone: '', emergencyContactRelation: '',
-                currentMedications: '', consentGiven: false, dataRetentionUntil: getDefaultRetentionDate()
-            })
+                currentMedications: '', consentGiven: false
+            }))
         } else {
             setError(result.error || 'Registration failed')
         }
         setLoading(false)
+    }
+
+    if (success) {
+        return (
+            <div className={styles.pageWrapper}>
+                <TopBar userRole="administrator" onBack={() => {
+                    setSuccess(null)
+                    // Form is already reset in handleSubmit
+                }} />
+                <div className={styles.container}>
+                    <motion.div
+                        className={styles.card}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                    >
+                        <div className={styles.successView}>
+                            <div className={styles.successIcon}>✅</div>
+                            <h2 className={styles.title}>Patient Enrolled Successfully</h2>
+                            <p className={styles.subtitle}>
+                                Clinical record has been initialized with <strong>MRN: <span style={{ color: 'var(--color-primary)' }}>{success.mrn}</span></strong>
+                                <br /><br />
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9em' }}>
+                                    A verification email has been sent to <strong>{formData.email || 'the patient'}</strong>.
+                                    <br />They must confirm their identity before accessing the Patient Portal.
+                                </span>
+                            </p>
+                            <div className={styles.successActions}>
+                                <AnimatedButton variant="primary" fullWidth onClick={() => setSuccess(null)}>
+                                    Enroll Another Patient
+                                </AnimatedButton>
+                                <AnimatedButton variant="secondary" fullWidth onClick={onBack}>
+                                    Return to Dashboard
+                                </AnimatedButton>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -139,21 +226,6 @@ export const CreatePatient = ({ onBack, onComplete, userRole }) => {
                                 className={styles.alertError}
                             >
                                 {error}
-                            </motion.div>
-                        )}
-                        {success && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                className={styles.alertSuccess}
-                            >
-                                <div className={styles.successTitle}>✅ {success.message}</div>
-                                <div className={styles.successDetail}>
-                                    Assigned MRN: <code className={styles.mrnCode}>{success.mrn}</code>
-                                    <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--color-primary)' }}>
-                                        ⚠️ <strong>Note:</strong> A verification email has been sent to the patient. They must confirm it before logging in.
-                                    </div>
-                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -213,14 +285,14 @@ export const CreatePatient = ({ onBack, onComplete, userRole }) => {
                                     label="Gender Identification"
                                     value={formData.gender}
                                     onChange={(e) => handleInputChange('gender', e.target.value)}
-                                    options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }]}
+                                    options={genderOptions}
                                     required
                                 />
-                                <SelectField
+                                <SearchableSelect
                                     label="Blood Type"
                                     value={formData.bloodType}
                                     onChange={(e) => handleInputChange('bloodType', e.target.value)}
-                                    options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(t => ({ value: t, label: t }))}
+                                    options={bloodTypeOptions}
                                 />
                                 <InputField label="Phone Number" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} autoComplete="tel" />
                             </div>
@@ -233,7 +305,37 @@ export const CreatePatient = ({ onBack, onComplete, userRole }) => {
                                 <h3 className={styles.sectionTitle}>Residence & Logistics</h3>
                             </div>
                             <div className={`${styles.grid} ${styles.grid3}`}>
-                                <InputField label="Country" value={formData.country} onChange={(e) => handleInputChange('country', e.target.value)} autoComplete="country-name" />
+                                <SearchableSelect
+                                    label="Country"
+                                    value={formData.countryId}
+                                    onChange={onCountryChange}
+                                    options={countries.map(c => ({
+                                        value: c.country_id,
+                                        label: c.country_name,
+                                        code: c.country_code
+                                    }))}
+                                    required
+                                    isCountry={true}
+                                    placeholder="Search country..."
+                                />
+                                <SearchableSelect
+                                    label="Region / State"
+                                    value={formData.regionId}
+                                    onChange={onRegionChange}
+                                    options={regions.map(r => ({ value: r.region_id, label: r.region_name }))}
+                                    required
+                                    disabled={!formData.countryId}
+                                    placeholder={!formData.countryId ? "Select country first" : "Search region..."}
+                                />
+                                <SearchableSelect
+                                    label="Clinical Hospital"
+                                    value={formData.hospitalId}
+                                    onChange={(e) => handleInputChange('hospitalId', e.target.value)}
+                                    options={hospitals.map(h => ({ value: h.hospital_id, label: h.hospital_name }))}
+                                    required
+                                    disabled={!formData.regionId}
+                                    placeholder={!formData.regionId ? "Select region first" : "Search hospitals..."}
+                                />
                                 <InputField label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} autoComplete="address-level2" />
                                 <InputField label="Permanent Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} autoComplete="street-address" />
                             </div>

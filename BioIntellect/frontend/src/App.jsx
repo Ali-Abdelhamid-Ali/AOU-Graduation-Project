@@ -15,9 +15,9 @@ const EmailConfirmation = lazy(() => import('./pages/EmailConfirmation').then(m 
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })))
 const PatientDashboard = lazy(() => import('./pages/PatientDashboard').then(m => ({ default: m.PatientDashboard })))
-const CreatePatient = lazy(() => import('./pages/CreatePatient').then(m => ({ default: m.CreatePatient })))
-const CreateDoctor = lazy(() => import('./pages/CreateDoctor').then(m => ({ default: m.CreateDoctor })))
-const CreateAdmin = lazy(() => import('./pages/CreateAdmin').then(m => ({ default: m.CreateAdmin })))
+const CreatePatient = lazy(() => import('./pages/CreatePatient'))
+const CreateDoctor = lazy(() => import('./pages/CreateDoctor'))
+const CreateAdmin = lazy(() => import('./pages/CreateAdmin'))
 const ProjectAbout = lazy(() => import('./pages/ProjectAbout').then(m => ({ default: m.ProjectAbout })))
 const EcgAnalysis = lazy(() => import('./pages/EcgAnalysis').then(m => ({ default: m.EcgAnalysis })))
 const MriSegmentation = lazy(() => import('./pages/MriSegmentation').then(m => ({ default: m.MriSegmentation })))
@@ -59,7 +59,8 @@ function AppRoutes() {
         <Route path="/select-role" element={
           <SelectRole
             onRoleSelected={(role) => {
-              if (['admin', 'administrator', 'super_admin'].includes(role)) {
+              // Standardize roles using ROLES constants or explicit checks
+              if (['admin', 'administrator', 'super_admin'].includes(role.toLowerCase())) {
                 navigate('/signup')
               } else {
                 navigate('/login')
@@ -72,7 +73,8 @@ function AppRoutes() {
         <Route path="/login" element={
           <Login
             onLoginSuccess={(role) => {
-              if (['super_admin', 'admin', 'doctor', 'nurse'].includes(role)) {
+              const r = role?.toLowerCase();
+              if (['super_admin', 'administrator', 'admin', 'doctor', 'nurse'].includes(r)) {
                 navigate('/admin-dashboard')
               } else {
                 navigate('/patient-dashboard')
@@ -105,7 +107,7 @@ function AppRoutes() {
 
         {/* Protected Dashboard Routes (RBAC) */}
         <Route path="/admin-dashboard" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'doctor', 'nurse']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse']}>
             <AdminDashboard
               userRole={userRole}
               onLogout={signOut}
@@ -132,37 +134,37 @@ function AppRoutes() {
 
         {/* Sub-modules (Protected) */}
         <Route path="/create-patient" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'doctor', 'nurse']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse']}>
             <CreatePatient userRole={userRole} onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/create-doctor" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'administrator']}>
             <CreateDoctor userRole={userRole} onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/create-admin" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'administrator']}>
             <CreateAdmin userRole={userRole} onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/ecg-analysis" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'doctor', 'nurse', 'patient']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse', 'patient']}>
             <EcgAnalysis onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/mri-segmentation" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'doctor', 'nurse', 'patient']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse', 'patient']}>
             <MriSegmentation onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/medical-llm" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'admin', 'doctor', 'nurse', 'patient']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse', 'patient']}>
             <MedicalLlm onBack={handleBack} />
           </ProtectedRoute>
         } />

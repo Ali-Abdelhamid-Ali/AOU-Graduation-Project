@@ -10,7 +10,7 @@ import { AnimatedButton } from '../components/AnimatedButton'
 import { genderOptions, bloodTypeOptions } from '../constants/options'
 import styles from './CreatePatient.module.css'
 
-export const CreatePatient = ({ onBack, userRole }) => {
+const CreatePatient = ({ onBack, userRole }) => {
     const { registerPatient, isLoading: authLoading } = useAuth()
     const {
         countries,
@@ -30,20 +30,35 @@ export const CreatePatient = ({ onBack, userRole }) => {
         password: '',
         firstName: '',
         lastName: '',
+        firstNameAr: '', // [NEW] Arabic Name
+        lastNameAr: '', // [NEW] Arabic Name
         dateOfBirth: '',
         gender: 'male',
         bloodType: 'unknown',
+
+        // IDs
+        nationalId: '', // [NEW]
+        passportNumber: '', // [NEW]
+
         phone: '',
         address: '',
         city: '',
         countryId: '',
         regionId: '',
         hospitalId: '',
+
+        // Medical & Insurance
+        insuranceProvider: '', // [NEW]
+        insuranceNumber: '', // [NEW]
+
         allergies: '',
         chronicConditions: '',
+
+        // Emergency
         emergencyContactName: '',
         emergencyContactPhone: '',
         emergencyContactRelation: '',
+
         currentMedications: '',
         notes: ''
     })
@@ -128,9 +143,12 @@ export const CreatePatient = ({ onBack, userRole }) => {
             })
             setFormData({
                 email: '', password: '', firstName: '', lastName: '',
+                firstNameAr: '', lastNameAr: '',
                 dateOfBirth: '', gender: 'male', bloodType: 'unknown', phone: '',
+                nationalId: '', passportNumber: '',
                 address: '', city: '', countryId: formData.countryId,
                 regionId: formData.regionId, hospitalId: formData.hospitalId,
+                insuranceProvider: '', insuranceNumber: '',
                 allergies: '', chronicConditions: '', emergencyContactName: '',
                 emergencyContactPhone: '', emergencyContactRelation: '',
                 currentMedications: '', notes: ''
@@ -212,12 +230,19 @@ export const CreatePatient = ({ onBack, userRole }) => {
                         <section className={styles.section}>
                             <h3 className={styles.sectionTitle}>2. Personal Profile</h3>
                             <div className={`${styles.grid} ${styles.grid3}`}>
-                                <InputField label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
-                                <InputField label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
+                                <InputField label="First Name (English)" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
+                                <InputField label="Last Name (English)" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
                                 <InputField label="Birth Date" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required />
+
+                                <InputField label="First Name (Arabic)" value={formData.firstNameAr} onChange={(e) => handleInputChange('firstNameAr', e.target.value)} placeholder="الاسم الأول - اختياري" />
+                                <InputField label="Last Name (Arabic)" value={formData.lastNameAr} onChange={(e) => handleInputChange('lastNameAr', e.target.value)} placeholder="اسم العائلة - اختياري" />
                                 <SelectField label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
-                                <SelectField label="Blood Type" value={formData.bloodType} onChange={(e) => handleInputChange('bloodType', e.target.value)} options={bloodTypeOptions} />
+
+                                <InputField label="National ID / SSN" value={formData.nationalId} onChange={(e) => handleInputChange('nationalId', e.target.value)} placeholder="Optional" />
+                                <InputField label="Passport Number" value={formData.passportNumber} onChange={(e) => handleInputChange('passportNumber', e.target.value)} placeholder="Optional" />
                                 <InputField label="Phone Number" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} />
+
+                                <SelectField label="Blood Type" value={formData.bloodType} onChange={(e) => handleInputChange('bloodType', e.target.value)} options={bloodTypeOptions} />
                             </div>
                         </section>
 
@@ -254,7 +279,15 @@ export const CreatePatient = ({ onBack, userRole }) => {
                         </section>
 
                         <section className={styles.section}>
-                            <h3 className={styles.sectionTitle}>4. Emergency Contact</h3>
+                            <h3 className={styles.sectionTitle}>4. Insurance & Coverage</h3>
+                            <div className={`${styles.grid} ${styles.grid2}`}>
+                                <InputField label="Insurance Provider" value={formData.insuranceProvider} onChange={(e) => handleInputChange('insuranceProvider', e.target.value)} placeholder="e.g. AXA, MetLife" />
+                                <InputField label="Policy / Member Number" value={formData.insuranceNumber} onChange={(e) => handleInputChange('insuranceNumber', e.target.value)} />
+                            </div>
+                        </section>
+
+                        <section className={styles.section}>
+                            <h3 className={styles.sectionTitle}>5. Emergency Contact</h3>
                             <div className={`${styles.grid} ${styles.grid3}`}>
                                 <InputField label="Contact Name" value={formData.emergencyContactName} onChange={(e) => handleInputChange('emergencyContactName', e.target.value)} />
                                 <InputField label="Contact Phone" value={formData.emergencyContactPhone} onChange={(e) => handleInputChange('emergencyContactPhone', e.target.value)} />
@@ -263,7 +296,7 @@ export const CreatePatient = ({ onBack, userRole }) => {
                         </section>
 
                         <section className={styles.section}>
-                            <h3 className={styles.sectionTitle}>5. Clinical Summary</h3>
+                            <h3 className={styles.sectionTitle}>6. Clinical Summary</h3>
                             <div className={`${styles.grid} ${styles.grid2}`}>
                                 <InputField label="Allergies (comma separated)" value={formData.allergies} onChange={(e) => handleInputChange('allergies', e.target.value)} />
                                 <InputField label="Chronic Conditions (comma separated)" value={formData.chronicConditions} onChange={(e) => handleInputChange('chronicConditions', e.target.value)} />
@@ -288,3 +321,5 @@ export const CreatePatient = ({ onBack, userRole }) => {
         </div>
     )
 }
+
+export default CreatePatient

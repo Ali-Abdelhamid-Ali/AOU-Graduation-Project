@@ -10,7 +10,7 @@ import { AnimatedButton } from '../components/AnimatedButton'
 import styles from './CreateDoctor.module.css' // Reusing styles for consistency
 import { adminOptions } from '../constants/options'
 
-export const CreateAdmin = ({ onBack, userRole }) => {
+const CreateAdmin = ({ onBack, userRole }) => {
     const { registerAdmin, isLoading, error, clearError } = useAuth()
     const {
         countries,
@@ -21,13 +21,18 @@ export const CreateAdmin = ({ onBack, userRole }) => {
     } = useGeography()
 
     const [formData, setFormData] = useState({
-        fullName: '',
+        firstName: '',
+        lastName: '',
+        firstNameAr: '',
+        lastNameAr: '',
         email: '',
         role: '',
         password: '',
         confirmPassword: '',
         phone: '',
         department: '',
+        nationalId: '', // [NEW]
+        employeeId: '', // [NEW]
         countryId: '',
         regionId: '',
         hospitalId: ''
@@ -72,7 +77,8 @@ export const CreateAdmin = ({ onBack, userRole }) => {
 
     const validateForm = () => {
         const errors = {}
-        if (!formData.fullName.trim()) errors.fullName = 'System name is required'
+        if (!formData.firstName.trim()) errors.firstName = 'First name is required'
+        if (!formData.lastName.trim()) errors.lastName = 'Last name is required'
         if (!formData.email.trim()) errors.email = 'Administrative email is required'
         if (!formData.role) errors.role = 'System Role is required'
         if (!formData.hospitalId) errors.hospitalId = 'Assigned hospital is required'
@@ -98,11 +104,13 @@ export const CreateAdmin = ({ onBack, userRole }) => {
         // Resolve IDs to Names
         const selectedCountry = countries.find(c => c.country_id === formData.countryId);
         const selectedRegion = regions.find(r => r.region_id === formData.regionId);
+        const selectedHospital = hospitals.find(h => h.hospital_id === formData.hospitalId);
 
         const adminData = {
             ...formData,
             country: selectedCountry ? selectedCountry.country_name : formData.countryId,
-            region: selectedRegion ? selectedRegion.region_name : formData.regionId
+            region: selectedRegion ? selectedRegion.region_name : formData.regionId,
+            hospitalName: selectedHospital ? selectedHospital.hospital_name : null
         }
 
         const result = await registerAdmin(adminData)
@@ -116,8 +124,10 @@ export const CreateAdmin = ({ onBack, userRole }) => {
             <div className={styles.pageWrapper}>
                 <TopBar userRole="admin" onBack={() => {
                     setSuccess(false); setFormData({
-                        fullName: '', email: '', role: '', password: '', confirmPassword: '',
-                        phone: '', department: '', countryId: '', regionId: '', hospitalId: ''
+                        firstName: '', lastName: '', firstNameAr: '', lastNameAr: '',
+                        email: '', role: '', password: '', confirmPassword: '',
+                        phone: '', department: '', nationalId: '', employeeId: '',
+                        countryId: '', regionId: '', hospitalId: ''
                     })
                 }} />
                 <div className={styles.container}>
@@ -126,7 +136,7 @@ export const CreateAdmin = ({ onBack, userRole }) => {
                             <div className={styles.successIcon}>🔑</div>
                             <h2 className={styles.title}>Admin Access Granted</h2>
                             <p className={styles.subtitle}>
-                                <strong>{formData.fullName}</strong> provisioned as {formData.role === 'admin' ? 'Administrator' : 'Super Admin'}.
+                                <strong>{formData.firstName} {formData.lastName}</strong> provisioned as {formData.role === 'admin' ? 'Administrator' : 'Super Admin'}.
                                 <br /><br />
                                 <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>
                                     ⚠️ Activation email sent. The administrator must confirm their credentials before signing in.
@@ -135,8 +145,10 @@ export const CreateAdmin = ({ onBack, userRole }) => {
                             <div className={styles.successActions}>
                                 <AnimatedButton variant="primary" fullWidth onClick={() => {
                                     setSuccess(false); setFormData({
-                                        fullName: '', email: '', role: '', password: '', confirmPassword: '',
-                                        phone: '', department: '', countryId: '', regionId: '', hospitalId: ''
+                                        firstName: '', lastName: '', firstNameAr: '', lastNameAr: '',
+                                        email: '', role: '', password: '', confirmPassword: '',
+                                        phone: '', department: '', nationalId: '', employeeId: '',
+                                        countryId: '', regionId: '', hospitalId: ''
                                     })
                                 }}>Provision Another Administrator</AnimatedButton>
                                 <AnimatedButton variant="secondary" fullWidth onClick={onBack}>Back to Dashboard</AnimatedButton>
@@ -165,14 +177,36 @@ export const CreateAdmin = ({ onBack, userRole }) => {
 
                     <form onSubmit={handleSubmit} className={styles.form}>
                         <div className={styles.grid}>
-                            <InputField
-                                label="Administrator Full Name"
-                                placeholder="E.g. Engineering Lead"
-                                value={formData.fullName}
-                                onChange={(e) => handleInputChange('fullName', e.target.value)}
-                                error={validationErrors.fullName}
-                                required
-                            />
+                            <div className={styles.grid2}>
+                                <InputField
+                                    label="First Name (English)"
+                                    placeholder="Admin"
+                                    value={formData.firstName}
+                                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                                    error={validationErrors.firstName}
+                                    required
+                                />
+                                <InputField
+                                    label="Last Name (English)"
+                                    placeholder="User"
+                                    value={formData.lastName}
+                                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                                    error={validationErrors.lastName}
+                                    required
+                                />
+                            </div>
+                            <div className={styles.grid2}>
+                                <InputField
+                                    label="First Name (Arabic)"
+                                    value={formData.firstNameAr}
+                                    onChange={(e) => handleInputChange('firstNameAr', e.target.value)}
+                                />
+                                <InputField
+                                    label="Last Name (Arabic)"
+                                    value={formData.lastNameAr}
+                                    onChange={(e) => handleInputChange('lastNameAr', e.target.value)}
+                                />
+                            </div>
                             <InputField
                                 label="System Email"
                                 type="email"
@@ -201,6 +235,16 @@ export const CreateAdmin = ({ onBack, userRole }) => {
                                 placeholder="IT / Engineering"
                                 value={formData.department}
                                 onChange={(e) => handleInputChange('department', e.target.value)}
+                            />
+                            <InputField
+                                label="Employee ID"
+                                value={formData.employeeId}
+                                onChange={(e) => handleInputChange('employeeId', e.target.value)}
+                            />
+                            <InputField
+                                label="National ID"
+                                value={formData.nationalId}
+                                onChange={(e) => handleInputChange('nationalId', e.target.value)}
                             />
                             <SearchableSelect
                                 label="Country"
@@ -261,3 +305,5 @@ export const CreateAdmin = ({ onBack, userRole }) => {
         </div>
     )
 }
+
+export default CreateAdmin

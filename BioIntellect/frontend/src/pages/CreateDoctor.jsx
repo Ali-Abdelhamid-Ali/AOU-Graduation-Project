@@ -10,7 +10,7 @@ import { AnimatedButton } from '../components/AnimatedButton'
 import { specialtyOptions, genderOptions } from '../constants/options'
 import styles from './CreateDoctor.module.css'
 
-export const CreateDoctor = ({ onBack, userRole }) => {
+const CreateDoctor = ({ onBack, userRole }) => {
     const { registerDoctor, isLoading, error, clearError } = useAuth()
     const {
         countries,
@@ -21,15 +21,23 @@ export const CreateDoctor = ({ onBack, userRole }) => {
     } = useGeography()
 
     const [formData, setFormData] = useState({
-        fullName: '',
+        firstName: '',
+        lastName: '',
+        firstNameAr: '',
+        lastNameAr: '',
         email: '',
         password: '',
         confirmPassword: '',
         specialty: '',
         phone: '',
         licenseNumber: '',
+        nationalId: '',
         gender: 'male',
         dateOfBirth: '',
+        bio: '',
+        qualifications: '',
+        workingHours: '',
+        languagesSpoken: '',
         countryId: '',
         regionId: '',
         hospitalId: ''
@@ -77,7 +85,8 @@ export const CreateDoctor = ({ onBack, userRole }) => {
 
     const validateForm = () => {
         const errors = {}
-        if (!formData.fullName.trim()) errors.fullName = 'Full name is required'
+        if (!formData.firstName.trim()) errors.firstName = 'First name is required'
+        if (!formData.lastName.trim()) errors.lastName = 'Last name is required'
         if (!formData.email.trim()) errors.email = 'Email is required'
         if (!formData.specialty) errors.specialty = 'Specialty selection is required'
         if (!formData.licenseNumber.trim()) errors.licenseNumber = 'License number is required'
@@ -124,8 +133,11 @@ export const CreateDoctor = ({ onBack, userRole }) => {
             <div className={styles.pageWrapper}>
                 <TopBar userRole="admin" onBack={() => {
                     setSuccess(false); setFormData({
-                        fullName: '', email: '', password: '', confirmPassword: '', specialty: '', phone: '', licenseNumber: '',
-                        gender: 'male', dateOfBirth: '', countryId: '', regionId: '', hospitalId: ''
+                        firstName: '', lastName: '', firstNameAr: '', lastNameAr: '',
+                        email: '', password: '', confirmPassword: '', specialty: '', phone: '',
+                        licenseNumber: '', nationalId: '', gender: 'male', dateOfBirth: '',
+                        bio: '', qualifications: '', workingHours: '', languagesSpoken: '',
+                        countryId: '', regionId: '', hospitalId: ''
                     })
                 }} />
                 <div className={styles.container}>
@@ -134,7 +146,7 @@ export const CreateDoctor = ({ onBack, userRole }) => {
                             <div className={styles.successIcon}>🛡️</div>
                             <h2 className={styles.title}>Account Provisioned</h2>
                             <p className={styles.subtitle}>
-                                Doctor <strong>{formData.fullName}</strong> has been successfully registered.
+                                Doctor <strong>{formData.firstName} {formData.lastName}</strong> has been successfully registered.
                                 <br /><br />
                                 <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>
                                     ⚠️ Activation email sent. The doctor must confirm their email before signing in.
@@ -143,8 +155,11 @@ export const CreateDoctor = ({ onBack, userRole }) => {
                             <div className={styles.successActions}>
                                 <AnimatedButton variant="primary" fullWidth onClick={() => {
                                     setSuccess(false); setFormData({
-                                        fullName: '', email: '', password: '', confirmPassword: '', specialty: '', phone: '', licenseNumber: '',
-                                        gender: 'male', dateOfBirth: '', countryId: '', regionId: '', hospitalId: ''
+                                        firstName: '', lastName: '', firstNameAr: '', lastNameAr: '',
+                                        email: '', password: '', confirmPassword: '', specialty: '', phone: '',
+                                        licenseNumber: '', nationalId: '', gender: 'male', dateOfBirth: '',
+                                        bio: '', qualifications: '', workingHours: '', languagesSpoken: '',
+                                        countryId: '', regionId: '', hospitalId: ''
                                     })
                                 }}>Provision Another Staff Member</AnimatedButton>
                                 <AnimatedButton variant="secondary" fullWidth onClick={onBack}>Return to Dashboard</AnimatedButton>
@@ -173,14 +188,38 @@ export const CreateDoctor = ({ onBack, userRole }) => {
 
                     <form onSubmit={handleSubmit} className={styles.form}>
                         <div className={styles.grid}>
-                            <InputField
-                                label="Professional Full Name"
-                                placeholder="Dr. Ahmed Ali"
-                                value={formData.fullName}
-                                onChange={(e) => handleInputChange('fullName', e.target.value)}
-                                error={validationErrors.fullName}
-                                required
-                            />
+                            <div className={styles.grid2}>
+                                <InputField
+                                    label="First Name (English)"
+                                    placeholder="Ahmed"
+                                    value={formData.firstName}
+                                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                                    error={validationErrors.firstName}
+                                    required
+                                />
+                                <InputField
+                                    label="Last Name (English)"
+                                    placeholder="Ali"
+                                    value={formData.lastName}
+                                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                                    error={validationErrors.lastName}
+                                    required
+                                />
+                            </div>
+                            <div className={styles.grid2}>
+                                <InputField
+                                    label="First Name (Arabic)"
+                                    placeholder="أحمد"
+                                    value={formData.firstNameAr}
+                                    onChange={(e) => handleInputChange('firstNameAr', e.target.value)}
+                                />
+                                <InputField
+                                    label="Last Name (Arabic)"
+                                    placeholder="علي"
+                                    value={formData.lastNameAr}
+                                    onChange={(e) => handleInputChange('lastNameAr', e.target.value)}
+                                />
+                            </div>
                             <InputField
                                 label="Medical Email"
                                 type="email"
@@ -204,6 +243,12 @@ export const CreateDoctor = ({ onBack, userRole }) => {
                                 onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
                                 error={validationErrors.licenseNumber}
                                 required
+                            />
+                            <InputField
+                                label="National ID"
+                                placeholder="Optional"
+                                value={formData.nationalId}
+                                onChange={(e) => handleInputChange('nationalId', e.target.value)}
                             />
                             <SelectField
                                 label="Gender"
@@ -269,6 +314,30 @@ export const CreateDoctor = ({ onBack, userRole }) => {
                                     value={formData.phone}
                                     onChange={(e) => handleInputChange('phone', e.target.value)}
                                 />
+                                <InputField
+                                    label="Bio / Experience Summary"
+                                    value={formData.bio}
+                                    onChange={(e) => handleInputChange('bio', e.target.value)}
+                                    multiline
+                                />
+                                <InputField
+                                    label="Qualifications"
+                                    value={formData.qualifications}
+                                    onChange={(e) => handleInputChange('qualifications', e.target.value)}
+                                    multiline
+                                />
+                                <InputField
+                                    label="Working Hours / Schedule"
+                                    value={formData.workingHours}
+                                    onChange={(e) => handleInputChange('workingHours', e.target.value)}
+                                    placeholder="e.g. Sun-Thu 9am-5pm"
+                                />
+                                <InputField
+                                    label="Languages Spoken"
+                                    value={formData.languagesSpoken}
+                                    onChange={(e) => handleInputChange('languagesSpoken', e.target.value)}
+                                    placeholder="e.g. Arabic, English"
+                                />
                             </div>
                         </div>
 
@@ -287,3 +356,5 @@ export const CreateDoctor = ({ onBack, userRole }) => {
         </div>
     )
 }
+
+export default CreateDoctor

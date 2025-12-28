@@ -135,13 +135,15 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
     // Resolve IDs to Names for DB storage (User Requirement: "Names instead of IDs")
     const selectedCountry = countries.find(c => c.country_id === formData.countryId);
     const selectedRegion = regions.find(r => r.region_id === formData.regionId);
+    const selectedHospital = hospitals.find(h => h.hospital_id === formData.hospitalId);
 
     const signUpData = {
       ...formData,
       first_name: formData.firstName,
       last_name: formData.lastName,
       country: selectedCountry ? selectedCountry.country_name : formData.countryId,
-      region: selectedRegion ? selectedRegion.region_name : formData.regionId
+      region: selectedRegion ? selectedRegion.region_name : formData.regionId,
+      hospitalName: selectedHospital ? selectedHospital.hospital_name : null
     }
 
     const result = await signUp(signUpData)

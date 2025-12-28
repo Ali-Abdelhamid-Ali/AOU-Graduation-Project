@@ -25,7 +25,20 @@ export const getCurrentUser = async () => {
     if (error) throw error
     return { data: user, error: null }
   } catch (error) {
-    console.error('🔑 Auth Error:', error.message)
+    // Only log if it's a real error, not just a missing session
+    if (error.message !== 'Auth session missing!' && !error.message.includes('not found')) {
+      console.error('🔑 Auth Error:', error.message)
+    }
+
+    // Auto-cleanup stale sessions
+    if (error.message.includes('User from sub claim in JWT does not exist')) {
+      console.warn('⚠️ [AUTH RECOVERY] Detected stale user session. Purging cache...');
+      await supabase.auth.signOut();
+      localStorage.removeItem('biointellect_current_user');
+      localStorage.removeItem('userRole');
+      return { data: null, error: null };
+    }
+
     return { data: null, error }
   }
 }

@@ -244,7 +244,7 @@ export const AuthProvider = ({ children }) => {
   }, [_registerUser])
 
   const registerDoctor = useCallback(async (data) => {
-    const result = await _registerUser(data, ROLES.DOCTOR, 'doctors', data.specialty);
+    const result = await _registerUser(data, ROLES.DOCTOR, 'doctors', null);
 
     // Handle Doctor Specialties Link
     if (result.success && data.specialty) {

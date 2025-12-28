@@ -103,9 +103,7 @@ export const normalizeRole = (role) => {
  * Used primarily for the SQL Trigger (basic info).
  */
 export const createAuthPayload = (input) => {
-    console.log("🛠️ [ROLES_CONFIG] Constructing Auth Payload...", input);
-
-    const role = normalizeRole(input.role || input.specialty);
+    const role = normalizeRole(input.role);
     const firstName = (input.firstName || input.first_name || '').trim();
     const lastName = (input.lastName || input.last_name || '').trim();
     const fullName = (input.fullName || input.full_name || `${firstName} ${lastName}`).trim();
@@ -159,7 +157,7 @@ export const createAuthPayload = (input) => {
  * Maps all form inputs to the exact column names in the schema.
  */
 export const createProfileData = (input) => {
-    const role = normalizeRole(input.role || input.specialty);
+    const role = normalizeRole(input.role);
     console.log("🛠️ [ROLES_CONFIG] Constructing Profile Data for DB...", role);
 
     const common = {
@@ -169,7 +167,6 @@ export const createProfileData = (input) => {
         last_name_ar: input.lastNameAr || input.last_name_ar || null,
         phone: input.phone || null,
         hospital_id: input.hospitalId || input.hospital_id || null, // [CRITICAL] Ensure hospital is linked
-        // address/city likely in patients/doctors tables or implicitly handled? schema has address in hospitals/patients
     };
 
     if (role === ROLES.PATIENT) {
@@ -188,7 +185,7 @@ export const createProfileData = (input) => {
             // Address
             address: input.address || null,
             city: input.city || null,
-            region_id: input.regionId || null, // Assuming regionId is UUID from frontend
+            region_id: input.regionId || null,
             country_id: input.countryId || null,
 
             // Emergency
@@ -216,15 +213,13 @@ export const createProfileData = (input) => {
         return {
             ...common,
             role: role, // [CRITICAL] Explicitly save role
-            first_name_ar: input.firstNameAr || null,
-            last_name_ar: input.lastNameAr || null,
             gender: input.gender || null,
             date_of_birth: input.dateOfBirth || null,
 
-            license_number: input.licenseNumber || input.license_number, // Already validated in AuthPayload
+            license_number: input.licenseNumber || input.license_number,
             license_expiry: input.licenseExpiry || input.license_expiry || null,
 
-            qualification: input.qualification || null,
+            qualification: input.qualifications || null,
             years_of_experience: input.yearsOfExperience ? parseInt(input.yearsOfExperience) : 0,
             bio: input.bio || null,
             employee_id: input.employeeId || input.employee_id || null,

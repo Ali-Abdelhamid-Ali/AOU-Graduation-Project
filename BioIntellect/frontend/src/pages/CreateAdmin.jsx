@@ -41,16 +41,13 @@ const CreateAdmin = ({ onBack, userRole }) => {
     const [validationErrors, setValidationErrors] = useState({})
     const [success, setSuccess] = useState(false)
 
-    // Set default country (Egypt) once countries are loaded
-    useEffect(() => {
-        if (countries.length > 0 && !formData.countryId) {
-            const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
-            if (egypt) {
-                handleInputChange('countryId', egypt.country_id)
-                selectCountry(egypt.country_id)
-            }
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }))
+        if (validationErrors[field]) {
+            setValidationErrors(prev => ({ ...prev, [field]: '' }))
         }
-    }, [countries])
+        clearError()
+    }
 
     const onCountryChange = (e) => {
         const val = e.target.value
@@ -67,13 +64,16 @@ const CreateAdmin = ({ onBack, userRole }) => {
         selectRegion(val)
     }
 
-    const handleInputChange = (field, value) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
-        if (validationErrors[field]) {
-            setValidationErrors(prev => ({ ...prev, [field]: '' }))
+    // Set default country (Egypt) once countries are loaded
+    useEffect(() => {
+        if (countries.length > 0 && !formData.countryId) {
+            const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
+            if (egypt) {
+                handleInputChange('countryId', egypt.country_id)
+                selectCountry(egypt.country_id)
+            }
         }
-        clearError()
-    }
+    }, [countries])
 
     const validateForm = () => {
         const errors = {}

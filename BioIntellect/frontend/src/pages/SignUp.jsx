@@ -35,16 +35,19 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
   })
   const [validationErrors, setValidationErrors] = useState({})
 
-  // Set default country (Egypt) once countries are loaded
-  useEffect(() => {
-    if (countries.length > 0 && !formData.countryId) {
-      const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
-      if (egypt) {
-        handleInputChange('countryId', egypt.country_id)
-        selectCountry(egypt.country_id)
-      }
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+    if (validationErrors[field]) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [field]: '',
+      }))
     }
-  }, [countries])
+    clearError()
+  }
 
   const onCountryChange = (e) => {
     const val = e.target.value
@@ -61,6 +64,17 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
     selectRegion(val)
   }
 
+  // Set default country (Egypt) once countries are loaded
+  useEffect(() => {
+    if (countries.length > 0 && !formData.countryId) {
+      const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
+      if (egypt) {
+        handleInputChange('countryId', egypt.country_id)
+        selectCountry(egypt.country_id)
+      }
+    }
+  }, [countries])
+
   // Determine available roles based on main role selection
   const roleOptions = useMemo(() => {
     if (userRole === 'doctor') {
@@ -76,20 +90,6 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },
   ]
-
-  const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-    if (validationErrors[field]) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [field]: '',
-      }))
-    }
-    clearError()
-  }
 
   const validateForm = () => {
     const errors = {}

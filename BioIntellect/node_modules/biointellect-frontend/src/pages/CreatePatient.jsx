@@ -63,17 +63,10 @@ const CreatePatient = ({ onBack, userRole }) => {
         notes: ''
     })
 
-    // Set default country (Egypt) once countries are loaded
-    // Set default country (Egypt) once countries are loaded
-    useEffect(() => {
-        if (countries.length > 0 && !formData.countryId) {
-            const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
-            if (egypt) {
-                handleInputChange('countryId', egypt.country_id)
-                selectCountry(egypt.country_id)
-            }
-        }
-    }, [countries, formData.countryId, handleInputChange, selectCountry])
+    const handleInputChange = useCallback((field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }))
+        setError(null)
+    }, [])
 
     const onCountryChange = (e) => {
         const val = e.target.value
@@ -95,10 +88,16 @@ const CreatePatient = ({ onBack, userRole }) => {
         return null
     }
 
-    const handleInputChange = useCallback((field, value) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
-        setError(null)
-    }, [])
+    // Set default country (Egypt) once countries are loaded
+    useEffect(() => {
+        if (countries.length > 0 && !formData.countryId) {
+            const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
+            if (egypt) {
+                handleInputChange('countryId', egypt.country_id)
+                selectCountry(egypt.country_id)
+            }
+        }
+    }, [countries, formData.countryId, handleInputChange, selectCountry])
 
     const handleSubmit = async (e) => {
         e.preventDefault()

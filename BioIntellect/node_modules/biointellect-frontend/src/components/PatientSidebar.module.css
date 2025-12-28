@@ -1,0 +1,212 @@
+.sidebar {
+    height: 100vh;
+    background: #ffffff;
+    border-right: 1px solid #eef2f6;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topSection {
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logoContainer {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.logoIcon {
+    width: 32px;
+    height: 32px;
+    background: var(--color-primary, #3b82f6);
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.25rem;
+}
+
+.logoText {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+}
+
+.collapseToggle {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.profileSection {
+    padding: 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.avatarWrapper {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 0.75rem;
+}
+
+.avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    object-fit: cover;
+    border: 3px solid #f8fafc;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.collapsed .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+}
+
+.statusDot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    background: #10b981;
+    border: 2px solid white;
+    border-radius: 50%;
+}
+
+.profileInfo {
+    margin-top: 0.5rem;
+}
+
+.userName {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.125rem;
+}
+
+.userStatus {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.nav {
+    flex: 1;
+    padding: 1.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.navLink {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    color: #64748b;
+    text-decoration: none;
+    transition: all 0.2s;
+    gap: 1rem;
+}
+
+.navLink:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.navLink.active {
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.navIcon {
+    font-size: 1.25rem;
+    min-width: 24px;
+    display: flex;
+    justify-content: center;
+}
+
+.navLabel {
+    font-size: 0.9375rem;
+}
+
+.footer {
+    padding: 1rem 0.75rem;
+    border-top: 1px solid #f1f5f9;
+}
+
+.logoutBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.logoutBtn:hover {
+    background: #fff1f2;
+    color: #e11d48;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        height: auto;
+        width: 100% !important;
+        flex-direction: row;
+        border-right: none;
+        border-top: 1px solid #eef2f6;
+        padding: 0.5rem;
+    }
+
+    .topSection,
+    .profileSection,
+    .footer,
+    .navLabel {
+        display: none;
+    }
+
+    .nav {
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 0;
+    }
+
+    .navLink {
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        font-size: 0.7rem;
+    }
+}

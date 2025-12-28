@@ -25,6 +25,7 @@ export const MedicalLlm = ({ onBack }) => {
 
     useEffect(() => {
         const initConversation = async () => {
+            if (!currentUser?.id) return;
             try {
                 const isPatient = userRole === 'patient'
                 const pId = isPatient ? currentUser.id : null
@@ -44,7 +45,7 @@ export const MedicalLlm = ({ onBack }) => {
     }, [currentUser, userRole])
 
     const handleSend = async () => {
-        if (!input.trim() || !conversation) return
+        if (!input.trim() || !conversation || !currentUser?.id) return
 
         const userContent = input
         const userMsg = { role: 'user', content: userContent }

@@ -22,6 +22,12 @@ const ProjectAbout = lazy(() => import('./pages/ProjectAbout').then(m => ({ defa
 const EcgAnalysis = lazy(() => import('./pages/EcgAnalysis').then(m => ({ default: m.EcgAnalysis })))
 const MriSegmentation = lazy(() => import('./pages/MriSegmentation').then(m => ({ default: m.MriSegmentation })))
 const MedicalLlm = lazy(() => import('./pages/MedicalLlm').then(m => ({ default: m.MedicalLlm })))
+const ForcePasswordReset = lazy(() => import('./pages/ForcePasswordReset').then(m => ({ default: m.ForcePasswordReset })))
+const PatientLayout = lazy(() => import('./components/PatientLayout').then(m => ({ default: m.PatientLayout })))
+const PatientResults = lazy(() => import('./pages/PatientResults').then(m => ({ default: m.PatientResults })))
+const PatientProfile = lazy(() => import('./pages/PatientProfile').then(m => ({ default: m.PatientProfile })))
+const PatientSecurity = lazy(() => import('./pages/PatientSecurity').then(m => ({ default: m.PatientSecurity })))
+const PatientAppointments = lazy(() => import('./pages/PatientAppointments').then(m => ({ default: m.PatientAppointments })))
 
 const LoadingScreen = () => (
   <div className="loading-screen" style={{
@@ -104,6 +110,11 @@ function AppRoutes() {
 
         <Route path="/email-confirmation" element={<EmailConfirmation />} />
         <Route path="/project-info" element={<ProjectAbout onBack={handleBack} />} />
+        <Route path="/force-password-reset" element={
+          <ProtectedRoute>
+            <ForcePasswordReset />
+          </ProtectedRoute>
+        } />
 
         {/* Protected Dashboard Routes (RBAC) */}
         <Route path="/admin-dashboard" element={
@@ -121,16 +132,22 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
 
-        <Route path="/patient-dashboard" element={
+        <Route element={
           <ProtectedRoute allowedRoles={['patient']}>
-            <PatientDashboard
-              onLogout={signOut}
-              onEcgAnalysis={() => navigate('/ecg-analysis')}
-              onMriSegmentation={() => navigate('/mri-segmentation')}
-              onMedicalLlm={() => navigate('/medical-llm')}
-            />
+            <PatientLayout />
           </ProtectedRoute>
-        } />
+        }>
+          <Route path="/patient-dashboard" element={<PatientDashboard />} />
+          <Route path="/patient-results" element={<PatientResults />} />
+          <Route path="/patient-profile" element={<PatientProfile />} />
+          <Route path="/patient-security" element={<PatientSecurity />} />
+          <Route path="/patient-appointments" element={<PatientAppointments />} />
+
+          {/* AI Modules Integrated within Patient Portal */}
+          <Route path="/ecg-analysis" element={<EcgAnalysis onBack={handleBack} />} />
+          <Route path="/mri-segmentation" element={<MriSegmentation onBack={handleBack} />} />
+          <Route path="/medical-llm" element={<MedicalLlm onBack={handleBack} />} />
+        </Route>
 
         {/* Sub-modules (Protected) */}
         <Route path="/create-patient" element={
@@ -151,20 +168,22 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
 
+        {/* Keep the standalone protected routes for non-patient roles if needed, 
+            or they will use the global handlers. For patients, they are handled above. */}
         <Route path="/ecg-analysis" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse', 'patient']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse']}>
             <EcgAnalysis onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/mri-segmentation" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse', 'patient']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse']}>
             <MriSegmentation onBack={handleBack} />
           </ProtectedRoute>
         } />
 
         <Route path="/medical-llm" element={
-          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse', 'patient']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'administrator', 'doctor', 'nurse']}>
             <MedicalLlm onBack={handleBack} />
           </ProtectedRoute>
         } />

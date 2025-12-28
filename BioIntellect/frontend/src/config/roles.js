@@ -33,13 +33,20 @@ export const ROLE_DB_CONFIG = {
     [ROLES.PATIENT]: {
         table: 'patients',
         // Select logic: standard fields + hospital join
-        select: 'id, first_name, last_name, user_id, hospital_id, hospitals(hospital_name_en), mrn',
+        select: 'id, first_name, last_name, user_id, hospital_id, hospitals(hospital_name_en), medical_record_number, photo_url, date_of_birth, gender, phone, address',
         transform: (data) => ({
             id: data.id,
+            first_name: data.first_name,
+            last_name: data.last_name,
             full_name: `${data.first_name} ${data.last_name}`,
             user_role: ROLES.PATIENT,
             hospital_name: data.hospitals?.hospital_name_en,
-            mrn: data.mrn
+            mrn: data.medical_record_number,
+            photo_url: data.photo_url,
+            date_of_birth: data.date_of_birth,
+            gender: data.gender,
+            phone: data.phone,
+            address: data.address
         })
     },
     [ROLES.DOCTOR]: {

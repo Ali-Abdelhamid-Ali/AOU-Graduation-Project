@@ -38,7 +38,7 @@ export const EcgAnalysis = ({ onBack }) => {
     }
 
     const runAnalysis = async () => {
-        if (!file) return
+        if (!file || !currentUser?.id) return
 
         setAnalyzing(true)
         setError(null)

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { supabase, getCurrentUser } from '../config/supabase'
 import { ROLES, CLINICAL_ROLES, ROLE_DB_CONFIG, ROLE_ALIAS_MAP, createAuthPayload, createProfileData, normalizeRole } from '../config/roles'
+import { schemas } from '../utils/securityUtils'
 
 const AuthContext = createContext()
 
@@ -23,6 +24,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [mustResetPassword, setMustResetPassword] = useState(false)
   const [error, setError] = useState(null)
 
   // ━━━━ CACHING LAYER ━━━━
@@ -62,6 +64,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             const finalRole = userData.user_role || normalizedRole;
             setUserRole(finalRole);
+            setMustResetPassword(authUser.user_metadata?.must_reset_password === true);
             localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
             localStorage.setItem(USER_ROLE_KEY, finalRole);
           } else if (normalizedRole) {
@@ -129,6 +132,10 @@ export const AuthProvider = ({ children }) => {
     setError(null);
 
     try {
+      // 0. VULNERABILITY MITIGATION: Validate input schema
+      const schemaType = explicitRole === ROLES.DOCTOR ? 'doctor' : 'patient';
+      const validatedData = schemas[schemaType].parse(baseInput);
+
       console.log(`━━━━ [SUPABASE] DIRECT REGISTRATION: ${explicitRole} ━━━━`);
 
       // 1. Prepare standardized metadata via roles.js logic
@@ -186,6 +193,9 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true)
     setError(null)
     try {
+      // 0. Validate Login Schema
+      schemas.login.parse({ email, password });
+
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
 
@@ -205,10 +215,11 @@ export const AuthProvider = ({ children }) => {
           setCurrentUser(userData);
           setIsAuthenticated(true);
           setUserRole(authRole);
+          setMustResetPassword(data.user.user_metadata?.must_reset_password === true);
           localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
           localStorage.setItem(USER_ROLE_KEY, authRole);
           setIsLoading(false);
-          return { success: true, user: userData, role: authRole };
+          return { success: true, user: userData, role: authRole, mustReset: data.user.user_metadata?.must_reset_password === true };
         }
       }
 
@@ -216,9 +227,10 @@ export const AuthProvider = ({ children }) => {
       console.warn("⚠️ [AUTH]: Login succeeded but Profile record not found. Using metadata role.");
       setIsAuthenticated(true);
       setUserRole(authRole);
+      setMustResetPassword(data.user.user_metadata?.must_reset_password === true);
       localStorage.setItem(USER_ROLE_KEY, authRole);
       setIsLoading(false);
-      return { success: true, user: data.user, role: authRole };
+      return { success: true, user: data.user, role: authRole, mustReset: data.user.user_metadata?.must_reset_password === true };
 
     } catch (err) {
       setError(err.message);
@@ -227,6 +239,30 @@ export const AuthProvider = ({ children }) => {
     }
   }, [userRole])
 
+  const completeForcedReset = useCallback(async (newPassword) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // 1. Update Password
+      const { error: pwdError } = await supabase.auth.updateUser({ password: newPassword });
+      if (pwdError) throw pwdError;
+
+      // 2. Clear must_reset_password flag in metadata
+      const { error: metaError } = await supabase.auth.updateUser({
+        data: { must_reset_password: false }
+      });
+      if (metaError) throw metaError;
+
+      setMustResetPassword(false);
+      setIsLoading(false);
+      return { success: true };
+    } catch (err) {
+      setError(err.message);
+      setIsLoading(false);
+      return { success: false, error: err.message };
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
     localStorage.removeItem(CURRENT_USER_KEY)
@@ -234,7 +270,31 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null)
     setIsAuthenticated(false)
     setUserRole(null)
+    setMustResetPassword(false)
   }, [])
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const rawRole = authUser.user_metadata?.role;
+      const authRole = rawRole ? ROLE_ALIAS_MAP[rawRole.toLowerCase()] : null;
+
+      if (authRole && ROLE_DB_CONFIG[authRole]) {
+        const config = ROLE_DB_CONFIG[authRole];
+        const { data: profile } = await supabase.from(config.table).select(config.select).eq('user_id', authUser.id).maybeSingle();
+        if (profile) {
+          const userData = config.transform(profile);
+          setCurrentUser(userData);
+          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
+          return userData;
+        }
+      }
+    } catch (err) {
+      console.error('🚨 [AUTH]: Refresh Error:', err);
+    }
+  }, []);
 
 
   // ─── SPECIFIC REGISTRATIONS ───
@@ -251,12 +311,14 @@ export const AuthProvider = ({ children }) => {
       // Logic to link specialty in 'doctor_specialties' table
       // This is a post-registration step
       try {
-        // Fetch doctor ID first
-        const { data: doc } = await supabase.from('doctors').select('id').eq('user_id', result.userId).single();
-        const { data: spec } = await supabase.from('specialty_types').select('id').eq('specialty_code', data.specialty).single();
+        // Fetch doctor ID first (Using maybeSingle to handle trigger race conditions)
+        const { data: doc } = await supabase.from('doctors').select('id').eq('user_id', result.userId).maybeSingle();
+        const { data: spec } = await supabase.from('specialty_types').select('id').eq('specialty_code', data.specialty).maybeSingle();
 
         if (doc && spec) {
           await supabase.from('doctor_specialties').insert({ doctor_id: doc.id, specialty_id: spec.id, is_primary: true });
+        } else {
+          console.warn("⚠️ [AUTH]: Could not link specialty - Record not ready or invalid specialty code.");
         }
       } catch (e) {
         console.warn("Failed to link specialty:", e);
@@ -350,13 +412,13 @@ export const AuthProvider = ({ children }) => {
   const clearError = useCallback(() => setError(null), [])
 
   const value = useMemo(() => ({
-    userRole, currentUser, isAuthenticated, isLoading, error,
-    selectRole, signUp, signIn, signOut,
+    userRole, currentUser, isAuthenticated, isLoading, error, mustResetPassword,
+    selectRole, signUp, signIn, signOut, refreshUser, completeForcedReset,
     registerPatient, registerDoctor, registerAdmin,
     fetchCountries, fetchRegions, fetchHospitals,
     clearError,
     CLINICAL_ROLES
-  }), [userRole, currentUser, isAuthenticated, isLoading, error, selectRole, signUp, signIn, signOut, registerPatient, registerDoctor, registerAdmin, fetchCountries, fetchRegions, fetchHospitals, clearError])
+  }), [userRole, currentUser, isAuthenticated, isLoading, error, mustResetPassword, selectRole, signUp, signIn, signOut, refreshUser, completeForcedReset, registerPatient, registerDoctor, registerAdmin, fetchCountries, fetchRegions, fetchHospitals, clearError])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
  * @param {Array} allowedRoles - Array of roles permitted to access this route
  */
 export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-    const { isAuthenticated, userRole, isLoading } = useAuth();
+    const { isAuthenticated, userRole, isLoading, mustResetPassword } = useAuth();
     const location = useLocation();
 
     if (isLoading) {
@@ -19,6 +19,10 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     if (!isAuthenticated) {
         // Redirect to home if not authenticated
         return <Navigate to="/" state={{ from: location }} replace />;
+    }
+
+    if (mustResetPassword && location.pathname !== '/force-password-reset') {
+        return <Navigate to="/force-password-reset" replace />;
     }
 
     if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {

@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
    BIOUI - Medical-Grade Design System
    ============================================================================
    
@@ -682,4 +682,30 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ========================================
+   SKELETON ANIMATION
+   ======================================== */
+@keyframes skeletonPulse {
+  0% { background-color: var(--color-gray-100); }
+  50% { background-color: var(--color-gray-200); }
+  100% { background-color: var(--color-gray-100); }
+}
+
+.skeleton {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-gray-100);
+}
+
+@keyframes skeletonPulseDark {
+  0% { background-color: var(--color-gray-800); }
+  50% { background-color: var(--color-gray-700); }
+  100% { background-color: var(--color-gray-800); }
+}
+
+html.dark .skeleton {
+  animation: skeletonPulseDark 1.5s ease-in-out infinite;
+  background-color: var(--color-gray-800);
 }

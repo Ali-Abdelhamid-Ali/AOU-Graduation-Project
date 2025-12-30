@@ -1,2 +1,6 @@
 BioIntellect/frontend/src/components/Toast.jsx
 BioIntellect/node_modules/biointellect-frontend/src/components/Toast.jsx
+-e 
+# Environment files
+*.env
+*.env.*

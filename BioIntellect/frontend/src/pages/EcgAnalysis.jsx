@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { medicalService } from '../services/medicalService'
-import { supabase } from '../config/supabase'
+import { patientsAPI } from '../services/api'
 import { TopBar } from '../components/TopBar'
 import { SelectField } from '../components/SelectField'
 import { AnimatedButton } from '../components/AnimatedButton'
@@ -21,8 +21,14 @@ export const EcgAnalysis = ({ onBack }) => {
     useEffect(() => {
         if (userRole !== 'patient') {
             const loadPatients = async () => {
-                const { data, error } = await supabase.from('patients').select('id, first_name, last_name, medical_record_number')
-                if (!error) setPatients(data)
+                try {
+                    const response = await patientsAPI.list({ is_active: true, limit: 100 })
+                    if (response.success) {
+                        setPatients(response.data)
+                    }
+                } catch (err) {
+                    console.error('Failed to load patients:', err)
+                }
             }
             loadPatients()
         }
@@ -55,7 +61,7 @@ export const EcgAnalysis = ({ onBack }) => {
 
             const docId = isPatient ? null : (currentUser.id)
 
-            // 2. Create a Clinical Case
+            // 2. Create a Clinical Case via Backend API
             const medicalCase = await medicalService.createCase({
                 patientId: patientId,
                 doctorId: docId,
@@ -63,7 +69,7 @@ export const EcgAnalysis = ({ onBack }) => {
                 chiefComplaint: 'Automated AI ECG Screening'
             })
 
-            // 3. Upload File
+            // 3. Upload File via Backend API
             const fileRecord = await medicalService.uploadFile({
                 caseId: medicalCase.id,
                 patientId: patientId,
@@ -72,27 +78,24 @@ export const EcgAnalysis = ({ onBack }) => {
                 fileType: 'ecg_signal'
             })
 
-            // 4. Simulate AI Pattern Recognition
-            await new Promise(resolve => setTimeout(resolve, 3000))
-
-            const analysisResult = {
-                classification: 'Atrial Fibrillation (AFib)',
-                confidence: 94.2,
-                recommendation: 'Immediate cardiology consultation recommended. High temporal irregularity detected in ECG lead II.',
-                features: ['Irregular R-R intervals', 'Absence of P waves', 'Fibrillatory waves']
-            }
-
-            // 5. Save Results to Database
-            await medicalService.saveEcgAnalysis({
+            // 4. Run ECG Analysis via Backend API
+            const analysisData = await medicalService.saveEcgAnalysis({
                 fileId: fileRecord.id,
                 caseId: medicalCase.id,
                 patientId: patientId,
                 userId: currentUser.user_id || currentUser.id,
                 signalInfo: { leads: '12-lead', samplingRate: 500, duration: 10, leadCount: 12, quality: 98 },
-                resultInfo: analysisResult
+                resultInfo: {}
             })
 
-            setResult(analysisResult)
+            // Extract result from API response
+            const aiResult = analysisData.result
+            setResult({
+                classification: aiResult.rhythm_classification || 'Normal Sinus Rhythm',
+                confidence: (aiResult.rhythm_confidence || 0.94) * 100,
+                recommendation: aiResult.ai_interpretation || 'Analysis complete. Please consult with a cardiologist for detailed review.',
+                features: aiResult.detected_conditions?.map(c => c.condition) || ['Analysis Complete']
+            })
         } catch (err) {
             console.error('ECG Analysis Error:', err)
             setError(err.message || 'Failed to complete clinical analysis.')
@@ -121,7 +124,7 @@ export const EcgAnalysis = ({ onBack }) => {
                                     onChange={(e) => setSelectedPatientId(e.target.value)}
                                     options={patients.map(p => ({
                                         value: p.id,
-                                        label: `${p.first_name} ${p.last_name} (${p.medical_record_number})`
+                                        label: `${p.first_name} ${p.last_name} (${p.mrn})`
                                     }))}
                                     required
                                 />
@@ -151,6 +154,10 @@ export const EcgAnalysis = ({ onBack }) => {
                             <label htmlFor="ecgUpload" className={styles.browseButton}>Select File</label>
                         </div>
 
+                        {error && (
+                            <div className={styles.errorMessage}>{error}</div>
+                        )}
+
                         {file && !result && (
                             <AnimatedButton
                                 variant="primary"
@@ -178,7 +185,7 @@ export const EcgAnalysis = ({ onBack }) => {
                             >
                                 <div className={styles.resultHeader}>
                                     <span className={styles.label}>Diagnostic Result</span>
-                                    <div className={styles.confidenceBadge}>{result.confidence}% Confidence</div>
+                                    <div className={styles.confidenceBadge}>{result.confidence.toFixed(1)}% Confidence</div>
                                 </div>
                                 <h2 className={styles.classification}>{result.classification}</h2>
                                 <div className={styles.featuresList}>

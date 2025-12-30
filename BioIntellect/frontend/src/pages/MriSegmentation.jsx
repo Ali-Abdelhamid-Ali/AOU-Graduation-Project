@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { medicalService } from '../services/medicalService'
-import { supabase } from '../config/supabase'
+import { patientsAPI } from '../services/api'
 import { TopBar } from '../components/TopBar'
 import { SelectField } from '../components/SelectField'
 import { AnimatedButton } from '../components/AnimatedButton'
@@ -10,10 +10,10 @@ import styles from './MriSegmentation.module.css'
 
 export const MriSegmentation = ({ onBack }) => {
     const { currentUser, userRole } = useAuth()
+    const [dragging, setDragging] = useState(false)
     const [file, setFile] = useState(null)
     const [analyzing, setAnalyzing] = useState(false)
     const [result, setResult] = useState(null)
-    const [selectedSequence, setSelectedSequence] = useState('T1ce')
     const [error, setError] = useState(null)
     const [patients, setPatients] = useState([])
     const [selectedPatientId, setSelectedPatientId] = useState('')
@@ -21,8 +21,14 @@ export const MriSegmentation = ({ onBack }) => {
     useEffect(() => {
         if (userRole !== 'patient') {
             const loadPatients = async () => {
-                const { data, error } = await supabase.from('patients').select('id, first_name, last_name, medical_record_number')
-                if (!error) setPatients(data)
+                try {
+                    const response = await patientsAPI.list({ is_active: true, limit: 100 })
+                    if (response.success) {
+                        setPatients(response.data)
+                    }
+                } catch (err) {
+                    console.error('Failed to load patients:', err)
+                }
             }
             loadPatients()
         }
@@ -43,7 +49,6 @@ export const MriSegmentation = ({ onBack }) => {
         setAnalyzing(true)
         setError(null)
         try {
-            // 1. Determine IDs
             const isPatient = userRole === 'patient'
             const patientId = isPatient ? currentUser.id : selectedPatientId
 
@@ -55,16 +60,16 @@ export const MriSegmentation = ({ onBack }) => {
 
             const docId = isPatient ? null : (currentUser.id)
 
-            // 2. Clinical Case
+            // Create a Medical Case
             const medicalCase = await medicalService.createCase({
                 patientId: patientId,
                 doctorId: docId,
                 caseType: 'mri_segmentation',
-                chiefComplaint: `Brain MRI Volumetric Study (${selectedSequence})`
+                chiefComplaint: 'AI-Powered MRI Brain Segmentation'
             })
 
-            // 3. Upload Scan File
-            await medicalService.uploadFile({
+            // Upload File
+            const fileRecord = await medicalService.uploadFile({
                 caseId: medicalCase.id,
                 patientId: patientId,
                 userId: currentUser.user_id || currentUser.id,
@@ -72,34 +77,30 @@ export const MriSegmentation = ({ onBack }) => {
                 fileType: 'mri_scan'
             })
 
-            // 4. AI Segmentation Simulation (3D U-Net)
-            await new Promise(resolve => setTimeout(resolve, 4000))
-
-            const analysisResult = {
-                type: 'Glioblastoma Multiforme',
-                volume: '42.5 cm³',
-                location: 'Right Frontal Lobe',
-                maskDetails: {
-                    edema: '15.2 cm³',
-                    enhancing: '21.0 cm³',
-                    necrosis: '6.3 cm³'
-                },
-                recommendation: 'Urgent neurosurgical consultation. The tumor shows significant mass effect on the lateral ventricles.'
-            }
-
-            // 5. Save Results
-            await medicalService.saveMriAnalysis({
+            // Run MRI Segmentation Analysis
+            const analysisData = await medicalService.saveMriAnalysis({
+                fileId: fileRecord.id,
                 caseId: medicalCase.id,
                 patientId: patientId,
-                userId: currentUser.user_id || currentUser.id,
-                scanInfo: { quality: 'excellent' },
-                resultInfo: analysisResult
+                scanInfo: {
+                    type: 'brain',
+                    sequence: 'T1ce'
+                }
             })
 
-            setResult(analysisResult)
+            const aiResult = analysisData.result
+
+            setResult({
+                segmentedRegions: aiResult.segmented_regions || [],
+                abnormalities: aiResult.detected_abnormalities || [],
+                interpretation: aiResult.ai_interpretation,
+                recommendations: aiResult.ai_recommendations || [],
+                measurements: aiResult.measurements || {},
+                severityScore: aiResult.severity_score
+            })
         } catch (err) {
-            console.error('MRI Segmentation Error:', err)
-            setError(err.message || 'Clinical neuro-imaging analysis failed.')
+            console.error('MRI Analysis Error:', err)
+            setError(err.message || 'Failed to complete MRI analysis.')
         } finally {
             setAnalyzing(false)
         }
@@ -111,141 +112,143 @@ export const MriSegmentation = ({ onBack }) => {
 
             <div className={styles.container}>
                 <header className={styles.header}>
-                    <h1>Brain MRI Segmentation</h1>
-                    <p>Powered by BioIntellect 3D U-Net Deep Learning Model</p>
+                    <h1>MRI Brain Tumor Segmentation</h1>
+                    <p>3D U-Net Architecture with Multi-Modal Fusion</p>
                 </header>
 
                 <div className={styles.mainGrid}>
-                    <section className={styles.controlPanel}>
+                    <section className={styles.uploadCard}>
                         {userRole !== 'patient' && (
-                            <div className={styles.patientSelector} style={{ marginBottom: '1.5rem' }}>
+                            <div className={styles.patientSelector}>
                                 <SelectField
                                     label="Select Patient"
                                     value={selectedPatientId}
                                     onChange={(e) => setSelectedPatientId(e.target.value)}
                                     options={patients.map(p => ({
                                         value: p.id,
-                                        label: `${p.first_name} ${p.last_name} (${p.medical_record_number})`
+                                        label: `${p.first_name} ${p.last_name} (${p.mrn})`
                                     }))}
                                     required
                                 />
                             </div>
                         )}
-                        <div className={styles.card}>
-                            <h3>Sequence Selection</h3>
-                            <div className={styles.sequenceGrid}>
-                                {['T1', 'T1ce', 'T2', 'FLAIR'].map(seq => (
-                                    <button
-                                        key={seq}
-                                        className={`${styles.seqBtn} ${selectedSequence === seq ? styles.activeSeq : ''}`}
-                                        onClick={() => setSelectedSequence(seq)}
-                                    >
-                                        {seq}
-                                    </button>
-                                ))}
-                            </div>
-                            <p className={styles.hint}>Multi-modal integration required for precise volumetric calculation.</p>
+                        <h3>Upload MRI Scans</h3>
+                        <div
+                            className={`${styles.dropZone} ${dragging ? styles.dragActive : ''} ${file ? styles.hasFile : ''}`}
+                            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                            onDragLeave={() => setDragging(false)}
+                            onDrop={(e) => {
+                                e.preventDefault()
+                                setDragging(false)
+                                if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0])
+                            }}
+                        >
+                            <div className={styles.uploadIcon}>🧠</div>
+                            {file ? (
+                                <div className={styles.fileInfo}>
+                                    <span className={styles.fileName}>{file.name}</span>
+                                    <span className={styles.fileSize}>{(file.size / 1024).toFixed(2)} KB</span>
+                                </div>
+                            ) : (
+                                <p>Upload MRI DICOM/NIfTI Files (.nii, .dcm)</p>
+                            )}
+                            <input type="file" onChange={handleFileUpload} className={styles.hiddenInput} id="mriUpload" accept=".nii,.nii.gz,.dcm" />
+                            <label htmlFor="mriUpload" className={styles.browseButton}>Select File</label>
+                        </div>
 
-                            <div className={`${styles.uploadBox} ${file ? styles.hasFile : ''}`}>
-                                <input
-                                    type="file"
-                                    id="mri-upload"
-                                    className={styles.hiddenInput}
-                                    onChange={handleFileUpload}
-                                    accept=".nii,.nii.gz,.dcm,image/*"
-                                />
-                                <label htmlFor="mri-upload" className={styles.uploadLabel}>
-                                    {file ? (
-                                        <div className={styles.fileSelected}>
-                                            <span>📄</span>
-                                            <p>{file.name}</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <span>📥</span>
-                                            <p>Upload NIfTI / DICOM</p>
-                                        </>
-                                    )}
-                                </label>
+                        <div className={styles.modalityInfo}>
+                            <h4>Accepted Modalities</h4>
+                            <div className={styles.modalityTags}>
+                                <span>T1</span>
+                                <span>T1ce</span>
+                                <span>T2</span>
+                                <span>FLAIR</span>
                             </div>
+                        </div>
 
+                        {error && <div className={styles.errorMessage}>{error}</div>}
+
+                        {file && !result && (
                             <AnimatedButton
                                 variant="primary"
                                 isLoading={analyzing}
                                 onClick={runAnalysis}
-                                style={{ width: '100%', marginTop: '2rem' }}
+                                style={{ width: '100%', marginTop: '1.5rem' }}
                             >
-                                Calculate Segments
+                                Run Segmentation
                             </AnimatedButton>
-                        </div>
-
-                        {result && (
-                            <motion.div
-                                className={styles.card + ' ' + styles.statsCard}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                            >
-                                <h3>Volumetric Stats</h3>
-                                <div className={styles.statList}>
-                                    <div className={styles.statRow}>
-                                        <span>Whole Tumor:</span>
-                                        <strong>{result.volume}</strong>
-                                    </div>
-                                    <div className={styles.statRow}>
-                                        <span>Enhancing Core:</span>
-                                        <strong style={{ color: 'var(--color-error)' }}>{result.maskDetails.enhancing}</strong>
-                                    </div>
-                                    <div className={styles.statRow}>
-                                        <span>Peritumoral Edema:</span>
-                                        <strong style={{ color: 'var(--color-primary)' }}>{result.maskDetails.edema}</strong>
-                                    </div>
-                                </div>
-                            </motion.div>
                         )}
                     </section>
 
-                    <section className={styles.visualizationPanel}>
-                        <div className={styles.vizCard}>
-                            <div className={styles.vizHeader}>
-                                <h3>3D Volumetric View</h3>
-                                {result && <span className={styles.statusBadge}>Analysis Complete</span>}
+                    <section className={styles.resultsArea}>
+                        {analyzing ? (
+                            <div className={styles.analyzingState}>
+                                <div className={styles.loader}></div>
+                                <h4>Running 3D Convolutions...</h4>
+                                <p>Analyzing volumetric data with attention mechanisms</p>
                             </div>
+                        ) : result ? (
+                            <motion.div
+                                className={styles.resultCard}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                            >
+                                <div className={styles.resultHeader}>
+                                    <span className={styles.label}>Segmentation Results</span>
+                                    {result.severityScore && (
+                                        <div className={styles.severityBadge}>
+                                            Severity: {result.severityScore.toFixed(1)}%
+                                        </div>
+                                    )}
+                                </div>
 
-                            <div className={styles.viewport}>
-                                {analyzing ? (
-                                    <div className={styles.scanningLine}></div>
-                                ) : result ? (
-                                    <div className={styles.brainOverlay}>
-                                        {/* Symbolic representation of segmented brain tumor */}
-                                        <div className={styles.tumorMask}></div>
-                                    </div>
-                                ) : (
-                                    <div className={styles.emptyView}>
-                                        <div className={styles.brainIcon}>🧠</div>
-                                        <p>Awaiting Sequence Upload</p>
+                                <div className={styles.segmentationGrid}>
+                                    {result.segmentedRegions.map((region, i) => (
+                                        <div key={i} className={styles.segmentItem}>
+                                            <span className={styles.regionName}>{region.region?.replace(/_/g, ' ')}</span>
+                                            <span className={styles.regionVolume}>{region.volume_ml?.toFixed(1)} ml</span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {result.abnormalities.length > 0 && (
+                                    <div className={styles.abnormalities}>
+                                        <h4>Detected Abnormalities</h4>
+                                        {result.abnormalities.map((ab, i) => (
+                                            <div key={i} className={styles.abnormalityItem}>
+                                                <strong>{ab.finding}</strong>
+                                                <span>Location: {ab.location}</span>
+                                                <span>Confidence: {(ab.confidence * 100).toFixed(0)}%</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
-                            </div>
 
-                            <div className={styles.vizControls}>
-                                <span>Slice: 72/144</span>
-                                <div className={styles.sliderPlaceholder}></div>
-                            </div>
-                        </div>
+                                <div className={styles.interpretation}>
+                                    <h4>AI Interpretation</h4>
+                                    <p>{result.interpretation}</p>
+                                </div>
 
-                        {result && (
-                            <motion.div
-                                className={styles.reportSection}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                            >
-                                <h4>Diagnostic Analysis</h4>
-                                <p><strong>Pathological Impression:</strong> {result.type}</p>
-                                <p><strong>Anatomical Location:</strong> {result.location}</p>
-                                <div className={styles.clinicalAdvice}>
-                                    {result.recommendation}
+                                {result.recommendations.length > 0 && (
+                                    <div className={styles.recommendations}>
+                                        <h4>Recommendations</h4>
+                                        <ul>
+                                            {result.recommendations.map((rec, i) => (
+                                                <li key={i}>{rec}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                <div className={styles.visualPlaceholder}>
+                                    <div className={styles.brainSlice}></div>
+                                    <p>3D Volumetric Segmentation Overlay</p>
                                 </div>
                             </motion.div>
+                        ) : (
+                            <div className={styles.emptyState}>
+                                <p>Upload MRI scans to begin AI-powered segmentation and tumor detection.</p>
+                            </div>
                         )}
                     </section>
                 </div>

@@ -1,258 +1,211 @@
-import { supabase } from '../config/supabase'
-
 /**
- * Service for handling all medical data interactions
- * Aligned with 2024 SQL Schema (id as primary key)
+ * Medical Service - Uses Backend API for all operations
+ * Flow: Frontend -> FastAPI Backend -> Supabase
  */
+
+import { casesAPI, filesAPI, ecgAPI, mriAPI, llmAPI, patientsAPI } from './api';
+
 export const medicalService = {
     /**
      * Create a new medical case
      */
     async createCase(caseData) {
-        const { patientId, doctorId, caseType, priority, chiefComplaint } = caseData
+        const { patientId, doctorId, caseType, priority, chiefComplaint } = caseData;
 
-        // Generate case number: CASE-YYYYMMDD-XXXX
-        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-        const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
-        const caseNumber = `CASE-${dateStr}-${rand}`
+        const result = await casesAPI.create({
+            patient_id: patientId,
+            assigned_doctor_id: doctorId,
+            priority: priority || 'normal',
+            chief_complaint: chiefComplaint || `${caseType || 'general'} analysis`
+        });
 
-        const { data, error } = await supabase
-            .from('medical_cases')
-            .insert({
-                case_number: caseNumber,
-                patient_id: patientId,
-                assigned_doctor_id: doctorId,
-                case_type: caseType || 'comprehensive',
-                case_status: 'open',
-                priority: priority || 'normal',
-                chief_complaint: chiefComplaint || '',
-                case_date: new Date().toISOString().split('T')[0]
-            })
-            .select()
-            .single()
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to create case');
+        }
 
-        if (error) throw error
-        return data // contains .id
+        return result.data;
     },
 
     /**
-     * Calculate SHA-256 checksum of a file
-     */
-    async calculateChecksum(file) {
-        const arrayBuffer = await file.arrayBuffer()
-        const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer)
-        const hashArray = Array.from(new Uint8Array(hashBuffer))
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-        return hashHex
-    },
-
-    /**
-     * Upload a medical file and record it in medical_files table
+     * Upload a medical file
      */
     async uploadFile(fileData) {
-        const { caseId, patientId, userId, file, fileType } = fileData
+        const { caseId, patientId, userId, file, fileType, description } = fileData;
 
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
-        const storagePath = `${patientId}/${caseId}/${fileName}`
+        const result = await filesAPI.upload(
+            file,
+            caseId,
+            patientId,
+            fileType,
+            description
+        );
 
-        const checksum = await this.calculateChecksum(file)
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to upload file');
+        }
 
-        const { error: storageError } = await supabase.storage
-            .from('medical-files')
-            .upload(storagePath, file)
-
-        if (storageError) throw storageError
-
-        const { data: fileRecord, error: fileError } = await supabase
-            .from('medical_files')
-            .insert({
-                case_id: caseId,
-                patient_id: patientId,
-                uploaded_by: userId,
-                file_name: file.name,
-                file_type: fileType,
-                file_format: fileExt,
-                file_size_bytes: file.size,
-                storage_bucket: 'medical-files',
-                storage_path: storagePath,
-                file_checksum: checksum,
-                is_processed: false,
-                processing_status: 'pending'
-            })
-            .select()
-            .single()
-
-        if (fileError) throw fileError
-        return fileRecord // contains .id
+        return result.data;
     },
 
     /**
-     * Save ECG Signal and Results
+     * Save ECG Signal and run analysis
      */
     async saveEcgAnalysis(analysisData) {
-        const { fileId, caseId, patientId, userId, signalInfo, resultInfo } = analysisData
+        const { fileId, caseId, patientId, signalInfo, resultInfo } = analysisData;
 
-        const { data: signal, error: signalError } = await supabase
-            .from('ecg_signals')
-            .insert({
-                file_id: fileId,
-                case_id: caseId,
-                patient_id: patientId,
-                lead_configuration: signalInfo.leads || '12-lead',
-                sampling_rate: signalInfo.samplingRate || 500,
-                signal_duration_seconds: signalInfo.duration || 10,
-                number_of_leads: signalInfo.leadCount || 12,
-                signal_quality_score: signalInfo.quality || 95.0
-            })
-            .select()
-            .single()
+        // Create ECG signal record
+        const signalResult = await ecgAPI.createSignal({
+            file_id: fileId,
+            patient_id: patientId,
+            case_id: caseId,
+            sampling_rate: signalInfo.samplingRate || 500,
+            duration_seconds: signalInfo.duration || 10,
+            lead_count: signalInfo.leadCount || 12,
+            leads_available: signalInfo.leads || ['12-lead'],
+            quality_score: signalInfo.quality || 95.0
+        });
 
-        if (signalError) throw signalError
+        if (!signalResult.success) {
+            throw new Error('Failed to create ECG signal');
+        }
 
-        const { data: result, error: resultError } = await supabase
-            .from('ecg_results')
-            .insert({
-                signal_id: signal.id,
-                case_id: caseId,
-                patient_id: patientId,
-                analyzed_by: userId,
-                primary_diagnosis: resultInfo.classification,
-                confidence_score: resultInfo.confidence,
-                recommendations: resultInfo.recommendation,
-                detected_arrhythmias: { features: resultInfo.features },
-                analysis_started_at: new Date(Date.now() - 3000).toISOString(),
-                analysis_completed_at: new Date().toISOString(),
-                review_status: 'pending'
-            })
-            .select()
-            .single()
+        // Run analysis
+        const analysisResult = await ecgAPI.analyze({
+            signal_id: signalResult.data.id,
+            patient_id: patientId,
+            case_id: caseId
+        });
 
-        if (resultError) throw resultError
-        return { signal, result }
+        if (!analysisResult.success) {
+            throw new Error('Failed to run ECG analysis');
+        }
+
+        return {
+            signal: signalResult.data,
+            result: analysisResult.data
+        };
     },
 
     /**
-     * Save MRI Scan and Segmentation Results
+     * Save MRI Scan and run segmentation analysis
      */
     async saveMriAnalysis(analysisData) {
-        const { caseId, patientId, userId, scanInfo, resultInfo } = analysisData
+        const { caseId, patientId, scanInfo, resultInfo, fileId } = analysisData;
 
-        const { data: scan, error: scanError } = await supabase
-            .from('mri_scans')
-            .insert({
-                case_id: caseId,
-                patient_id: patientId,
-                scan_date: new Date().toISOString().split('T')[0],
-                image_quality: scanInfo.quality || 'excellent',
-                all_sequences_present: true
-            })
-            .select()
-            .single()
+        // Create MRI scan record
+        const scanResult = await mriAPI.createScan({
+            file_id: fileId || caseId, // Use case_id as placeholder if no file
+            patient_id: patientId,
+            case_id: caseId,
+            scan_type: scanInfo?.type || 'brain',
+            sequence_type: scanInfo?.sequence || 'T1',
+            field_strength: 1.5
+        });
 
-        if (scanError) throw scanError
+        if (!scanResult.success) {
+            throw new Error('Failed to create MRI scan');
+        }
 
-        const { data: result, error: resultError } = await supabase
-            .from('mri_segmentation_results')
-            .insert({
-                scan_id: scan.id,
-                case_id: caseId,
-                patient_id: patientId,
-                analyzed_by: userId,
-                tumor_detected: resultInfo.tumorDetected !== false,
-                tumor_type: resultInfo.type,
-                whole_tumor_volume: parseFloat(resultInfo.volume) || 0,
-                edema_volume: parseFloat(resultInfo.maskDetails?.edema) || 0,
-                enhancing_tumor_volume: parseFloat(resultInfo.maskDetails?.enhancing) || 0,
-                necrotic_core_volume: parseFloat(resultInfo.maskDetails?.necrosis) || 0,
-                tumor_location: { description: resultInfo.location },
-                recommendations: resultInfo.recommendation,
-                analysis_started_at: new Date(Date.now() - 4000).toISOString(),
-                analysis_completed_at: new Date().toISOString(),
-                review_status: 'pending'
-            })
-            .select()
-            .single()
+        // Run segmentation analysis
+        const analysisResult = await mriAPI.analyze({
+            scan_id: scanResult.data.id,
+            patient_id: patientId,
+            case_id: caseId
+        });
 
-        if (resultError) throw resultError
-        return { scan, result }
+        if (!analysisResult.success) {
+            throw new Error('Failed to run MRI analysis');
+        }
+
+        return {
+            scan: scanResult.data,
+            result: analysisResult.data
+        };
     },
 
     /**
      * Fetch patient history (cases and results)
      */
     async getPatientHistory(patientId) {
-        const { data, error } = await supabase
-            .from('medical_cases')
-            .select(`
-                *,
-                ecg_results (*),
-                mri_segmentation_results (*)
-            `)
-            .eq('patient_id', patientId)
-            .order('created_at', { ascending: false })
+        const result = await patientsAPI.getHistory(patientId);
 
-        if (error) throw error
-        return data
+        if (!result.success) {
+            throw new Error('Failed to get patient history');
+        }
+
+        return result.data;
     },
 
     /**
      * Start an LLM conversation
      */
     async startConversation(convoData) {
-        const { patientId, doctorId, title } = convoData
-        const { data, error } = await supabase
-            .from('llm_conversations')
-            .insert({
-                patient_id: patientId,
-                doctor_id: doctorId,
-                title: title || 'New Medical Inquiry'
-            })
-            .select()
-            .single()
+        const { patientId, doctorId, title } = convoData;
 
-        if (error) throw error
-        return data // contains .id
+        const result = await llmAPI.createConversation({
+            conversation_type: doctorId ? 'doctor_llm' : 'patient_llm',
+            patient_id: patientId,
+            doctor_id: doctorId,
+            title: title || 'Medical Consultation'
+        });
+
+        if (!result.success) {
+            throw new Error('Failed to start conversation');
+        }
+
+        return result.data;
     },
 
     /**
-     * Save an LLM message
+     * Send an LLM message and get response
      */
-    async saveLlmMessage(messageData) {
-        const { conversationId, senderId, senderRole, content } = messageData
-        const { data, error } = await supabase
-            .from('llm_messages')
-            .insert({
-                conversation_id: conversationId,
-                sender_id: senderId === 'ai' ? null : senderId,
-                sender_role: senderRole,
-                content: content
-            })
-            .select()
-            .single()
+    async sendLlmMessage(messageData) {
+        const { conversationId, content } = messageData;
 
-        if (error) throw error
+        const result = await llmAPI.sendMessage({
+            conversation_id: conversationId,
+            message_content: content,
+            message_type: 'text'
+        });
 
-        // Update last_message_at in conversation
-        await supabase
-            .from('llm_conversations')
-            .update({ last_message_at: new Date().toISOString() })
-            .eq('id', conversationId)
+        if (!result.success) {
+            throw new Error('Failed to send message');
+        }
 
-        return data
+        return {
+            userMessage: result.user_message,
+            llmResponse: result.llm_response
+        };
     },
 
     /**
      * Fetch conversation messages
      */
     async getMessages(conversationId) {
-        const { data, error } = await supabase
-            .from('llm_messages')
-            .select('*')
-            .eq('conversation_id', conversationId)
-            .order('sent_at', { ascending: true })
+        const result = await llmAPI.getMessages(conversationId);
 
-        if (error) throw error
-        return data
+        if (!result.success) {
+            throw new Error('Failed to get messages');
+        }
+
+        return result.data;
+    },
+
+    /**
+     * Get ECG results for a patient
+     */
+    async getEcgResults(patientId) {
+        const result = await ecgAPI.listResults({ patient_id: patientId });
+        return result.success ? result.data : [];
+    },
+
+    /**
+     * Get MRI results for a patient
+     */
+    async getMriResults(patientId) {
+        const result = await mriAPI.listResults({ patient_id: patientId });
+        return result.success ? result.data : [];
     }
-}
+};
+
+export default medicalService;

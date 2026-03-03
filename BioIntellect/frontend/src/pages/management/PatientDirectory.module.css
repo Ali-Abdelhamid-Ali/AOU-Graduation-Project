@@ -1,0 +1,368 @@
+.pageWrapper {
+    min-height: 100vh;
+    background: var(--color-background);
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.header {
+    margin-bottom: 2.5rem;
+}
+
+.breadcrumb {
+    font-family: var(--font-family-mono);
+    font-size: 0.75rem;
+    color: var(--color-primary);
+    letter-spacing: 2px;
+    margin-bottom: 0.5rem;
+}
+
+.header h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+}
+
+.header p {
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
+}
+
+.searchSection {
+    margin-bottom: 2.5rem;
+}
+
+.searchBar {
+    display: flex;
+    gap: 1rem;
+    background: var(--color-surface);
+    padding: 0.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+}
+
+.searchBar input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 0.8rem 1rem;
+    color: var(--color-text);
+    font-size: 1rem;
+    outline: none;
+}
+
+.searchBar button {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 0 2rem;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+}
+
+.searchBar button:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.mainGrid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 2rem;
+    min-height: 600px;
+}
+
+.resultsPanel {
+    background: var(--color-surface);
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.resultsPanel h3 {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1.5rem;
+}
+
+.patientList {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.patientItem {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    margin-bottom: 0.5rem;
+}
+
+.patientItem:hover {
+    background: var(--color-surface-subtle);
+}
+
+.patientItem.selected {
+    background: var(--color-primary-bg);
+    border-color: var(--color-primary-light);
+}
+
+.patientAvatar {
+    width: 44px;
+    height: 44px;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.patientInfo {
+    flex: 1;
+}
+
+.pName {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.pMrn {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-family-mono);
+}
+
+.arrow {
+    opacity: 0;
+    color: var(--color-primary);
+    transition: all 0.2s;
+}
+
+.patientItem:hover .arrow {
+    opacity: 1;
+}
+
+.emptyResults {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.detailPanel {
+    background: var(--color-surface);
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    min-height: 600px;
+}
+
+.emptyDetail {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem;
+    color: var(--color-text-muted);
+}
+
+.placeholderIcon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.2;
+}
+
+.emptyDetail h3 {
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+}
+
+.profileCard {
+    height: 100%;
+}
+
+.cardHeader {
+    padding: 2rem;
+    background: var(--color-surface-subtle);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.statusBadge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+}
+
+.cardHeader h2 {
+    font-size: 1.8rem;
+    color: var(--color-text);
+    margin-bottom: 0.3rem;
+}
+
+.mrnTag {
+    font-family: var(--font-family-mono);
+    color: var(--color-primary);
+    font-size: 0.9rem;
+}
+
+.headerActions button {
+    padding: 0.7rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.editBtn {
+    background: transparent;
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary);
+}
+
+.editBtn:hover {
+    background: var(--color-primary);
+    color: white;
+}
+
+.editActions {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.cancelBtn {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.saveBtn {
+    background: var(--color-primary);
+    border: none;
+    color: white;
+}
+
+.successMsg {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    padding: 1rem 2rem;
+    font-weight: 600;
+}
+
+.profileGrid {
+    padding: 2rem;
+}
+
+.fieldSection {
+    margin-bottom: 3rem;
+}
+
+.fieldSection h4 {
+    font-size: 0.85rem;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.fieldGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem 2.5rem;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.field label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+}
+
+.field span {
+    font-size: 1.1rem;
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.field input,
+.field select,
+.fieldFull textarea {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    padding: 0.7rem;
+    border-radius: 8px;
+    color: var(--color-text);
+    font-size: 1rem;
+    outline: none;
+}
+
+.field input:focus,
+.field select:focus,
+.fieldFull textarea:focus {
+    border-color: var(--color-primary);
+}
+
+.capitalize {
+    text-transform: capitalize;
+}
+
+.fieldFull {
+    width: 100%;
+}
+
+.notesBox {
+    background: var(--color-surface-subtle);
+    padding: 1.5rem;
+    border-radius: 12px;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+.fieldFull textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+}
+
+@media (max-width: 1000px) {
+    .mainGrid {
+        grid-template-columns: 1fr;
+    }
+}

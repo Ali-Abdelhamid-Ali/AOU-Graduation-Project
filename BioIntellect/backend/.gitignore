@@ -1,0 +1,26 @@
+﻿# Python cache / build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+
+# Test/cache artifacts
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Runtime logs and local runtime outputs
+logs/*.log
+logs/audit/*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Local DB / temp
+*.sqlite3
+*.tmp

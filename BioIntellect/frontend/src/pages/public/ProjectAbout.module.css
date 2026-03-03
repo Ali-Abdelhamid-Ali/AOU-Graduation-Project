@@ -1,0 +1,228 @@
+.pageWrapper {
+    min-height: 100vh;
+    background: var(--color-background);
+    color: var(--color-text);
+    padding-bottom: 4rem;
+    overflow-x: hidden;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 6rem 2rem;
+}
+
+.hero {
+    text-align: center;
+    margin-bottom: 8rem;
+}
+
+.title {
+    font-size: clamp(3rem, 6vw, 4rem);
+    font-weight: 900;
+    letter-spacing: -2px;
+    margin-bottom: 1.5rem;
+    color: var(--color-text-bright);
+    line-height: 1.1;
+}
+
+.subtitle {
+    max-width: 700px;
+    margin: 0 auto;
+    font-size: 1.1rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+}
+
+/* Studio & Stages */
+.showreel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 10rem;
+}
+
+.studioWrapper {
+    background: var(--color-surface);
+    border-radius: 24px;
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    position: relative;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+}
+
+.viewerHeader {
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--color-border);
+    font-family: var(--font-family-mono);
+    font-size: 0.7rem;
+    color: var(--color-primary-light);
+    letter-spacing: 1px;
+}
+
+.livePulse {
+    width: 6px;
+    height: 6px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 5px;
+    animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+    from {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+}
+
+.volumetricStage {
+    height: 400px;
+    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, rgba(59, 130, 246, 0.05) 0%, transparent 80%);
+}
+
+.webglCanvasWrapper {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: auto;
+}
+
+.studioFooter {
+    padding: 2rem;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.studioFooter h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: var(--color-text-bright);
+}
+
+.studioFooter p {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+/* Services Info Section */
+.servicesInfo {
+    margin-top: 6rem;
+    margin-bottom: 8rem;
+}
+
+.sectionTitle {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 3rem;
+    color: var(--color-text-bright);
+}
+
+.servicesDisplayGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.serviceInfoCard {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    padding: 2.5rem;
+    transition: all 0.3s ease;
+}
+
+.serviceInfoCard h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--color-primary-light);
+}
+
+.serviceInfoCard p {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+}
+
+.detailsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-bottom: 6rem;
+}
+
+.detailCard {
+    padding: 2.5rem;
+    background: var(--color-surface);
+    border-radius: 24px;
+    text-align: center;
+    border: 1px solid var(--color-border);
+    transition: transform 0.3s ease;
+}
+
+.detailCard:hover {
+    transform: translateY(-5px);
+}
+
+.cardIcon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1.5rem;
+    display: block;
+    filter: brightness(0) invert(1);
+    opacity: 0.7;
+}
+
+.detailCard h4 {
+    font-size: 1.1rem;
+    color: var(--color-text-bright);
+    margin-bottom: 0.75rem;
+}
+
+.detailCard p {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+}
+
+.footer {
+    text-align: center;
+    padding: 4rem 0;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    opacity: 0.6;
+    border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 900px) {
+
+    .showreel,
+    .servicesDisplayGrid,
+    .detailsGrid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .container {
+        padding: 4rem 1.5rem;
+    }
+}

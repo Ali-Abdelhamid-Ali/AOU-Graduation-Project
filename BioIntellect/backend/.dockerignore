@@ -1,0 +1,23 @@
+﻿# Keep image small and deterministic
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local runtime
+logs/
+.env
+.env.*
+
+# Dev-only artifacts
+tests/
+notebooks/
+*.ipynb
+
+# VCS / editor
+.git/
+.gitignore
+.vscode/
+.idea/

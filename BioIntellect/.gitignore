@@ -1,0 +1,9 @@
+# AI model artifacts
+AI/brain 3D/brain_seg_deploy/models/The Best 3D Brain MRI Segmentation.keras
+
+# AI fine-tuning data and outputs
+AI/fintune/data QA/
+AI/fintune/fine-tuning data/
+AI/fintune/fintuned_chating_model/
+AI/fintune/fintuned_QA_model/
+

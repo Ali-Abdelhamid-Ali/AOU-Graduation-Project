@@ -1,3 +1,36 @@
+# Environment
+.env
+.env.*
+!.env.example
 
-*.env
-*.env.*
+# Node
+node_modules/
+dist/
+dist-ssr/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+*.sqlite3
+*.tmp
+
+# Logs
+logs/
+*.log
+
+# AI artifacts
+BioIntellect/AI/fintune/data QA/
+BioIntellect/AI/fintune/fine-tuning data/
+BioIntellect/AI/fintune/fintuned_chating_model/
+BioIntellect/AI/fintune/fintuned_QA_model/
+BioIntellect/AI/fintune/unsloth_compiled_cache/
+BioIntellect/AI/brain 3D/brain_seg_deploy/models/

@@ -1,0 +1,263 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+}
+
+.hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    padding: 3rem;
+    border-radius: 32px;
+    color: white;
+}
+
+.welcomeText {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+}
+
+.highlight {
+    color: #60a5fa;
+}
+
+.heroSubtitle {
+    color: #94a3b8;
+    font-size: 1.1rem;
+}
+
+.statBox {
+    text-align: center;
+}
+
+.statValue {
+    display: block;
+    font-size: 3rem;
+    font-weight: 800;
+    color: #60a5fa;
+}
+
+.statLabel {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #94a3b8;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.statCard {
+    background: white;
+    padding: 2rem;
+    border-radius: 24px;
+    border: 1px solid #eef2f6;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.cardIcon {
+    font-size: 1.5rem;
+}
+
+.cardTitle {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.cardValue {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+}
+
+.cardTrend {
+    font-size: 0.75rem;
+    color: #10b981;
+    font-weight: 600;
+}
+
+.sectionTitle {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.01em;
+}
+
+.moduleGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.moduleCard {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 20px;
+    border: 1px solid #eef2f6;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    cursor: pointer;
+}
+
+.moduleIcon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.moduleIcon img {
+    width: 32px;
+    height: 32px;
+}
+
+.moduleInfo h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.moduleInfo p {
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+
+.chartPlaceholder {
+    background: white;
+    height: 200px;
+    border-radius: 24px;
+    border: 1px solid #eef2f6;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    padding: 2rem;
+    gap: 1rem;
+}
+
+.chartBar {
+    flex: 1;
+    background: #e2e8f0;
+    border-radius: 8px 8px 0 0;
+    transition: height 1s ease;
+}
+
+.chartBar:nth-child(even) {
+    background: #bfdbfe;
+}
+
+/* Skeletons */
+.loadingGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.skeletonHero {
+    height: 250px;
+    background: #e2e8f0;
+    border-radius: 32px;
+    animation: pulse 1.5s infinite;
+}
+
+.skeletonGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.skeletonCard {
+    height: 150px;
+    background: #f1f5f9;
+    border-radius: 24px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero {
+        flex-direction: column;
+        padding: 2rem;
+        text-align: center;
+        gap: 2rem;
+    }
+
+    .welcomeText {
+        font-size: 1.75rem;
+    }
+}
+
+/* Skeleton Styles - Corrected */
+.loadingGrid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+    padding: var(--spacing-xl);
+}
+
+.heroSkeleton {
+    width: 100%;
+}
+
+.statsSkeleton {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-lg);
+}
+
+.skeletonCard {
+    background: var(--color-surface);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.moduleSkeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.moduleGridSkeleton {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+}

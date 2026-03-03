@@ -1,0 +1,34 @@
+.layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f8fafc;
+}
+
+.mainContent {
+    flex: 1;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-x: hidden;
+    position: relative;
+}
+
+.pageContainer {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+@media (max-width: 768px) {
+    .layout {
+        flex-direction: column;
+    }
+
+    .mainContent {
+        margin-left: 0 !important;
+        padding-bottom: 80px;
+        /* Space for the bottom nav */
+    }
+
+    .pageContainer {
+        padding: 1rem;
+    }
+}

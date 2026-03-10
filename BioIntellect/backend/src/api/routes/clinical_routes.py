@@ -1,36 +1,44 @@
 ﻿"""Clinical Routes - Complete Medical Case and File Management API."""
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from typing import Optional, List, Any
-from src.services.domain.clinical_service import ClinicalService
+from datetime import datetime, timezone
+from typing import Any, List, Optional
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from pydantic import BaseModel, Field
+
+from src.observability.logger import get_logger
 from src.repositories.clinical_repository import ClinicalRepository
-from src.services.ai.ai_service import AIService
-from src.validators.medical_dto import (
-    MedicalCaseCreateDTO,
-    MedicalCaseUpdateDTO,
-    MedicalFileCreateDTO,
-    ECGSignalCreateDTO,
-    ECGResultCreateDTO,
-    ECGResultUpdateDTO,
-    MRIScanCreateDTO,
-    MRISegmentationResultCreateDTO,
-    MRISegmentationResultUpdateDTO,
-    GeneratedReportCreateDTO,
-    GeneratedReportUpdateDTO,
-    MedicalCaseResponseDTO,
-    MedicalFileResponseDTO,
-    ECGSignalResponseDTO,
-    ECGResultResponseDTO,
-    MRIScanResponseDTO,
-    MRISegmentationResultResponseDTO,
-    GeneratedReportResponseDTO,
-)
 from src.security.auth_middleware import (
+    Permission,
     get_current_user,
     require_permission,
-    Permission,
 )
-from src.observability.logger import get_logger
+from src.services.ai.ai_service import AIService
+from src.services.domain.clinical_service import ClinicalService
+from src.services.domain.file_service import (
+    is_supported_mri_upload,
+    normalize_upload_content_type,
+)
+from src.validators.medical_dto import (
+    ECGResultCreateDTO,
+    ECGResultResponseDTO,
+    ECGResultUpdateDTO,
+    ECGSignalCreateDTO,
+    ECGSignalResponseDTO,
+    GeneratedReportCreateDTO,
+    GeneratedReportResponseDTO,
+    GeneratedReportUpdateDTO,
+    MedicalCaseCreateDTO,
+    MedicalCaseResponseDTO,
+    MedicalCaseUpdateDTO,
+    MedicalFileCreateDTO,
+    MedicalFileResponseDTO,
+    MRIScanCreateDTO,
+    MRIScanResponseDTO,
+    MRISegmentationResultCreateDTO,
+    MRISegmentationResultResponseDTO,
+    MRISegmentationResultUpdateDTO,
+)
 
 logger = get_logger("routes.clinical")
 
@@ -51,6 +59,53 @@ def get_clinical_service():
     repo = ClinicalRepository()
     ai = AIService()
     return ClinicalService(repo, ai)
+
+
+class SignalAnalysisRequest(BaseModel):
+    signal_id: str = Field(..., description="ECG signal identifier")
+
+
+class ScanAnalysisRequest(BaseModel):
+    scan_id: str = Field(..., description="MRI scan identifier")
+
+
+class ResultReviewRequest(BaseModel):
+    is_reviewed: bool = True
+    doctor_agrees_with_ai: Optional[bool] = None
+    doctor_notes: Optional[str] = None
+
+
+def _has_permission(user: dict[str, Any], permission: Permission) -> bool:
+    permissions = user.get("permissions", set()) or set()
+    normalized_permissions = {getattr(item, "value", item) for item in permissions}
+    return permission in permissions or permission.value in normalized_permissions
+
+
+def _resolve_request_patient_id(
+    user: dict[str, Any], patient_id: Optional[str] = None
+) -> Optional[str]:
+    if user.get("role") != "patient":
+        return patient_id
+
+    current_patient_id = user.get("profile_id")
+    if patient_id and patient_id != current_patient_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return current_patient_id
+
+
+def _ensure_clinical_permission(
+    user: dict[str, Any],
+    permission: Permission,
+    patient_id: Optional[str] = None,
+) -> Optional[str]:
+    scoped_patient_id = _resolve_request_patient_id(user, patient_id)
+    if user.get("role") == "patient":
+        return scoped_patient_id
+
+    if _has_permission(user, permission):
+        return scoped_patient_id
+
+    raise HTTPException(status_code=403, detail="Access denied")
 
 
 # â”پâ”پâ”پâ”پ MEDICAL CASES â”پâ”پâ”پâ”پ
@@ -116,20 +171,30 @@ async def get_medical_case(
 @router.post(
     "/cases",
     response_model=MedicalCaseResponseDTO,
-    dependencies=[Depends(require_permission(Permission.CREATE_CASE))],
 )
 async def create_medical_case(
     case_data: MedicalCaseCreateDTO,
     user: dict[str, Any] = Depends(get_current_user),
     service: ClinicalService = Depends(get_clinical_service),
 ):
-    """Create a new medical case (Doctor/Admin only)."""
+    """Create a new medical case or a patient self-service case."""
     try:
-        case = await service.create_case(user["id"], case_data.dict())
+        patient_id = _ensure_clinical_permission(
+            user, Permission.CREATE_CASE, case_data.patient_id
+        )
+        payload = case_data.dict()
+        payload["patient_id"] = patient_id or payload["patient_id"]
+        if user.get("role") == "patient":
+            payload["assigned_doctor_id"] = None
+            payload["created_by_doctor_id"] = None
+
+        case = await service.create_case(user["id"], payload)
         if not case:
             raise HTTPException(status_code=500, detail="Failed to create medical case")
         logger.info(f"Medical case created by user {user['id']}: {case['id']}")
         return case
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to create medical case: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create medical case")
@@ -399,20 +464,26 @@ async def get_ecg_signal(
 @router.post(
     "/ecg/signals",
     response_model=ECGSignalResponseDTO,
-    dependencies=[Depends(require_permission(Permission.CREATE_CASE))],
 )
 async def create_ecg_signal(
     signal_data: ECGSignalCreateDTO,
     user: dict[str, Any] = Depends(get_current_user),
     service: ClinicalService = Depends(get_clinical_service),
 ):
-    """Create a new ECG signal (Doctor/Admin only)."""
+    """Create a new ECG signal."""
     try:
-        signal = await service.create_ecg_signal(user["id"], signal_data.dict())
+        patient_id = _ensure_clinical_permission(
+            user, Permission.CREATE_CASE, signal_data.patient_id
+        )
+        payload = signal_data.dict()
+        payload["patient_id"] = patient_id or payload["patient_id"]
+        signal = await service.create_ecg_signal(user["id"], payload)
         if not signal:
             raise HTTPException(status_code=500, detail="Failed to create ECG signal")
         logger.info(f"ECG signal created by user {user['id']}: {signal['id']}")
         return signal
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to create ECG signal: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create ECG signal")
@@ -516,7 +587,6 @@ async def create_ecg_signal_from_file(
 @router.get(
     "/ecg/results",
     response_model=List[ECGResultResponseDTO],
-    dependencies=[Depends(require_permission(Permission.VIEW_PATIENT))],
 )
 async def list_ecg_results(
     patient_id: Optional[str] = None,
@@ -525,10 +595,12 @@ async def list_ecg_results(
     is_reviewed: Optional[bool] = None,
     limit: int = 50,
     offset: int = 0,
+    user: dict[str, Any] = Depends(get_current_user),
     repo: ClinicalRepository = Depends(ClinicalRepository),
 ):
     """List ECG results with optional filtering."""
     try:
+        patient_id = _ensure_clinical_permission(user, Permission.VIEW_PATIENT, patient_id)
         filters: dict[str, Any] = {}
         if patient_id:
             filters["patient_id"] = patient_id
@@ -541,6 +613,8 @@ async def list_ecg_results(
 
         results = await repo.list_ecg_results(filters, limit, offset)
         return results
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to list ECG results: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to retrieve ECG results")
@@ -722,16 +796,20 @@ async def get_mri_scan(
 @router.post(
     "/mri/scans",
     response_model=MRIScanResponseDTO,
-    dependencies=[Depends(require_permission(Permission.CREATE_CASE))],
 )
 async def create_mri_scan(
     scan_data: MRIScanCreateDTO,
     user: dict[str, Any] = Depends(get_current_user),
     service: ClinicalService = Depends(get_clinical_service),
 ):
-    """Create a new MRI scan (Doctor/Admin only)."""
+    """Create a new MRI scan."""
     try:
-        scan = await service.create_mri_scan(user["id"], scan_data.dict())
+        patient_id = _ensure_clinical_permission(
+            user, Permission.CREATE_CASE, scan_data.patient_id
+        )
+        payload = scan_data.dict()
+        payload["patient_id"] = patient_id or payload["patient_id"]
+        scan = await service.create_mri_scan(user["id"], payload)
         if not scan:
             raise HTTPException(status_code=500, detail="Failed to create MRI scan")
         logger.info(f"MRI scan created by user {user['id']}: {scan['id']}")
@@ -794,18 +872,13 @@ async def create_mri_scan_from_file(
 
         # Validate file type for MRI
         filename = file.filename or ""
-        valid_mri_types = [
-            "application/dicom",
-            "application/octet-stream",
-            "image/jpeg",
-            "image/png",
-        ]
-        if file.content_type not in valid_mri_types and not filename.lower().endswith(
-            (".dcm", ".jpg", ".jpeg", ".png")
-        ):
+        normalized_content_type = normalize_upload_content_type(
+            filename, file.content_type
+        )
+        if not is_supported_mri_upload(filename, normalized_content_type):
             raise HTTPException(
                 status_code=400,
-                detail="Invalid MRI file format. Must be DICOM or medical image format.",
+                detail="Invalid MRI file format. Supported formats: .nii, .nii.gz, .dcm, .jpg, .jpeg, .png",
             )
 
         scan_data = {
@@ -815,9 +888,9 @@ async def create_mri_scan_from_file(
             "dicom_metadata": {
                 "file_name": filename,
                 "file_size": len(content),
-                "content_type": file.content_type,
+                "content_type": normalized_content_type,
                 "uploaded_at": "now()",
-                "is_dicom": file.content_type == "application/dicom"
+                "is_dicom": normalized_content_type == "application/dicom"
                 or filename.lower().endswith(".dcm"),
             },
         }
@@ -843,7 +916,6 @@ async def create_mri_scan_from_file(
 @router.get(
     "/mri/results",
     response_model=List[MRISegmentationResultResponseDTO],
-    dependencies=[Depends(require_permission(Permission.VIEW_PATIENT))],
 )
 async def list_mri_results(
     patient_id: Optional[str] = None,
@@ -857,6 +929,7 @@ async def list_mri_results(
 ):
     """List MRI results with optional filtering."""
     try:
+        patient_id = _ensure_clinical_permission(user, Permission.VIEW_PATIENT, patient_id)
         filters: dict[str, Any] = {}
         if patient_id:
             filters["patient_id"] = patient_id
@@ -869,6 +942,8 @@ async def list_mri_results(
 
         results = await service.list_mri_results(user["id"], filters, limit, offset)
         return results
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to list MRI results: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to retrieve MRI results")
@@ -900,20 +975,26 @@ async def get_mri_result(
 @router.post(
     "/mri/results",
     response_model=MRISegmentationResultResponseDTO,
-    dependencies=[Depends(require_permission(Permission.ANALYZE_MRI))],
 )
 async def create_mri_result(
     result_data: MRISegmentationResultCreateDTO,
     user: dict[str, Any] = Depends(get_current_user),
     service: ClinicalService = Depends(get_clinical_service),
 ):
-    """Create a new MRI result (Doctor/Admin only)."""
+    """Create a new MRI result."""
     try:
-        result = await service.create_mri_result(user["id"], result_data.dict())
+        patient_id = _ensure_clinical_permission(
+            user, Permission.ANALYZE_MRI, result_data.patient_id
+        )
+        payload = result_data.dict()
+        payload["patient_id"] = patient_id or payload["patient_id"]
+        result = await service.create_mri_result(user["id"], payload)
         if not result:
             raise HTTPException(status_code=500, detail="Failed to create MRI result")
         logger.info(f"MRI result created by user {user['id']}: {result['id']}")
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to create MRI result: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create MRI result")
@@ -1169,6 +1250,103 @@ async def get_patient_history(
         )
 
 
+# â”پâ”پâ”پâ”پ FRONTEND INTEGRATION HELPERS â”پâ”پâ”پâ”پ
+
+
+@router.get("/model/info")
+async def get_frontend_model_info(
+    user: dict[str, Any] = Depends(get_current_user),
+):
+    """Return MRI model information used by the UI."""
+    _ensure_clinical_permission(user, Permission.UPLOAD_FILES)
+    return AIService().get_model_info("mri")
+
+
+@router.post("/mri/segment")
+async def segment_mri_modalities(
+    t1: UploadFile = File(...),
+    t1ce: UploadFile = File(...),
+    t2: UploadFile = File(...),
+    flair: UploadFile = File(...),
+    gt: Optional[UploadFile] = File(None),
+    patient_id: Optional[str] = Form(None),
+    user: dict[str, Any] = Depends(get_current_user),
+):
+    """Accept the four MRI modalities and return a structured segmentation payload."""
+    patient_id = _ensure_clinical_permission(user, Permission.UPLOAD_FILES, patient_id)
+    try:
+        files = {
+            "t1": t1,
+            "t1ce": t1ce,
+            "t2": t2,
+            "flair": flair,
+        }
+        return await AIService().segment_mri_modalities(
+            files,
+            patient_id=patient_id,
+            gt_file=gt,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/mri/visualization/{case_id}/image")
+async def get_mri_visualization_image(
+    case_id: str,
+    user: dict[str, Any] = Depends(get_current_user),
+):
+    """Proxy the generated MRI image volume artifact."""
+    _ensure_clinical_permission(user, Permission.UPLOAD_FILES)
+    try:
+        artifact = await AIService().fetch_mri_visualization_artifact(case_id, "image")
+        return Response(
+            content=artifact["content"],
+            media_type=artifact["content_type"],
+            headers={"Content-Disposition": f'inline; filename="{artifact["filename"]}"'},
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/mri/visualization/{case_id}/labels")
+async def get_mri_visualization_labels(
+    case_id: str,
+    user: dict[str, Any] = Depends(get_current_user),
+):
+    """Proxy the generated MRI label volume artifact."""
+    _ensure_clinical_permission(user, Permission.UPLOAD_FILES)
+    try:
+        artifact = await AIService().fetch_mri_visualization_artifact(case_id, "labels")
+        return Response(
+            content=artifact["content"],
+            media_type=artifact["content_type"],
+            headers={"Content-Disposition": f'inline; filename="{artifact["filename"]}"'},
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/mri/result/{case_id}/patient-view")
+async def get_patient_friendly_mri_result(
+    case_id: str,
+    user: dict[str, Any] = Depends(get_current_user),
+):
+    """Return a patient-friendly placeholder summary for MRI results."""
+    _ensure_clinical_permission(user, Permission.UPLOAD_FILES)
+    return {
+        "case_id": case_id,
+        "summary": "Your MRI scan has been processed and is ready for clinician review.",
+        "next_step": "Please discuss the result with your physician for a final interpretation.",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 # â”پâ”پâ”پâ”پ ANALYSIS ENDPOINTS â”پâ”پâ”پâ”پ
 
 
@@ -1207,4 +1385,84 @@ async def analyze_mri(
     except Exception as e:
         logger.error(f"Failed to analyze MRI for scan {scan_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to analyze MRI")
+
+
+@router.post("/ecg/analyze")
+async def analyze_ecg_by_signal(
+    payload: SignalAnalysisRequest,
+    user: dict[str, Any] = Depends(get_current_user),
+    service: ClinicalService = Depends(get_clinical_service),
+):
+    """Frontend-friendly ECG analysis endpoint."""
+    if user.get("role") != "patient":
+        _ensure_clinical_permission(user, Permission.ANALYZE_ECG)
+
+    try:
+        if user.get("role") == "patient":
+            signal = await service.get_ecg_signal(user["id"], payload.signal_id)
+            if not signal or signal.get("patient_id") != user.get("profile_id"):
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        result = await service.run_ecg_analysis(user["id"], payload.signal_id)
+        return {"success": True, "data": result}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Failed to analyze ECG signal {payload.signal_id}: {exc}")
+        raise HTTPException(status_code=500, detail="Failed to analyze ECG")
+
+
+@router.post("/mri/analyze")
+async def analyze_mri_by_scan(
+    payload: ScanAnalysisRequest,
+    user: dict[str, Any] = Depends(get_current_user),
+    service: ClinicalService = Depends(get_clinical_service),
+):
+    """Frontend-friendly MRI analysis endpoint."""
+    if user.get("role") != "patient":
+        _ensure_clinical_permission(user, Permission.ANALYZE_MRI)
+
+    try:
+        if user.get("role") == "patient":
+            scan = await service.get_mri_scan(user["id"], payload.scan_id)
+            if not scan or scan.get("patient_id") != user.get("profile_id"):
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        result = await service.run_mri_analysis(user["id"], payload.scan_id)
+        return {"success": True, "data": result}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Failed to analyze MRI scan {payload.scan_id}: {exc}")
+        raise HTTPException(status_code=500, detail="Failed to analyze MRI")
+
+
+@router.put("/results/{table_name}/{result_id}/review")
+async def review_result_alias(
+    table_name: str,
+    result_id: str,
+    review_data: ResultReviewRequest,
+    user: dict[str, Any] = Depends(get_current_user),
+    service: ClinicalService = Depends(get_clinical_service),
+):
+    """Alias for the frontend review workflow."""
+    if table_name == "mri_results":
+        table_name = "mri_segmentation_results"
+    elif table_name != "ecg_results":
+        raise HTTPException(status_code=400, detail="Unsupported result table")
+
+    _ensure_clinical_permission(
+        user,
+        Permission.ANALYZE_MRI if table_name == "mri_segmentation_results" else Permission.ANALYZE_ECG,
+    )
+
+    try:
+        return await service.review_result(
+            user["id"], table_name, result_id, review_data.model_dump(exclude_unset=True)
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Failed to review result {result_id}: {exc}")
+        raise HTTPException(status_code=500, detail="Failed to review result")
 

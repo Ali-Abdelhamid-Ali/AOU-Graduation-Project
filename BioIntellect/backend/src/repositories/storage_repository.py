@@ -1,8 +1,15 @@
-﻿"""Storage Repository - Managed Supabase Storage Access."""
+"""Storage Repository - Managed Supabase Storage Access."""
 
 import os
+from typing import Optional
+
 from src.db.supabase.client import SupabaseProvider
-from src.services.infrastructure.retry_utils import async_retry
+from src.services.infrastructure.retry_utils import (
+    async_retry,
+    should_retry_http_exception,
+)
+
+DEFAULT_STORAGE_BUCKET = "medical-files"
 
 
 class StorageRepository:
@@ -11,26 +18,42 @@ class StorageRepository:
     STRICT RULE: Only handles binary data and paths. Metadata goes to DB repositories.
     """
 
-    def __init__(self, bucket_name: str = "medical-files"):
+    def __init__(self, bucket_name: str = DEFAULT_STORAGE_BUCKET):
         self.bucket = bucket_name
+
+    def _resolve_bucket(self, bucket_name: Optional[str] = None) -> str:
+        return bucket_name or self.bucket
 
     async def _get_client(self):
         return await SupabaseProvider.get_admin()
 
-    @async_retry(max_retries=3)
-    async def upload_file(self, path: str, content: bytes, content_type: str) -> str:
+    @async_retry(max_retries=3, retry_if=should_retry_http_exception)
+    async def upload_file(
+        self,
+        path: str,
+        content: bytes,
+        content_type: str,
+        bucket_name: Optional[str] = None,
+    ) -> str:
         """Uploads binary content to a specific path."""
         client = await self._get_client()
-        await client.storage.from_(self.bucket).upload(
+        bucket = self._resolve_bucket(bucket_name)
+        await client.storage.from_(bucket).upload(
             path=path, file=content, file_options={"content-type": content_type}
         )
         return path
 
-    @async_retry(max_retries=3)
-    async def get_signed_url(self, path: str, expires_in: int = 3600) -> str:
+    @async_retry(max_retries=3, retry_if=should_retry_http_exception)
+    async def get_signed_url(
+        self,
+        path: str,
+        expires_in: int = 3600,
+        bucket_name: Optional[str] = None,
+    ) -> str:
         """Generates a transient signed URL for secure download."""
         client = await self._get_client()
-        response = await client.storage.from_(self.bucket).create_signed_url(
+        bucket = self._resolve_bucket(bucket_name)
+        response = await client.storage.from_(bucket).create_signed_url(
             path, expires_in
         )
 
@@ -56,22 +79,24 @@ class StorageRepository:
             raise ValueError(f"Failed to generate signed URL for path: {path}")
         return signedURL
 
-    async def delete_file(self, path: str):
+    async def delete_file(self, path: str, bucket_name: Optional[str] = None):
         """Removes a file from storage."""
         client = await self._get_client()
-        await client.storage.from_(self.bucket).remove([path])
+        bucket = self._resolve_bucket(bucket_name)
+        await client.storage.from_(bucket).remove([path])
 
-    async def is_accessible(self) -> bool:
+    async def is_accessible(self, bucket_name: Optional[str] = None) -> bool:
         """Checks whether the configured storage bucket is reachable."""
         client = await self._get_client()
-        await client.storage.from_(self.bucket).list(path="", options={"limit": 1})
+        bucket = self._resolve_bucket(bucket_name)
+        await client.storage.from_(bucket).list(path="", options={"limit": 1})
         return True
 
-    def get_public_url(self, path: str) -> str:
+    def get_public_url(self, path: str, bucket_name: Optional[str] = None) -> str:
         """Get public URL for a file (synchronous generation)."""
         url = os.getenv("SUPABASE_URL", "")
         if url.endswith("/"):
             url = url[:-1]
 
-        return f"{url}/storage/v1/object/public/{self.bucket}/{path}"
-
+        bucket = self._resolve_bucket(bucket_name)
+        return f"{url}/storage/v1/object/public/{bucket}/{path}"

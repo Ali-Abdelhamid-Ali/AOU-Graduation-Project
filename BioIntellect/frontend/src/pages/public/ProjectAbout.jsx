@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { TopBar } from '@/components/layout/TopBar'
-import { Medical3DViewer } from '../../components/clinical/Medical3DViewer'
+import { ProjectInfoModelViewer } from '../../components/clinical/ProjectInfoModelViewer'
 import styles from './ProjectAbout.module.css'
 
 // Professional Icon Imports
@@ -62,7 +62,7 @@ export const ProjectAbout = ({ onBack }) => {
                         </div>
                         <div className={styles.volumetricStage}>
                             <div className={styles.webglCanvasWrapper}>
-                                <Medical3DViewer type="heart" />
+                                <ProjectInfoModelViewer type="heart" />
                             </div>
                         </div>
                         <div className={styles.studioFooter}>
@@ -79,7 +79,7 @@ export const ProjectAbout = ({ onBack }) => {
                         </div>
                         <div className={styles.volumetricStage}>
                             <div className={styles.webglCanvasWrapper}>
-                                <Medical3DViewer type="brain" />
+                                <ProjectInfoModelViewer type="brain" />
                             </div>
                         </div>
                         <div className={styles.studioFooter}>

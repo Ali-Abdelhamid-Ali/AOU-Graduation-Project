@@ -67,6 +67,7 @@ export const EcgAnalysis = ({ onBack }) => {
             const medicalCase = await medicalService.createCase({
                 patientId: patientId,
                 doctorId: docId,
+                hospitalId: currentUser.hospital_id,
                 caseType: 'ecg_analysis',
                 chiefComplaint: 'Automated AI ECG Screening'
             })
@@ -77,7 +78,7 @@ export const EcgAnalysis = ({ onBack }) => {
                 patientId: patientId,
                 userId: currentUser.user_id || currentUser.id,
                 file: file,
-                fileType: 'ecg_signal'
+                fileType: 'ecg'
             })
 
             // 4. Run ECG Analysis via Backend API

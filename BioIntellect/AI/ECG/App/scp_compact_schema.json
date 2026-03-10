@@ -1,0 +1,1761 @@
+{
+  "items": {
+    "NDT": {
+      "code": "NDT",
+      "name": "non-diagnostic T abnormalities",
+      "description": "non-diagnostic T abnormalities",
+      "types": {
+        "diagnostic": true,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "STTC",
+        "category": "other ST-T descriptive statements"
+      },
+      "search_terms": [
+        "ndt",
+        "non diagnostic t abnormalities"
+      ]
+    },
+    "NST_": {
+      "code": "NST_",
+      "name": "non-specific ST changes",
+      "description": "non-specific ST changes",
+      "types": {
+        "diagnostic": true,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "NST_",
+        "category": "Basic roots for coding ST-T changes and abnormalities"
+      },
+      "search_terms": [
+        "nst",
+        "non specific st changes"
+      ]
+    },
+    "DIG": {
+      "code": "DIG",
+      "name": "digitalis-effect",
+      "description": "suggests digitalis-effect",
+      "types": {
+        "diagnostic": true,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "STTC",
+        "category": "other ST-T descriptive statements"
+      },
+      "search_terms": [
+        "dig",
+        "digitalis effect",
+        "suggests digitalis effect"
+      ]
+    },
+    "LNGQT": {
+      "code": "LNGQT",
+      "name": "long QT-interval",
+      "description": "long QT-interval",
+      "types": {
+        "diagnostic": true,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "STTC",
+        "category": "other ST-T descriptive statements"
+      },
+      "search_terms": [
+        "lngqt",
+        "long qt interval"
+      ]
+    },
+    "NORM": {
+      "code": "NORM",
+      "name": "normal ECG",
+      "description": "normal ECG",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "NORM",
+        "subclass": "NORM",
+        "category": "Normal/abnormal"
+      },
+      "search_terms": [
+        "norm",
+        "normal ecg"
+      ]
+    },
+    "IMI": {
+      "code": "IMI",
+      "name": "inferior myocardial infarction",
+      "description": "inferior myocardial infarction",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "IMI",
+        "category": "Myocardial Infarction"
+      },
+      "search_terms": [
+        "imi",
+        "inferior myocardial infarction"
+      ]
+    },
+    "ASMI": {
+      "code": "ASMI",
+      "name": "anteroseptal myocardial infarction",
+      "description": "anteroseptal myocardial infarction",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "AMI",
+        "category": "Myocardial Infarction"
+      },
+      "search_terms": [
+        "asmi",
+        "anteroseptal myocardial infarction"
+      ]
+    },
+    "LVH": {
+      "code": "LVH",
+      "name": "left ventricular hypertrophy",
+      "description": "left ventricular hypertrophy",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "HYP",
+        "subclass": "LVH",
+        "category": "Ventricular Hypertrophy"
+      },
+      "search_terms": [
+        "lvh",
+        "left ventricular hypertrophy"
+      ]
+    },
+    "LAFB": {
+      "code": "LAFB",
+      "name": "left anterior fascicular block",
+      "description": "left anterior fascicular block",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "LAFB/LPFB",
+        "category": "Intraventricular and intra-atrial Conduction disturbances"
+      },
+      "search_terms": [
+        "lafb",
+        "left anterior fascicular block"
+      ]
+    },
+    "ISC_": {
+      "code": "ISC_",
+      "name": "non-specific ischemic",
+      "description": "ischemic ST-T changes",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "ISC_",
+        "category": "Basic roots for coding ST-T changes and abnormalities"
+      },
+      "search_terms": [
+        "isc",
+        "non specific ischemic",
+        "ischemic st t changes"
+      ]
+    },
+    "IRBBB": {
+      "code": "IRBBB",
+      "name": "incomplete right bundle branch block",
+      "description": "incomplete right bundle branch block",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "IRBBB",
+        "category": "Intraventricular and intra-atrial Conduction disturbances"
+      },
+      "search_terms": [
+        "irbbb",
+        "incomplete right bundle branch block"
+      ]
+    },
+    "1AVB": {
+      "code": "1AVB",
+      "name": "first degree AV block",
+      "description": "first degree AV block",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "_AVB",
+        "category": "Sinus node dysfunction, atrial and AV-conduction defects"
+      },
+      "search_terms": [
+        "1avb",
+        "first degree av block"
+      ]
+    },
+    "IVCD": {
+      "code": "IVCD",
+      "name": "non-specific intraventricular conduction disturbance (block)",
+      "description": "non-specific intraventricular conduction disturbance",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "IVCD",
+        "category": "Intraventricular and intra-atrial Conduction disturbances"
+      },
+      "search_terms": [
+        "ivcd",
+        "non specific intraventricular conduction disturbance block",
+        "non specific intraventricular conduction disturbance"
+      ]
+    },
+    "ISCAL": {
+      "code": "ISCAL",
+      "name": "ischemic in anterolateral leads",
+      "description": "in anterolateral leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "ISCA",
+        "category": "ischemic ST-T changes"
+      },
+      "search_terms": [
+        "iscal",
+        "ischemic in anterolateral leads",
+        "in anterolateral leads"
+      ]
+    },
+    "CRBBB": {
+      "code": "CRBBB",
+      "name": "complete right bundle branch block",
+      "description": "(complete) right bundle branch block",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "CRBBB",
+        "category": "Intraventricular and intra-atrial Conduction disturbances"
+      },
+      "search_terms": [
+        "crbbb",
+        "complete right bundle branch block"
+      ]
+    },
+    "CLBBB": {
+      "code": "CLBBB",
+      "name": "complete left bundle branch block",
+      "description": "(complete) left bundle branch block",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "CLBBB",
+        "category": "Intraventricular and intra-atrial Conduction disturbances"
+      },
+      "search_terms": [
+        "clbbb",
+        "complete left bundle branch block"
+      ]
+    },
+    "ILMI": {
+      "code": "ILMI",
+      "name": "inferolateral myocardial infarction",
+      "description": "inferolateral myocardial infarction",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "IMI",
+        "category": "Myocardial Infarction"
+      },
+      "search_terms": [
+        "ilmi",
+        "inferolateral myocardial infarction"
+      ]
+    },
+    "LAO/LAE": {
+      "code": "LAO/LAE",
+      "name": "left atrial overload/enlargement",
+      "description": "left atrial overload/enlargement",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "HYP",
+        "subclass": "LAO/LAE",
+        "category": "Atrial statements"
+      },
+      "search_terms": [
+        "lao lae",
+        "left atrial overload enlargement"
+      ]
+    },
+    "AMI": {
+      "code": "AMI",
+      "name": "anterior myocardial infarction",
+      "description": "anterior myocardial infarction",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "AMI",
+        "category": "Myocardial Infarction"
+      },
+      "search_terms": [
+        "ami",
+        "anterior myocardial infarction"
+      ]
+    },
+    "ALMI": {
+      "code": "ALMI",
+      "name": "anterolateral myocardial infarction",
+      "description": "anterolateral myocardial infarction",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "AMI",
+        "category": "Myocardial Infarction"
+      },
+      "search_terms": [
+        "almi",
+        "anterolateral myocardial infarction"
+      ]
+    },
+    "ISCIN": {
+      "code": "ISCIN",
+      "name": "ischemic in inferior leads",
+      "description": "in inferior leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "ISCI",
+        "category": "ischemic ST-T changes"
+      },
+      "search_terms": [
+        "iscin",
+        "ischemic in inferior leads",
+        "in inferior leads"
+      ]
+    },
+    "INJAS": {
+      "code": "INJAS",
+      "name": "subendocardial injury in anteroseptal leads",
+      "description": "in anteroseptal leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "AMI",
+        "category": "ischemic ST-T changes compatible with subendocardial injury"
+      },
+      "search_terms": [
+        "injas",
+        "subendocardial injury in anteroseptal leads",
+        "in anteroseptal leads"
+      ]
+    },
+    "LMI": {
+      "code": "LMI",
+      "name": "lateral myocardial infarction",
+      "description": "lateral myocardial infarction",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "LMI",
+        "category": "Myocardial Infarction"
+      },
+      "search_terms": [
+        "lmi",
+        "lateral myocardial infarction"
+      ]
+    },
+    "ISCIL": {
+      "code": "ISCIL",
+      "name": "ischemic in inferolateral leads",
+      "description": "in inferolateral leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "ISCI",
+        "category": "ischemic ST-T changes"
+      },
+      "search_terms": [
+        "iscil",
+        "ischemic in inferolateral leads",
+        "in inferolateral leads"
+      ]
+    },
+    "LPFB": {
+      "code": "LPFB",
+      "name": "left posterior fascicular block",
+      "description": "left posterior fascicular block",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "LAFB/LPFB",
+        "category": "Intraventricular and intra-atrial Conduction disturbances"
+      },
+      "search_terms": [
+        "lpfb",
+        "left posterior fascicular block"
+      ]
+    },
+    "ISCAS": {
+      "code": "ISCAS",
+      "name": "ischemic in anteroseptal leads",
+      "description": "in anteroseptal leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "ISCA",
+        "category": "ischemic ST-T changes"
+      },
+      "search_terms": [
+        "iscas",
+        "ischemic in anteroseptal leads",
+        "in anteroseptal leads"
+      ]
+    },
+    "INJAL": {
+      "code": "INJAL",
+      "name": "subendocardial injury in anterolateral leads",
+      "description": "in anterolateral leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "AMI",
+        "category": "ischemic ST-T changes compatible with subendocardial injury"
+      },
+      "search_terms": [
+        "injal",
+        "subendocardial injury in anterolateral leads",
+        "in anterolateral leads"
+      ]
+    },
+    "ISCLA": {
+      "code": "ISCLA",
+      "name": "ischemic in lateral leads",
+      "description": "in lateral leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "ISCA",
+        "category": "ischemic ST-T changes"
+      },
+      "search_terms": [
+        "iscla",
+        "ischemic in lateral leads",
+        "in lateral leads"
+      ]
+    },
+    "RVH": {
+      "code": "RVH",
+      "name": "right ventricular hypertrophy",
+      "description": "right ventricular hypertrophy",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "HYP",
+        "subclass": "RVH",
+        "category": "Ventricular Hypertrophy"
+      },
+      "search_terms": [
+        "rvh",
+        "right ventricular hypertrophy"
+      ]
+    },
+    "ANEUR": {
+      "code": "ANEUR",
+      "name": "ST-T changes compatible with ventricular aneurysm",
+      "description": "ST-T changes compatible with ventricular aneurysm",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "STTC",
+        "category": "other ST-T descriptive statements"
+      },
+      "search_terms": [
+        "aneur",
+        "st t changes compatible with ventricular aneurysm"
+      ]
+    },
+    "RAO/RAE": {
+      "code": "RAO/RAE",
+      "name": "right atrial overload/enlargement",
+      "description": "right atrial overload/enlargement",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "HYP",
+        "subclass": "RAO/RAE",
+        "category": "Atrial statements"
+      },
+      "search_terms": [
+        "rao rae",
+        "right atrial overload enlargement"
+      ]
+    },
+    "EL": {
+      "code": "EL",
+      "name": "electrolytic disturbance or drug (former EDIS)",
+      "description": "compatible with electrolyte abnormalities",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "STTC",
+        "category": "physiopathological nature of ST-T changes"
+      },
+      "search_terms": [
+        "el",
+        "electrolytic disturbance or drug former edis",
+        "compatible with electrolyte abnormalities"
+      ]
+    },
+    "WPW": {
+      "code": "WPW",
+      "name": "Wolf-Parkinson-White syndrome",
+      "description": "Wolff-Parkinson-White syndrome",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "WPW",
+        "category": "Intraventricular and intra-atrial Conduction disturbances"
+      },
+      "search_terms": [
+        "wpw",
+        "wolf parkinson white syndrome",
+        "wolff parkinson white syndrome"
+      ]
+    },
+    "ILBBB": {
+      "code": "ILBBB",
+      "name": "incomplete left bundle branch block",
+      "description": "incomplete left bundle branch block",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "ILBBB",
+        "category": "Intraventricular and intra-atrial Conduction disturbances"
+      },
+      "search_terms": [
+        "ilbbb",
+        "incomplete left bundle branch block"
+      ]
+    },
+    "IPLMI": {
+      "code": "IPLMI",
+      "name": "inferoposterolateral myocardial infarction",
+      "description": "inferoposterolateral myocardial infarction",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "IMI",
+        "category": "Myocardial Infarction"
+      },
+      "search_terms": [
+        "iplmi",
+        "inferoposterolateral myocardial infarction"
+      ]
+    },
+    "ISCAN": {
+      "code": "ISCAN",
+      "name": "ischemic in anterior leads",
+      "description": "in anterior leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "STTC",
+        "subclass": "ISCA",
+        "category": "ischemic ST-T changes"
+      },
+      "search_terms": [
+        "iscan",
+        "ischemic in anterior leads",
+        "in anterior leads"
+      ]
+    },
+    "IPMI": {
+      "code": "IPMI",
+      "name": "inferoposterior myocardial infarction",
+      "description": "inferoposterior myocardial infarction",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "IMI",
+        "category": "Myocardial Infarction"
+      },
+      "search_terms": [
+        "ipmi",
+        "inferoposterior myocardial infarction"
+      ]
+    },
+    "SEHYP": {
+      "code": "SEHYP",
+      "name": "septal hypertrophy",
+      "description": "septal hypertrophy",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "HYP",
+        "subclass": "SEHYP",
+        "category": "Ventricular Hypertrophy"
+      },
+      "search_terms": [
+        "sehyp",
+        "septal hypertrophy"
+      ]
+    },
+    "INJIN": {
+      "code": "INJIN",
+      "name": "subendocardial injury in inferior leads",
+      "description": "in inferior leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "IMI",
+        "category": "ischemic ST-T changes compatible with subendocardial injury"
+      },
+      "search_terms": [
+        "injin",
+        "subendocardial injury in inferior leads",
+        "in inferior leads"
+      ]
+    },
+    "INJLA": {
+      "code": "INJLA",
+      "name": "subendocardial injury in lateral leads",
+      "description": "in lateral leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "AMI",
+        "category": "ischemic ST-T changes compatible with subendocardial injury"
+      },
+      "search_terms": [
+        "injla",
+        "subendocardial injury in lateral leads",
+        "in lateral leads"
+      ]
+    },
+    "PMI": {
+      "code": "PMI",
+      "name": "posterior myocardial infarction",
+      "description": "posterior myocardial infarction",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "PMI",
+        "category": "Myocardial Infarction"
+      },
+      "search_terms": [
+        "pmi",
+        "posterior myocardial infarction"
+      ]
+    },
+    "3AVB": {
+      "code": "3AVB",
+      "name": "third degree AV block",
+      "description": "third degree AV block",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "_AVB",
+        "category": "Sinus node dysfunction, atrial and AV-conduction defects"
+      },
+      "search_terms": [
+        "3avb",
+        "third degree av block"
+      ]
+    },
+    "INJIL": {
+      "code": "INJIL",
+      "name": "subendocardial injury in inferolateral leads",
+      "description": "in inferolateral leads",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "MI",
+        "subclass": "IMI",
+        "category": "ischemic ST-T changes compatible with subendocardial injury"
+      },
+      "search_terms": [
+        "injil",
+        "subendocardial injury in inferolateral leads",
+        "in inferolateral leads"
+      ]
+    },
+    "2AVB": {
+      "code": "2AVB",
+      "name": "second degree AV block",
+      "description": "second degree AV block",
+      "types": {
+        "diagnostic": true,
+        "form": false,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": "CD",
+        "subclass": "_AVB",
+        "category": "Sinus node dysfunction, atrial and AV-conduction defects"
+      },
+      "search_terms": [
+        "2avb",
+        "second degree av block"
+      ]
+    },
+    "ABQRS": {
+      "code": "ABQRS",
+      "name": "abnormal QRS",
+      "description": "abnormal QRS",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Normal/abnormal"
+      },
+      "search_terms": [
+        "abqrs",
+        "abnormal qrs"
+      ]
+    },
+    "PVC": {
+      "code": "PVC",
+      "name": "ventricular premature complex",
+      "description": "ventricular premature complex (beat)",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to ectopic rhythm abnormalities"
+      },
+      "search_terms": [
+        "pvc",
+        "ventricular premature complex",
+        "ventricular premature complex beat"
+      ]
+    },
+    "STD_": {
+      "code": "STD_",
+      "name": "non-specific ST depression",
+      "description": "non-specific ST depression",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Basic roots for coding ST-T changes and abnormalities"
+      },
+      "search_terms": [
+        "std",
+        "non specific st depression"
+      ]
+    },
+    "VCLVH": {
+      "code": "VCLVH",
+      "name": "voltage criteria (QRS) for left ventricular hypertrophy",
+      "description": "voltage criteria (QRS) for left ventricular hypertrophy",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Ventricular Hypertrophy"
+      },
+      "search_terms": [
+        "vclvh",
+        "voltage criteria qrs for left ventricular hypertrophy"
+      ]
+    },
+    "QWAVE": {
+      "code": "QWAVE",
+      "name": "Q waves present",
+      "description": "Q waves present",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Other QRS morphology descriptive statements"
+      },
+      "search_terms": [
+        "qwave",
+        "q waves present"
+      ]
+    },
+    "LOWT": {
+      "code": "LOWT",
+      "name": "low amplitude T-waves",
+      "description": "low amplitude T-waves",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "other ST-T descriptive statements"
+      },
+      "search_terms": [
+        "lowt",
+        "low amplitude t waves"
+      ]
+    },
+    "NT_": {
+      "code": "NT_",
+      "name": "non-specific T-wave changes",
+      "description": "non-specific T-wave changes",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Basic roots for coding ST-T changes and abnormalities"
+      },
+      "search_terms": [
+        "nt",
+        "non specific t wave changes"
+      ]
+    },
+    "PAC": {
+      "code": "PAC",
+      "name": "atrial premature complex",
+      "description": "atrial premature complex (beat)",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to ectopic rhythm abnormalities"
+      },
+      "search_terms": [
+        "pac",
+        "atrial premature complex",
+        "atrial premature complex beat"
+      ]
+    },
+    "LPR": {
+      "code": "LPR",
+      "name": "prolonged PR interval",
+      "description": "Prolonged PR interval",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to impulse formation (abnormalities)"
+      },
+      "search_terms": [
+        "lpr",
+        "prolonged pr interval"
+      ]
+    },
+    "INVT": {
+      "code": "INVT",
+      "name": "inverted T-waves",
+      "description": "inverted T-waves",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "other ST-T descriptive statements"
+      },
+      "search_terms": [
+        "invt",
+        "inverted t waves"
+      ]
+    },
+    "LVOLT": {
+      "code": "LVOLT",
+      "name": "low QRS voltages in the frontal and horizontal leads",
+      "description": "low QRS voltages in the frontal and horizontal leads",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Other QRS morphology descriptive statements"
+      },
+      "search_terms": [
+        "lvolt",
+        "low qrs voltages in the frontal and horizontal leads"
+      ]
+    },
+    "HVOLT": {
+      "code": "HVOLT",
+      "name": "high QRS voltage",
+      "description": "high QRS voltage",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Other QRS morphology descriptive statements"
+      },
+      "search_terms": [
+        "hvolt",
+        "high qrs voltage"
+      ]
+    },
+    "TAB_": {
+      "code": "TAB_",
+      "name": "T-wave abnormality",
+      "description": "T-wave abnormality",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Basic roots for coding ST-T changes and abnormalities"
+      },
+      "search_terms": [
+        "tab",
+        "t wave abnormality"
+      ]
+    },
+    "STE_": {
+      "code": "STE_",
+      "name": "non-specific ST elevation",
+      "description": "non-specific ST elevation",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Basic roots for coding ST-T changes and abnormalities"
+      },
+      "search_terms": [
+        "ste",
+        "non specific st elevation"
+      ]
+    },
+    "PRC(S)": {
+      "code": "PRC(S)",
+      "name": "premature complex(es)",
+      "description": "premature complex(es)",
+      "types": {
+        "diagnostic": false,
+        "form": true,
+        "rhythm": false
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to ectopic rhythm abnormalities"
+      },
+      "search_terms": [
+        "prc s",
+        "premature complex es"
+      ]
+    },
+    "SR": {
+      "code": "SR",
+      "name": "sinus rhythm",
+      "description": "sinus rhythm",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to impulse formation (abnormalities)"
+      },
+      "search_terms": [
+        "sr",
+        "sinus rhythm"
+      ]
+    },
+    "AFIB": {
+      "code": "AFIB",
+      "name": "atrial fibrillation",
+      "description": "atrial fibrillation",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to impulse formation (abnormalities)"
+      },
+      "search_terms": [
+        "afib",
+        "atrial fibrillation"
+      ]
+    },
+    "STACH": {
+      "code": "STACH",
+      "name": "sinus tachycardia",
+      "description": "sinus tachycardia",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to impulse formation (abnormalities)"
+      },
+      "search_terms": [
+        "stach",
+        "sinus tachycardia"
+      ]
+    },
+    "SARRH": {
+      "code": "SARRH",
+      "name": "sinus arrhythmia",
+      "description": "sinus arrhythmia",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to impulse formation (abnormalities)"
+      },
+      "search_terms": [
+        "sarrh",
+        "sinus arrhythmia"
+      ]
+    },
+    "SBRAD": {
+      "code": "SBRAD",
+      "name": "sinus bradycardia",
+      "description": "sinus bradycardia",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to impulse formation (abnormalities)"
+      },
+      "search_terms": [
+        "sbrad",
+        "sinus bradycardia"
+      ]
+    },
+    "PACE": {
+      "code": "PACE",
+      "name": "normal functioning artificial pacemaker",
+      "description": "normal functioning artificial pacemaker",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Pacemaker types and pacemaker function"
+      },
+      "search_terms": [
+        "pace",
+        "normal functioning artificial pacemaker"
+      ]
+    },
+    "SVARR": {
+      "code": "SVARR",
+      "name": "supraventricular arrhythmia",
+      "description": "supraventricular arrhythmia",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to impulse formation (abnormalities)"
+      },
+      "search_terms": [
+        "svarr",
+        "supraventricular arrhythmia"
+      ]
+    },
+    "BIGU": {
+      "code": "BIGU",
+      "name": "bigeminal pattern (unknown origin, SV or Ventricular)",
+      "description": "bigeminal pattern (unknown origin, SV or Ventricular)",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to ectopic rhythm abnormalities"
+      },
+      "search_terms": [
+        "bigu",
+        "bigeminal pattern unknown origin sv or ventricular"
+      ]
+    },
+    "AFLT": {
+      "code": "AFLT",
+      "name": "atrial flutter",
+      "description": "atrial flutter",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to impulse formation (abnormalities)"
+      },
+      "search_terms": [
+        "aflt",
+        "atrial flutter"
+      ]
+    },
+    "SVTAC": {
+      "code": "SVTAC",
+      "name": "supraventricular tachycardia",
+      "description": "supraventricular tachycardia",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to impulse formation (abnormalities)"
+      },
+      "search_terms": [
+        "svtac",
+        "supraventricular tachycardia"
+      ]
+    },
+    "PSVT": {
+      "code": "PSVT",
+      "name": "paroxysmal supraventricular tachycardia",
+      "description": "paroxysmal supraventricular tachycardia",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to impulse formation (abnormalities)"
+      },
+      "search_terms": [
+        "psvt",
+        "paroxysmal supraventricular tachycardia"
+      ]
+    },
+    "TRIGU": {
+      "code": "TRIGU",
+      "name": "trigeminal pattern (unknown origin, SV or Ventricular)",
+      "description": "trigeminal pattern (unknown origin, SV or Ventricular)",
+      "types": {
+        "diagnostic": false,
+        "form": false,
+        "rhythm": true
+      },
+      "group": {
+        "superclass": null,
+        "subclass": null,
+        "category": "Statements related to ectopic rhythm abnormalities"
+      },
+      "search_terms": [
+        "trigu",
+        "trigeminal pattern unknown origin sv or ventricular"
+      ]
+    }
+  },
+  "index": {
+    "term_to_code": {
+      "ndt": "NDT",
+      "non diagnostic t abnormalities": "NDT",
+      "nst": "NST_",
+      "non specific st changes": "NST_",
+      "dig": "DIG",
+      "digitalis effect": "DIG",
+      "suggests digitalis effect": "DIG",
+      "lngqt": "LNGQT",
+      "long qt interval": "LNGQT",
+      "norm": "NORM",
+      "normal ecg": "NORM",
+      "imi": "IMI",
+      "inferior myocardial infarction": "IMI",
+      "asmi": "ASMI",
+      "anteroseptal myocardial infarction": "ASMI",
+      "lvh": "LVH",
+      "left ventricular hypertrophy": "LVH",
+      "lafb": "LAFB",
+      "left anterior fascicular block": "LAFB",
+      "isc": "ISC_",
+      "non specific ischemic": "ISC_",
+      "ischemic st t changes": "ISC_",
+      "irbbb": "IRBBB",
+      "incomplete right bundle branch block": "IRBBB",
+      "1avb": "1AVB",
+      "first degree av block": "1AVB",
+      "ivcd": "IVCD",
+      "non specific intraventricular conduction disturbance block": "IVCD",
+      "non specific intraventricular conduction disturbance": "IVCD",
+      "iscal": "ISCAL",
+      "ischemic in anterolateral leads": "ISCAL",
+      "in anterolateral leads": "ISCAL",
+      "crbbb": "CRBBB",
+      "complete right bundle branch block": "CRBBB",
+      "clbbb": "CLBBB",
+      "complete left bundle branch block": "CLBBB",
+      "ilmi": "ILMI",
+      "inferolateral myocardial infarction": "ILMI",
+      "lao lae": "LAO/LAE",
+      "left atrial overload enlargement": "LAO/LAE",
+      "ami": "AMI",
+      "anterior myocardial infarction": "AMI",
+      "almi": "ALMI",
+      "anterolateral myocardial infarction": "ALMI",
+      "iscin": "ISCIN",
+      "ischemic in inferior leads": "ISCIN",
+      "in inferior leads": "ISCIN",
+      "injas": "INJAS",
+      "subendocardial injury in anteroseptal leads": "INJAS",
+      "in anteroseptal leads": "INJAS",
+      "lmi": "LMI",
+      "lateral myocardial infarction": "LMI",
+      "iscil": "ISCIL",
+      "ischemic in inferolateral leads": "ISCIL",
+      "in inferolateral leads": "ISCIL",
+      "lpfb": "LPFB",
+      "left posterior fascicular block": "LPFB",
+      "iscas": "ISCAS",
+      "ischemic in anteroseptal leads": "ISCAS",
+      "injal": "INJAL",
+      "subendocardial injury in anterolateral leads": "INJAL",
+      "iscla": "ISCLA",
+      "ischemic in lateral leads": "ISCLA",
+      "in lateral leads": "ISCLA",
+      "rvh": "RVH",
+      "right ventricular hypertrophy": "RVH",
+      "aneur": "ANEUR",
+      "st t changes compatible with ventricular aneurysm": "ANEUR",
+      "rao rae": "RAO/RAE",
+      "right atrial overload enlargement": "RAO/RAE",
+      "el": "EL",
+      "electrolytic disturbance or drug former edis": "EL",
+      "compatible with electrolyte abnormalities": "EL",
+      "wpw": "WPW",
+      "wolf parkinson white syndrome": "WPW",
+      "wolff parkinson white syndrome": "WPW",
+      "ilbbb": "ILBBB",
+      "incomplete left bundle branch block": "ILBBB",
+      "iplmi": "IPLMI",
+      "inferoposterolateral myocardial infarction": "IPLMI",
+      "iscan": "ISCAN",
+      "ischemic in anterior leads": "ISCAN",
+      "in anterior leads": "ISCAN",
+      "ipmi": "IPMI",
+      "inferoposterior myocardial infarction": "IPMI",
+      "sehyp": "SEHYP",
+      "septal hypertrophy": "SEHYP",
+      "injin": "INJIN",
+      "subendocardial injury in inferior leads": "INJIN",
+      "injla": "INJLA",
+      "subendocardial injury in lateral leads": "INJLA",
+      "pmi": "PMI",
+      "posterior myocardial infarction": "PMI",
+      "3avb": "3AVB",
+      "third degree av block": "3AVB",
+      "injil": "INJIL",
+      "subendocardial injury in inferolateral leads": "INJIL",
+      "2avb": "2AVB",
+      "second degree av block": "2AVB",
+      "abqrs": "ABQRS",
+      "abnormal qrs": "ABQRS",
+      "pvc": "PVC",
+      "ventricular premature complex": "PVC",
+      "ventricular premature complex beat": "PVC",
+      "std": "STD_",
+      "non specific st depression": "STD_",
+      "vclvh": "VCLVH",
+      "voltage criteria qrs for left ventricular hypertrophy": "VCLVH",
+      "qwave": "QWAVE",
+      "q waves present": "QWAVE",
+      "lowt": "LOWT",
+      "low amplitude t waves": "LOWT",
+      "nt": "NT_",
+      "non specific t wave changes": "NT_",
+      "pac": "PAC",
+      "atrial premature complex": "PAC",
+      "atrial premature complex beat": "PAC",
+      "lpr": "LPR",
+      "prolonged pr interval": "LPR",
+      "invt": "INVT",
+      "inverted t waves": "INVT",
+      "lvolt": "LVOLT",
+      "low qrs voltages in the frontal and horizontal leads": "LVOLT",
+      "hvolt": "HVOLT",
+      "high qrs voltage": "HVOLT",
+      "tab": "TAB_",
+      "t wave abnormality": "TAB_",
+      "ste": "STE_",
+      "non specific st elevation": "STE_",
+      "prc s": "PRC(S)",
+      "premature complex es": "PRC(S)",
+      "sr": "SR",
+      "sinus rhythm": "SR",
+      "afib": "AFIB",
+      "atrial fibrillation": "AFIB",
+      "stach": "STACH",
+      "sinus tachycardia": "STACH",
+      "sarrh": "SARRH",
+      "sinus arrhythmia": "SARRH",
+      "sbrad": "SBRAD",
+      "sinus bradycardia": "SBRAD",
+      "pace": "PACE",
+      "normal functioning artificial pacemaker": "PACE",
+      "svarr": "SVARR",
+      "supraventricular arrhythmia": "SVARR",
+      "bigu": "BIGU",
+      "bigeminal pattern unknown origin sv or ventricular": "BIGU",
+      "aflt": "AFLT",
+      "atrial flutter": "AFLT",
+      "svtac": "SVTAC",
+      "supraventricular tachycardia": "SVTAC",
+      "psvt": "PSVT",
+      "paroxysmal supraventricular tachycardia": "PSVT",
+      "trigu": "TRIGU",
+      "trigeminal pattern unknown origin sv or ventricular": "TRIGU"
+    },
+    "superclass_to_codes": {
+      "STTC": [
+        "NDT",
+        "NST_",
+        "DIG",
+        "LNGQT",
+        "ISC_",
+        "ISCAL",
+        "ISCIN",
+        "ISCIL",
+        "ISCAS",
+        "ISCLA",
+        "ANEUR",
+        "EL",
+        "ISCAN"
+      ],
+      "NORM": [
+        "NORM"
+      ],
+      "MI": [
+        "IMI",
+        "ASMI",
+        "ILMI",
+        "AMI",
+        "ALMI",
+        "INJAS",
+        "LMI",
+        "INJAL",
+        "IPLMI",
+        "IPMI",
+        "INJIN",
+        "INJLA",
+        "PMI",
+        "INJIL"
+      ],
+      "HYP": [
+        "LVH",
+        "LAO/LAE",
+        "RVH",
+        "RAO/RAE",
+        "SEHYP"
+      ],
+      "CD": [
+        "LAFB",
+        "IRBBB",
+        "1AVB",
+        "IVCD",
+        "CRBBB",
+        "CLBBB",
+        "LPFB",
+        "WPW",
+        "ILBBB",
+        "3AVB",
+        "2AVB"
+      ]
+    },
+    "subclass_to_codes": {
+      "STTC": [
+        "NDT",
+        "DIG",
+        "LNGQT",
+        "ANEUR",
+        "EL"
+      ],
+      "NST_": [
+        "NST_"
+      ],
+      "NORM": [
+        "NORM"
+      ],
+      "IMI": [
+        "IMI",
+        "ILMI",
+        "IPLMI",
+        "IPMI",
+        "INJIN",
+        "INJIL"
+      ],
+      "AMI": [
+        "ASMI",
+        "AMI",
+        "ALMI",
+        "INJAS",
+        "INJAL",
+        "INJLA"
+      ],
+      "LVH": [
+        "LVH"
+      ],
+      "LAFB/LPFB": [
+        "LAFB",
+        "LPFB"
+      ],
+      "ISC_": [
+        "ISC_"
+      ],
+      "IRBBB": [
+        "IRBBB"
+      ],
+      "_AVB": [
+        "1AVB",
+        "3AVB",
+        "2AVB"
+      ],
+      "IVCD": [
+        "IVCD"
+      ],
+      "ISCA": [
+        "ISCAL",
+        "ISCAS",
+        "ISCLA",
+        "ISCAN"
+      ],
+      "CRBBB": [
+        "CRBBB"
+      ],
+      "CLBBB": [
+        "CLBBB"
+      ],
+      "LAO/LAE": [
+        "LAO/LAE"
+      ],
+      "ISCI": [
+        "ISCIN",
+        "ISCIL"
+      ],
+      "LMI": [
+        "LMI"
+      ],
+      "RVH": [
+        "RVH"
+      ],
+      "RAO/RAE": [
+        "RAO/RAE"
+      ],
+      "WPW": [
+        "WPW"
+      ],
+      "ILBBB": [
+        "ILBBB"
+      ],
+      "SEHYP": [
+        "SEHYP"
+      ],
+      "PMI": [
+        "PMI"
+      ]
+    },
+    "type_to_codes": {
+      "diagnostic": [
+        "NDT",
+        "NST_",
+        "DIG",
+        "LNGQT",
+        "NORM",
+        "IMI",
+        "ASMI",
+        "LVH",
+        "LAFB",
+        "ISC_",
+        "IRBBB",
+        "1AVB",
+        "IVCD",
+        "ISCAL",
+        "CRBBB",
+        "CLBBB",
+        "ILMI",
+        "LAO/LAE",
+        "AMI",
+        "ALMI",
+        "ISCIN",
+        "INJAS",
+        "LMI",
+        "ISCIL",
+        "LPFB",
+        "ISCAS",
+        "INJAL",
+        "ISCLA",
+        "RVH",
+        "ANEUR",
+        "RAO/RAE",
+        "EL",
+        "WPW",
+        "ILBBB",
+        "IPLMI",
+        "ISCAN",
+        "IPMI",
+        "SEHYP",
+        "INJIN",
+        "INJLA",
+        "PMI",
+        "3AVB",
+        "INJIL",
+        "2AVB"
+      ],
+      "form": [
+        "NDT",
+        "NST_",
+        "DIG",
+        "LNGQT",
+        "ABQRS",
+        "PVC",
+        "STD_",
+        "VCLVH",
+        "QWAVE",
+        "LOWT",
+        "NT_",
+        "PAC",
+        "LPR",
+        "INVT",
+        "LVOLT",
+        "HVOLT",
+        "TAB_",
+        "STE_",
+        "PRC(S)"
+      ],
+      "rhythm": [
+        "SR",
+        "AFIB",
+        "STACH",
+        "SARRH",
+        "SBRAD",
+        "PACE",
+        "SVARR",
+        "BIGU",
+        "AFLT",
+        "SVTAC",
+        "PSVT",
+        "TRIGU"
+      ]
+    }
+  }
+}

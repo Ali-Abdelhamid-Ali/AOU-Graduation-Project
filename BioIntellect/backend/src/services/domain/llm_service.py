@@ -1,10 +1,10 @@
 ﻿"""LLM Service - Medical AI Conversation Orchestration."""
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 from fastapi import HTTPException
 
-from src.observability.audit import log_audit, AuditAction
+from src.observability.audit import AuditAction, log_audit
 from src.repositories.llm_repository import LLMRepository
 from src.security.permission_map import Permission
 from src.services.ai.ai_service import AIService
@@ -39,7 +39,7 @@ class LLMService:
             return conversation
 
         user_id = user.get("id")
-        owns_conversation = conversation.get("created_by") == user_id
+        owns_conversation = conversation.get("patient_id") == user_id
         assigned_doctor = conversation.get("doctor_id") == user_id
         same_patient = conversation.get("patient_id") == user_id
 
@@ -87,17 +87,29 @@ class LLMService:
 
     async def create_conversation(self, user_id: str, data: Any) -> Dict[str, Any]:
         """Initiates a new medical AI consultation with proper validation."""
-        if hasattr(data, "dict") and callable(getattr(data, "dict")):
+        if hasattr(data, "dict") and callable(data.dict):
             data = data.dict()
 
         if not data.get("patient_id"):
             raise Exception("Patient ID is required for conversation creation")
+        if not data.get("hospital_id"):
+            raise Exception("Hospital ID is required for conversation creation")
+        if not data.get("conversation_type"):
+            raise Exception("Conversation type is required for conversation creation")
 
         conversation_data = {
             "title": data.get("title", "Medical Consultation"),
+            "conversation_type": data["conversation_type"],
             "patient_id": data["patient_id"],
             "doctor_id": data.get("doctor_id", user_id),
+            "case_id": data.get("case_id"),
+            "hospital_id": data["hospital_id"],
+            "system_prompt": data.get("system_prompt"),
+            "llm_model": data.get("llm_model", "gpt-4"),
+            "temperature": data.get("temperature", 0.7),
+            "max_tokens": data.get("max_tokens", 4096),
             "is_active": True,
+            "metadata": {},
         }
         result = await self.repo.create(conversation_data)
         if not result:
@@ -123,11 +135,13 @@ class LLMService:
             raise Exception("Conversation not found")
 
         context = await self.repo.get_patient_metadata(conv["patient_id"])
+        sender_type = "patient" if conv.get("patient_id") == user_id else "doctor"
 
         await self.repo.create_message(
             {
                 "conversation_id": conversation_id,
-                "sender_type": "user",
+                "sender_type": sender_type,
+                "sender_id": user_id,
                 "message_content": content,
             }
         )

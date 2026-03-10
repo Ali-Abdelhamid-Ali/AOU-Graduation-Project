@@ -1,10 +1,13 @@
 ﻿"""Clinical Service - Medical Data Orchestration."""
 
-from typing import Dict, Any, List, Optional
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+from uuid import uuid4
+
+from src.observability.audit import AuditAction, log_audit
+from src.observability.logger import get_logger
 from src.repositories.clinical_repository import ClinicalRepository
 from src.services.ai.ai_service import AIService
-from src.observability.audit import log_audit, AuditAction
-from src.observability.logger import get_logger
 
 logger = get_logger("service.clinical")
 
@@ -14,11 +17,29 @@ class ClinicalService:
         self.clinical_repo = clinical_repo
         self.ai_service = ai_service
 
+    @staticmethod
+    def _generate_case_number(hospital_id: Optional[str]) -> str:
+        hospital_fragment = str(hospital_id or "GENERAL").replace("-", "").upper()[:6]
+        date_fragment = datetime.now(timezone.utc).strftime("%Y%m%d")
+        entropy = uuid4().hex[:6].upper()
+        return f"MC-{hospital_fragment}-{date_fragment}-{entropy}"
+
+    @staticmethod
+    def _generate_report_number(report_type: Optional[str]) -> str:
+        report_prefix = str(report_type or "report").upper()[:10]
+        date_fragment = datetime.now(timezone.utc).strftime("%Y%m%d")
+        entropy = uuid4().hex[:5].upper()
+        return f"{report_prefix}-{date_fragment}-{entropy}"
+
     async def create_case(
         self, user_id: str, case_data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """Creates a new medical case."""
-        case = await self.clinical_repo.create_medical_case(case_data)
+        payload = dict(case_data)
+        payload.setdefault(
+            "case_number", self._generate_case_number(payload.get("hospital_id"))
+        )
+        case = await self.clinical_repo.create_medical_case(payload)
         log_audit(
             AuditAction.ACCESS_MEDICAL_DATA,
             user_id=user_id,
@@ -44,6 +65,15 @@ class ClinicalService:
             "rhythm_classification": analysis.get("prediction"),
             "rhythm_confidence": analysis.get("confidence"),
             "ai_interpretation": analysis.get("ai_notes"),
+            "detected_conditions": analysis.get("detected_conditions", []),
+            "ai_recommendations": analysis.get("recommendations", []),
+            "heart_rate": analysis.get("heart_rate"),
+            "heart_rate_variability": analysis.get("heart_rate_variability"),
+            "risk_score": analysis.get("risk_score"),
+            "analyzed_by_model": analysis.get("model_info", {}).get(
+                "name", "BioIntellect ECG"
+            ),
+            "model_version": analysis.get("model_info", {}).get("version"),
             "analysis_status": "completed",
             "performed_by": user_id,
         }
@@ -71,8 +101,8 @@ class ClinicalService:
                     result_id,
                     {
                         "is_reviewed": True,
-                        "reviewed_at": "now()",
-                        "doctor_id": user_id,
+                        "reviewed_at": datetime.now(timezone.utc).isoformat(),
+                        "reviewed_by_doctor_id": user_id,
                         **data,
                     },
                 )
@@ -81,8 +111,8 @@ class ClinicalService:
                     result_id,
                     {
                         "is_reviewed": True,
-                        "reviewed_at": "now()",
-                        "doctor_id": user_id,
+                        "reviewed_at": datetime.now(timezone.utc).isoformat(),
+                        "reviewed_by_doctor_id": user_id,
                         **data,
                     },
                 )
@@ -150,6 +180,15 @@ class ClinicalService:
             "rhythm_classification": analysis.get("prediction"),
             "rhythm_confidence": analysis.get("confidence"),
             "ai_interpretation": analysis.get("ai_notes"),
+            "detected_conditions": analysis.get("detected_conditions", []),
+            "ai_recommendations": analysis.get("recommendations", []),
+            "heart_rate": analysis.get("heart_rate"),
+            "heart_rate_variability": analysis.get("heart_rate_variability"),
+            "risk_score": analysis.get("risk_score"),
+            "analyzed_by_model": analysis.get("model_info", {}).get(
+                "name", "BioIntellect ECG"
+            ),
+            "model_version": analysis.get("model_info", {}).get("version"),
             "analysis_status": "completed",
             "performed_by": user_id,
         }
@@ -206,6 +245,16 @@ class ClinicalService:
             "case_id": scan.get("case_id"),
             "severity_score": analysis.get("severity_score"),
             "ai_interpretation": analysis.get("ai_notes"),
+            "segmented_regions": analysis.get("segmented_regions", []),
+            "detected_abnormalities": analysis.get("abnormalities", []),
+            "measurements": analysis.get("measurements", {}),
+            "ai_recommendations": analysis.get("recommendations", []),
+            "tumor_detected": analysis.get("tumor_detected", False),
+            "confidence_score": analysis.get("confidence"),
+            "analyzed_by_model": analysis.get("model_info", {}).get(
+                "name", "BioIntellect MRI"
+            ),
+            "model_version": analysis.get("model_info", {}).get("version"),
             "analysis_status": "completed",
             "performed_by": user_id,
         }
@@ -427,7 +476,15 @@ class ClinicalService:
         self, user_id: str, report_data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """Creates a generated report."""
-        report = await self.clinical_repo.create_report(report_data)
+        payload = dict(report_data)
+        payload.setdefault(
+            "report_number", self._generate_report_number(payload.get("report_type"))
+        )
+        payload.setdefault("status", "draft")
+        payload.setdefault("is_final", False)
+        payload.setdefault("version", 1)
+        payload.setdefault("doctor_id", user_id)
+        report = await self.clinical_repo.create_report(payload)
         log_audit(
             AuditAction.REPORT_SIGN,
             user_id=user_id,

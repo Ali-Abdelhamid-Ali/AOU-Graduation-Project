@@ -3,8 +3,9 @@ import logging
 import tempfile
 import traceback
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 from keras import backend as K
 import nibabel as nib
 import numpy as np
@@ -12,7 +13,6 @@ import tensorflow as tf
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_cors import CORS
 from scipy.ndimage import zoom
-import traceback
 from huggingface_hub import hf_hub_download
 from keras.models import load_model
 # Configure comprehensive logging
@@ -58,6 +58,11 @@ td_path = Path(os.getenv("TEMP_DIR", "default/temp/path"))
 USE_FLOAT16 = True
 MODALITIES = ["t1", "t1ce", "t2", "flair"]
 TARGET_SPATIAL = (112, 112, 112)  # Desired D,H,W
+CLASS_METADATA = {
+    1: {"class_name": "Necrotic/Non-Enhancing Tumor Core", "color": [255, 80, 80]},
+    2: {"class_name": "Peritumoral Edema", "color": [80, 255, 80]},
+    3: {"class_name": "Enhancing Tumor", "color": [80, 80, 255]},
+}
 
 # --- Utility: preprocessing functions ---
 def load_nifti_canonical(path: Path) -> Tuple[np.ndarray, np.ndarray, dict]:
@@ -82,10 +87,10 @@ def preprocess_mask_multiclass(mask: np.ndarray) -> np.ndarray:
     m[m == 4] = 3
     return m
 
-def crop_to_roi(image: np.ndarray, mask: np.ndarray, margin: int = 5) -> Tuple[np.ndarray, np.ndarray]:
+def get_roi_bounds(mask: np.ndarray, margin: int = 5) -> Optional[Tuple[int, int, int, int, int, int]]:
     coords = np.array(np.nonzero(mask))
     if coords.size == 0:
-        return image, mask
+        return None
     zmin, ymin, xmin = coords.min(axis=1)
     zmax, ymax, xmax = coords.max(axis=1)
     zmin = max(zmin - margin, 0)
@@ -94,6 +99,13 @@ def crop_to_roi(image: np.ndarray, mask: np.ndarray, margin: int = 5) -> Tuple[n
     zmax = min(zmax + margin, mask.shape[0] - 1)
     ymax = min(ymax + margin, mask.shape[1] - 1)
     xmax = min(xmax + margin, mask.shape[2] - 1)
+    return (int(zmin), int(zmax), int(ymin), int(ymax), int(xmin), int(xmax))
+
+def crop_to_roi(image: np.ndarray, mask: np.ndarray, margin: int = 5) -> Tuple[np.ndarray, np.ndarray]:
+    bounds = get_roi_bounds(mask, margin=margin)
+    if bounds is None:
+        return image, mask
+    zmin, zmax, ymin, ymax, xmin, xmax = bounds
     img_c = image[zmin:zmax+1, ymin:ymax+1, xmin:xmax+1]
     msk_c = mask[zmin:zmax+1, ymin:ymax+1, xmin:xmax+1]
     return img_c, msk_c
@@ -129,45 +141,85 @@ def enforce_mask_values(mask: np.ndarray) -> np.ndarray:
     m = np.clip(m, 0, 3).astype(np.uint8)
     return m
 
-def process_one_patient(patient_folder: Path, patient_id: str) -> Tuple[np.ndarray, np.ndarray, Dict]:
-    image_4ch = None
-    mask = None
-    metas = {"patient_id": patient_id, "modalities": MODALITIES}
+def extract_spacing_mm(header: dict) -> Tuple[float, float, float]:
+    pixdim = (header or {}).get("pixdim") or []
+    if len(pixdim) >= 4:
+        return (float(pixdim[1]), float(pixdim[2]), float(pixdim[3]))
+    return (1.0, 1.0, 1.0)
 
-    # Load modalities
+def validate_spatial_compatibility(
+    shapes: list[Tuple[int, ...]],
+    spacings: list[Tuple[float, float, float]],
+    patient_id: str,
+) -> Tuple[Tuple[int, int, int], Tuple[float, float, float]]:
+    if len(set(shapes)) != 1:
+        raise ValueError(
+            f"[AlignmentError] Modality shapes differ for patient {patient_id}: {shapes}"
+        )
+
+    reference_spacing = spacings[0]
+    for spacing in spacings[1:]:
+        if not np.allclose(reference_spacing, spacing, rtol=1e-3, atol=1e-3):
+            raise ValueError(
+                f"[SpacingError] Modality spacing differs for patient {patient_id}: {spacings}"
+            )
+
+    return shapes[0], reference_spacing
+
+def process_uploaded_case(
+    modality_paths: Dict[str, Path],
+    gt_path: Optional[Path] = None,
+    patient_id: str = "uploaded",
+) -> Tuple[np.ndarray, np.ndarray, Dict]:
+    metas = {"patient_id": patient_id, "modalities": MODALITIES}
     vols = []
+    shapes = []
+    spacings = []
+    aff_m = None
+    hdr_m = None
+
     for mod in MODALITIES:
-        p = patient_folder / f"{patient_id}_{mod}.nii.gz"
-        if not p.exists():
-            raise FileNotFoundError(f"File not found: {p}")
-        vol, aff, hdr = load_nifti_canonical(p)
+        modality_path = modality_paths.get(mod)
+        if modality_path is None or not modality_path.exists():
+            raise FileNotFoundError(f"File not found: {modality_path}")
+        vol, aff, hdr = load_nifti_canonical(modality_path)
         vols.append(vol)
+        shapes.append(vol.shape)
+        spacings.append(extract_spacing_mm(hdr))
         metas[f"affine_{mod}"] = aff.tolist()
         metas[f"header_{mod}"] = hdr
 
-    # Check if all modalities have the same shape
-    shapes = [v.shape for v in vols]
-    if len(set(shapes)) != 1:
-        raise ValueError(f"[AlignmentError] Modality shapes differ for patient {patient_id}: {shapes}")
-
-    # Stack modalities into a 4-channel image
+    original_shape, original_spacing = validate_spatial_compatibility(
+        shapes, spacings, patient_id
+    )
     image_4ch = np.stack(vols, axis=-1)
 
-    # Load and preprocess mask
-    mask_path = patient_folder / f"{patient_id}_seg.nii.gz"
-    aff_m = None
-    hdr_m = None
-    if mask_path.exists():
-        mask_vol, aff_m, hdr_m = load_nifti_canonical(mask_path)
+    gt_provided = gt_path is not None and gt_path.exists()
+    if gt_provided:
+        mask_vol, aff_m, hdr_m = load_nifti_canonical(gt_path)
+        if mask_vol.shape != original_shape:
+            raise ValueError(
+                f"[AlignmentError] Ground-truth mask shape {mask_vol.shape} does not match modalities {original_shape}"
+            )
         mask = preprocess_mask_multiclass(mask_vol)
     else:
-        logger.warning(f"Mask file not found: {mask_path}. Proceeding without mask.")
         mask = np.zeros(image_4ch.shape[:3], dtype=np.uint8)
 
-    # Crop to ROI
-    image_4ch, mask = crop_to_roi(image_4ch, mask)
+    metas["shape_before_crop"] = list(original_shape)
+    metas["original_spacing_mm"] = list(original_spacing)
+    metas["gt_provided"] = gt_provided
+    metas["roi_crop_applied"] = False
+    metas["roi_bounds"] = None
 
-    # Normalize each channel
+    if gt_provided:
+        bounds = get_roi_bounds(mask, margin=5)
+        if bounds is not None:
+            zmin, zmax, ymin, ymax, xmin, xmax = bounds
+            image_4ch = image_4ch[zmin:zmax+1, ymin:ymax+1, xmin:xmax+1]
+            mask = mask[zmin:zmax+1, ymin:ymax+1, xmin:xmax+1]
+            metas["roi_crop_applied"] = True
+            metas["roi_bounds"] = [zmin, zmax, ymin, ymax, xmin, xmax]
+
     for i in range(image_4ch.shape[-1]):
         image_4ch[..., i] = normalize_nonzero(image_4ch[..., i])
 
@@ -176,9 +228,104 @@ def process_one_patient(patient_folder: Path, patient_id: str) -> Tuple[np.ndarr
 
     metas["affine_mask"] = aff_m.tolist() if aff_m is not None else None
     metas["header_mask"] = hdr_m if hdr_m is not None else None
+    metas["shape_after_crop"] = list(mask.shape)
     metas["shape"] = list(mask.shape)
-
+    metas["default_modality"] = "t1ce"
     return image_4ch, mask, metas
+
+def process_one_patient(patient_folder: Path, patient_id: str) -> Tuple[np.ndarray, np.ndarray, Dict]:
+    modality_paths = {
+        mod: patient_folder / f"{patient_id}_{mod}.nii.gz" for mod in MODALITIES
+    }
+    mask_path = patient_folder / f"{patient_id}_seg.nii.gz"
+    return process_uploaded_case(
+        modality_paths=modality_paths,
+        gt_path=mask_path if mask_path.exists() else None,
+        patient_id=patient_id,
+    )
+
+def compute_effective_spacing_mm(
+    original_spacing_mm: Tuple[float, float, float] | list[float],
+    shape_after_crop: Tuple[int, int, int] | list[int],
+    final_shape: Tuple[int, int, int] | list[int],
+) -> list[float]:
+    physical_extent_mm = [
+        float(original_spacing_mm[idx]) * float(shape_after_crop[idx]) for idx in range(3)
+    ]
+    return [
+        physical_extent_mm[idx] / max(float(final_shape[idx]), 1.0) for idx in range(3)
+    ]
+
+def calculate_prediction_confidence(pred_probs: np.ndarray, pred_labels: np.ndarray) -> dict:
+    voxel_confidence = np.max(pred_probs, axis=-1)
+    tumor_mask = pred_labels > 0
+    tumor_presence = float(np.mean(np.sum(pred_probs[..., 1:], axis=-1)))
+    if np.any(tumor_mask):
+        overall = float(np.mean(voxel_confidence[tumor_mask]))
+    else:
+        overall = float(np.mean(voxel_confidence))
+
+    return {
+        "overall": round(overall, 4),
+        "tumor_presence": round(tumor_presence, 4),
+        "segmentation_quality": round(float(np.mean(voxel_confidence)), 4),
+    }
+
+def calculate_region_stats(
+    pred_labels: np.ndarray,
+    effective_spacing_mm: Tuple[float, float, float] | list[float],
+) -> Tuple[list[dict], float]:
+    voxel_volume_mm3 = float(np.prod(np.array(effective_spacing_mm, dtype=np.float64)))
+    total_tumor_voxels = int(np.sum(pred_labels > 0))
+    total_tumor_volume_mm3 = float(total_tumor_voxels * voxel_volume_mm3)
+    regions = []
+
+    for class_id in (1, 2, 3):
+        voxel_count = int(np.sum(pred_labels == class_id))
+        volume_mm3 = float(voxel_count * voxel_volume_mm3)
+        volume_cm3 = volume_mm3 / 1000.0
+        percentage = (
+            (volume_mm3 / total_tumor_volume_mm3) * 100.0 if total_tumor_volume_mm3 > 0 else 0.0
+        )
+        regions.append(
+            {
+                "class_id": class_id,
+                "class_name": CLASS_METADATA[class_id]["class_name"],
+                "color": CLASS_METADATA[class_id]["color"],
+                "voxel_count": voxel_count,
+                "volume_voxels": voxel_count,
+                "volume_mm3": round(volume_mm3, 4),
+                "volume_cm3": round(volume_cm3, 4),
+                "percentage": round(percentage, 4),
+                "present": voxel_count > 0,
+            }
+        )
+
+    return regions, round(total_tumor_volume_mm3 / 1000.0, 4)
+
+def calculate_measurements(
+    pred_labels: np.ndarray,
+    effective_spacing_mm: Tuple[float, float, float] | list[float],
+    regions: list[dict],
+) -> dict:
+    tumor_coords = np.argwhere(pred_labels > 0)
+    if tumor_coords.size == 0:
+        largest_diameter_mm = 0.0
+    else:
+        mins = tumor_coords.min(axis=0)
+        maxs = tumor_coords.max(axis=0)
+        extents_voxels = (maxs - mins + 1).astype(np.float32)
+        extents_mm = extents_voxels * np.array(effective_spacing_mm, dtype=np.float32)
+        largest_diameter_mm = float(np.max(extents_mm))
+
+    return {
+        "largest_diameter_mm": round(largest_diameter_mm, 4),
+        "effective_spacing_mm": [round(float(value), 6) for value in effective_spacing_mm],
+        "voxel_volume_mm3": round(float(np.prod(np.array(effective_spacing_mm))), 6),
+        "class_volumes_cm3": {
+            str(region["class_id"]): region["volume_cm3"] for region in regions
+        },
+    }
 
 # --- Model load ---
 def load_segmentation_model(model_path: Path):
@@ -316,35 +463,36 @@ def route_predict():
 
         gt_file = request.files.get('gt') if 'gt' in request.files and request.files['gt'].filename else None
 
-        # Save uploaded files to temp dir and call process_one_patient
         with tempfile.TemporaryDirectory() as td:
             td_path = Path(td)
+            modality_paths = {}
             for m, fs in modality_files.items():
                 outp = td_path / f"uploaded_{m}.nii.gz"
                 fs.save(str(outp))
+                modality_paths[m] = outp
                 logger.debug(f"Saved uploaded {m} to {outp}")
-            
-            if gt_file:
-                gt_out = td_path / 'uploaded_gt.nii.gz'
-                gt_file.save(str(gt_out))
 
-            # Preprocess using process_one_patient
+            gt_path = None
+            if gt_file:
+                gt_path = td_path / 'uploaded_seg.nii.gz'
+                gt_file.save(str(gt_path))
+
             try:
-                image_4ch, mask, metas = process_one_patient(td_path, 'uploaded')
+                image_4ch, mask, metas = process_uploaded_case(
+                    modality_paths=modality_paths,
+                    gt_path=gt_path,
+                    patient_id='uploaded',
+                )
                 logger.info(f"Preprocessing produced image shape: {image_4ch.shape}")
             except Exception as e:
                 logger.error(f"Preprocessing failed: {e}")
                 return jsonify({'ok': False, 'error': f'File preprocessing failed: {str(e)}'}), 400
 
-            # Ensure fixed spatial shape
             try:
                 if image_4ch.shape[:3] != TARGET_SPATIAL:
                     logger.info(f"Resampling image from {image_4ch.shape[:3]} to {TARGET_SPATIAL}")
                     img_res = resample_to_target(image_4ch, TARGET_SPATIAL, order=1)
-                    if USE_FLOAT16:
-                        image_4ch = img_res.astype(np.float16)
-                    else:
-                        image_4ch = img_res.astype(np.float32)
+                    image_4ch = img_res.astype(np.float16) if USE_FLOAT16 else img_res.astype(np.float32)
                     logger.info(f"Resampled image shape: {image_4ch.shape}")
 
                 if mask.shape != TARGET_SPATIAL:
@@ -354,11 +502,16 @@ def route_predict():
                     logger.info(f"Resampled mask shape: {mask.shape}")
 
                 metas["shape"] = list(mask.shape)
+                metas["shape_after_resample"] = list(mask.shape)
+                metas["effective_spacing_mm"] = compute_effective_spacing_mm(
+                    metas["original_spacing_mm"],
+                    metas["shape_after_crop"],
+                    metas["shape_after_resample"],
+                )
             except Exception as e:
                 logger.error(f"Resampling to target shape failed: {e}")
                 return jsonify({'ok': False, 'error': f'Failed to resample image/mask to {TARGET_SPATIAL}: {e}'}), 500
 
-            # Prepare batch and dtype
             model_input = np.expand_dims(image_4ch, axis=0)
             if model_input.dtype == np.float16:
                 model_input = model_input.astype(np.float32)
@@ -379,104 +532,89 @@ def route_predict():
                 logger.error(f"Model prediction failed: {e}")
                 return jsonify({'ok': False, 'error': f'Model prediction failed: {str(e)}'}), 500
 
-            # Save outputs
             case_id = str(uuid.uuid4())
             outputs_dir = app_config.OUTPUTS_DIR
-            
-            # Save image data in CDHW format for visualization
             image_data_cdhw = np.transpose(image_4ch.astype(np.float32), (3,0,1,2))
             image_filename = f"{case_id}_image_data.npy"
             np.save(outputs_dir / image_filename, image_data_cdhw)
-            
-            # Save labels
             labels_filename = f"{case_id}_labels.npy"
             np.save(outputs_dir / labels_filename, pred_labels)
-
             logger.info(f"Saved outputs: {image_filename}, {labels_filename}")
 
-            # Calculate metrics using functions only
             metrics = {}
-            if gt_file:
+            if metas["gt_provided"]:
                 try:
-                    # Load and process ground truth
-                    gt_vol = load_nifti_canonical(td_path / 'uploaded_gt.nii.gz')[0]
-                    gt_mask = preprocess_mask_multiclass(gt_vol)
-                    
-                    # Resample ground truth to match prediction
-                    if gt_mask.shape != TARGET_SPATIAL:
-                        gt_mask_res = resample_to_target(gt_mask, TARGET_SPATIAL, order=0)
-                        gt_mask = enforce_mask_values(gt_mask_res)
-                    
-                    # Convert to proper format for TensorFlow functions
-                    pred_probs_tensor = tf.convert_to_tensor(pred_probs[None, ...], dtype=tf.float32)  # (1,D,H,W,C)
-                    gt_mask_tensor = tf.convert_to_tensor(gt_mask[None, ..., None], dtype=tf.float32)  # (1,D,H,W,1)
-                    
-                    # Calculate all metrics using the defined functions only
+                    pred_probs_tensor = tf.convert_to_tensor(pred_probs[None, ...], dtype=tf.float32)
+                    gt_mask_tensor = tf.convert_to_tensor(mask[None, ..., None], dtype=tf.float32)
+
                     metrics['Mean_Dice'] = float(dice_coef(gt_mask_tensor, pred_probs_tensor).numpy())
                     metrics['IoU'] = float(iou_coef(gt_mask_tensor, pred_probs_tensor).numpy())
                     metrics['Dice_whole_tumor'] = float(dice_whole_tumor(gt_mask_tensor, pred_probs_tensor).numpy())
                     metrics['Dice_tumor_core'] = float(dice_tumor_core(gt_mask_tensor, pred_probs_tensor).numpy())
                     metrics['Dice_enhancing_tumor'] = float(dice_enhancing_tumor(gt_mask_tensor, pred_probs_tensor).numpy())
-                    
-                    # Print metrics to console
                     logger.info(f"Calculated metrics: {metrics}")
-                    print(f"Case ID: {case_id}")
-                    print(f"Metrics: {metrics}")
-                        
                 except Exception as e:
                     logger.error(f"Metrics calculation failed with error: {e}")
-                    print(f"ERROR: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    
-                    # Try to calculate metrics one by one to see which one fails
-                    try:
-                        metrics['Mean_Dice'] = float(dice_coef(gt_mask_tensor, pred_probs_tensor).numpy())
-                        print("Mean_Dice calculated successfully")
-                    except Exception as e1:
-                        print(f"Mean_Dice failed: {e1}")
-                        metrics['Mean_Dice'] = 0.0
-                    
-                    try:
-                        metrics['IoU'] = float(iou_coef(gt_mask_tensor, pred_probs_tensor).numpy())
-                        print("IoU calculated successfully")
-                    except Exception as e2:
-                        print(f"IoU failed: {e2}")
-                        metrics['IoU'] = 0.0
-                    
-                    try:
-                        metrics['Dice_whole_tumor'] = float(dice_whole_tumor(gt_mask_tensor, pred_probs_tensor).numpy())
-                        print("Dice_whole_tumor calculated successfully")
-                    except Exception as e3:
-                        print(f"Dice_whole_tumor failed: {e3}")
-                        metrics['Dice_whole_tumor'] = 0.0
-                    
-                    try:
-                        metrics['Dice_tumor_core'] = float(dice_tumor_core(gt_mask_tensor, pred_probs_tensor).numpy())
-                        print("Dice_tumor_core calculated successfully")
-                    except Exception as e4:
-                        print(f"Dice_tumor_core failed: {e4}")
-                        metrics['Dice_tumor_core'] = 0.0
-                    
-                    try:
-                        metrics['Dice_enhancing_tumor'] = float(dice_enhancing_tumor(gt_mask_tensor, pred_probs_tensor).numpy())
-                        print("Dice_enhancing_tumor calculated successfully")
-                    except Exception as e5:
-                        print(f"Dice_enhancing_tumor failed: {e5}")
-                        metrics['Dice_enhancing_tumor'] = 0.0
+                    metrics = {
+                        'Mean_Dice': 0.0,
+                        'IoU': 0.0,
+                        'Dice_whole_tumor': 0.0,
+                        'Dice_tumor_core': 0.0,
+                        'Dice_enhancing_tumor': 0.0,
+                    }
             else:
-                # Provide dummy metrics when no ground truth
                 logger.info("No ground truth provided, showing example metrics")
                 metrics['Prediction_Stats'] = f"Classes found: {np.unique(pred_labels).tolist()}"
                 metrics['Tumor_Volume'] = f"{np.sum(pred_labels > 0)} voxels"
 
+            prediction_confidence = calculate_prediction_confidence(pred_probs, pred_labels)
+            regions, total_volume_cm3 = calculate_region_stats(
+                pred_labels, metas["effective_spacing_mm"]
+            )
+            measurements = calculate_measurements(
+                pred_labels, metas["effective_spacing_mm"], regions
+            )
+            tumor_detected = bool(np.any(pred_labels > 0))
+
+            metas["label_shape_dhw"] = list(pred_labels.shape)
+            metas["image_shape_cdhw"] = list(image_data_cdhw.shape)
+            metas["shape_after_resample"] = list(pred_labels.shape)
+
             return jsonify({
                 'ok': True,
                 'case_id': case_id,
+                'inference_timestamp': datetime.now(timezone.utc).isoformat(),
                 'image_filename': image_filename,
                 'labels_filename': labels_filename,
+                'model_info': {
+                    'name': 'BioIntellect Brain MRI 3D U-Net',
+                    'version': '2026.03',
+                    'checksum': 'mri-3d-unet-2026-03',
+                    'release_date': '2026-03-01',
+                },
+                'tumor_detected': tumor_detected,
+                'prediction_confidence': prediction_confidence,
+                'regions': regions,
+                'total_volume_cm3': total_volume_cm3,
+                'measurements': measurements,
+                'processing_metadata': metas,
                 'metrics': metrics,
-                'shape': metas["shape"]
+                'shape': metas["shape_after_resample"],
+                'ai_recommendations': (
+                    [
+                        'Urgent neuroradiology review recommended.',
+                        'Correlate with prior studies and clinical findings.',
+                    ]
+                    if tumor_detected
+                    else ['No segmented lesion detected. Correlate clinically as needed.']
+                ),
+                'ai_interpretation': (
+                    'Predicted abnormal enhancing intracranial lesion with volumetric segmentation.'
+                    if tumor_detected
+                    else 'No segmented intracranial tumor volume detected on the provided modalities.'
+                ),
+                'requires_review': tumor_detected,
+                'disclaimer': 'AI output supports review only and must be confirmed by a clinician.',
             })
 
     except Exception as e:

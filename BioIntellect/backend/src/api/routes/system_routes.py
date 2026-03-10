@@ -28,6 +28,23 @@ import httpx
 logger = get_logger("routes.system")
 
 router = APIRouter(prefix="/system", tags=["system"])
+_SCHEMA_REFRESH_UNSUPPORTED_DETAIL = (
+    'Automatic PostgREST schema refresh is not supported by the current Supabase '
+    'setup. Run `NOTIFY pgrst, "reload schema"` manually in the Supabase SQL Editor.'
+)
+
+
+def _is_schema_refresh_unavailable(exc: Exception) -> bool:
+    message = str(exc)
+    markers = (
+        "PGRST202",
+        "Could not find the function",
+        "pg_notify",
+        "notify_schema_reload",
+        "schema cache",
+        "not supported",
+    )
+    return any(marker in message for marker in markers)
 
 # â”پâ”پâ”پâ”پ SYSTEM MONITORING â”پâ”پâ”پâ”پ
 
@@ -787,22 +804,16 @@ async def refresh_postgrest_schema(
             "message": "Schema cache refresh signal sent successfully. Changes should be visible shortly.",
         }
     except Exception as e:
-        # Fallback: try direct SQL if RPC doesn't work
-        try:
-            client = await repo._get_client()
-            await (
-                client.postgrest.schema("public").rpc("notify_schema_reload").execute()
-            )
-            return {
-                "success": True,
-                "message": "Schema cache refresh attempted via fallback method.",
-            }
-        except Exception as fallback_error:
-            logger.error(
-                f"Failed to refresh schema cache: {str(e)}, fallback: {str(fallback_error)}"
-            )
+        logger.warning(
+            f"Schema cache refresh unavailable for user {user['id']}: {str(e)}"
+        )
+        if _is_schema_refresh_unavailable(e):
             raise HTTPException(
-                status_code=500,
-                detail="Failed to refresh schema cache. Please run 'NOTIFY pgrst, \"reload schema\"' manually in Supabase SQL Editor.",
+                status_code=501,
+                detail=_SCHEMA_REFRESH_UNSUPPORTED_DETAIL,
             )
+        raise HTTPException(
+            status_code=502,
+            detail="Failed to refresh schema cache via the backend.",
+        )
 

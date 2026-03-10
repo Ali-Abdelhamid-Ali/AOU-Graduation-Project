@@ -1,9 +1,10 @@
 """System DTOs - Data Transfer Objects for Audit and Notification System."""
 
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, Optional
+
+from pydantic import BaseModel, Field
 
 
 class AuditAction(str, Enum):
@@ -58,6 +59,13 @@ class NotificationType(str, Enum):
     USER_ACTION = "user_action"
     ADMIN = "admin"
     MEDICAL = "medical"
+    CHAT_ACCESS_REQUEST = "chat_access_request"
+    CHAT_ACCESS_APPROVED = "chat_access_approved"
+    CHAT_ACCESS_REJECTED = "chat_access_rejected"
+    NEW_CASE = "new_case"
+    CASE_UPDATE = "case_update"
+    NEW_RESULT = "new_result"
+    SYSTEM_ALERT = "system_alert"
 
 
 # =====================================================
@@ -74,8 +82,8 @@ class AuditLogCreateDTO(BaseModel):
     user_role: Optional[str] = Field(
         None, description="Role of the user performing the action"
     )
-    action: AuditAction = Field(..., description="Type of action performed")
-    resource_type: ResourceType = Field(..., description="Type of resource affected")
+    action: str = Field(..., description="Type of action performed")
+    resource_type: str = Field(..., description="Type of resource affected")
     resource_id: Optional[str] = Field(None, description="ID of the resource affected")
     hospital_id: Optional[str] = Field(None, description="Hospital ID")
     patient_id: Optional[str] = Field(None, description="Patient ID")
@@ -112,8 +120,8 @@ class AuditLogResponseDTO(BaseModel):
     user_role: Optional[str] = Field(
         None, description="Role of the user who performed the action"
     )
-    action: AuditAction = Field(..., description="Type of action performed")
-    resource_type: ResourceType = Field(..., description="Type of resource affected")
+    action: str = Field(..., description="Type of action performed")
+    resource_type: str = Field(..., description="Type of resource affected")
     resource_id: Optional[str] = Field(None, description="ID of the resource affected")
     hospital_id: Optional[str] = Field(None, description="Hospital ID")
     patient_id: Optional[str] = Field(None, description="Patient ID")

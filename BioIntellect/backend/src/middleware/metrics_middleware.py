@@ -9,13 +9,16 @@ This middleware automatically tracks:
 - Active requests count
 """
 
-import time
 import os
+import time
+from datetime import datetime
 from typing import Callable
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+
 from src.observability.logger import get_logger
-from datetime import datetime
+from src.repositories.schema_compat import build_audit_log_payload
 
 logger = get_logger("middleware.metrics")
 
@@ -131,6 +134,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             "action": f"api_request:{method}",
             "resource_type": "api_endpoint",
             "resource_id": None,
+            "description": endpoint,
             "details": {
                 "endpoint": endpoint,
                 "method": method,
@@ -138,16 +142,18 @@ class MetricsMiddleware(BaseHTTPMiddleware):
                 "response_time_ms": round(response_time_ms, 2),
                 "error_message": error,
             },
+            "timestamp": timestamp.isoformat(),
         }
 
-        await self._insert_with_retry(log_data)
+        await self._insert_with_retry(build_audit_log_payload(log_data))
 
     async def _insert_with_retry(
         self, log_data: dict, max_retries: int = 3, initial_delay: float = 1.0
     ):
         """Insert log data with exponential backoff and fallback."""
-        from src.db.supabase.client import SupabaseProvider
         import asyncio
+
+        from src.db.supabase.client import SupabaseProvider
 
         payload = dict(log_data)
         for column in unsupported_audit_columns:

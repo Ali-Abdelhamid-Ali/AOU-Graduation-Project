@@ -125,6 +125,25 @@ async def _build_user_context(token: str, user: Any) -> dict[str, Any]:
     hospital_id: str | None = user_metadata.get("hospital_id")
     metadata_role = _normalize_role(user_metadata.get("role"))
     role = await _resolve_role(user_id, metadata_role)
+    auth_repo = AuthRepository()
+    profile_table = {
+        "patient": "patients",
+        "doctor": "doctors",
+        "nurse": "nurses",
+        "admin": "administrators",
+        "super_admin": "administrators",
+    }.get(role)
+    try:
+        profile = (
+            await auth_repo.get_profile_by_user_id(profile_table, user_id)
+            if profile_table
+            else None
+        )
+    except Exception:
+        profile = None
+    profile_id = str(profile.get("id")) if profile and profile.get("id") else None
+    if not hospital_id and profile:
+        hospital_id = profile.get("hospital_id")
 
     if metadata_role and metadata_role != role:
         logger.warning(
@@ -134,6 +153,7 @@ async def _build_user_context(token: str, user: Any) -> dict[str, Any]:
 
     return {
         "id": user_id,
+        "profile_id": profile_id,
         "email": user_email,
         "role": role,
         "hospital_id": hospital_id,

@@ -1,11 +1,18 @@
 ﻿"""User Repository - Complete User Management Data Access."""
 
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from src.db.supabase.client import SupabaseProvider
 from src.observability.logger import get_logger
+from src.repositories.schema_compat import sanitize_for_table
 from src.services.infrastructure.retry_utils import async_retry
 
 logger = get_logger("repository.user")
+
+_USER_ROLE_SELECT_COLUMNS = (
+    "id, user_id, role, hospital_id, granted_by, granted_at, expires_at, "
+    "is_active, created_at"
+)
 
 
 class UserRepository:
@@ -26,10 +33,7 @@ class UserRepository:
         """List all user roles with optional filtering."""
         client = await self._get_client()
         try:
-            # Plan Section 7.B: Specific selectors
-            query = client.table("user_roles").select(
-                "id, role_name, permissions, created_at"
-            )
+            query = client.table("user_roles").select(_USER_ROLE_SELECT_COLUMNS)
 
             if filters:
                 for key, val in filters.items():
@@ -52,7 +56,7 @@ class UserRepository:
         try:
             result = await (
                 client.table("user_roles")
-                .select("id, role_name, permissions, created_at")
+                .select(_USER_ROLE_SELECT_COLUMNS)
                 .eq("id", role_id)
                 .limit(1)
                 .execute()
@@ -67,7 +71,8 @@ class UserRepository:
         """Create a new user role."""
         client = await self._get_client()
         try:
-            result = await client.table("user_roles").insert(role_data).execute()
+            payload = sanitize_for_table("user_roles", role_data)
+            result = await client.table("user_roles").insert(payload).execute()
             return result.data[0] if result.data else {}
         except Exception as e:
             logger.error(f"Failed to create user role: {str(e)}")
@@ -80,8 +85,9 @@ class UserRepository:
         """Update a user role."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("user_roles", role_data)
             result = await (
-                client.table("user_roles").update(role_data).eq("id", role_id).execute()
+                client.table("user_roles").update(payload).eq("id", role_id).execute()
             )
             return result.data[0] if result.data else None
         except Exception as e:
@@ -161,7 +167,8 @@ class UserRepository:
         """Create a new doctor."""
         client = await self._get_client()
         try:
-            result = await client.table("doctors").insert(doctor_data).execute()
+            payload = sanitize_for_table("doctors", doctor_data)
+            result = await client.table("doctors").insert(payload).execute()
             return result.data[0] if result.data else {}
         except Exception as e:
             logger.error(f"Failed to create doctor: {str(e)}")
@@ -174,9 +181,10 @@ class UserRepository:
         """Update a doctor."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("doctors", doctor_data)
             result = await (
                 client.table("doctors")
-                .update(doctor_data)
+                .update(payload)
                 .eq("id", doctor_id)
                 .execute()
             )
@@ -235,9 +243,11 @@ class UserRepository:
         client = await self._get_client()
         try:
             # Ensure doctor_id is set in the data
-            specialty_data["doctor_id"] = doctor_id
+            payload = sanitize_for_table(
+                "doctor_specialties", {**specialty_data, "doctor_id": doctor_id}
+            )
             result = await (
-                client.table("doctor_specialties").insert(specialty_data).execute()
+                client.table("doctor_specialties").insert(payload).execute()
             )
             return result.data[0] if result.data else {}
         except Exception as e:
@@ -322,7 +332,8 @@ class UserRepository:
         """Create a new nurse."""
         client = await self._get_client()
         try:
-            result = await client.table("nurses").insert(nurse_data).execute()
+            payload = sanitize_for_table("nurses", nurse_data)
+            result = await client.table("nurses").insert(payload).execute()
             return result.data[0] if result.data else {}
         except Exception as e:
             logger.error(f"Failed to create nurse: {str(e)}")
@@ -335,8 +346,9 @@ class UserRepository:
         """Update a nurse."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("nurses", nurse_data)
             result = await (
-                client.table("nurses").update(nurse_data).eq("id", nurse_id).execute()
+                client.table("nurses").update(payload).eq("id", nurse_id).execute()
             )
             return result.data[0] if result.data else None
         except Exception as e:
@@ -414,7 +426,8 @@ class UserRepository:
         """Create a new administrator."""
         client = await self._get_client()
         try:
-            result = await client.table("administrators").insert(admin_data).execute()
+            payload = sanitize_for_table("administrators", admin_data)
+            result = await client.table("administrators").insert(payload).execute()
             return result.data[0] if result.data else {}
         except Exception as e:
             logger.error(f"Failed to create administrator: {str(e)}")
@@ -427,9 +440,10 @@ class UserRepository:
         """Update an administrator."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("administrators", admin_data)
             result = await (
                 client.table("administrators")
-                .update(admin_data)
+                .update(payload)
                 .eq("id", admin_id)
                 .execute()
             )
@@ -520,7 +534,8 @@ class UserRepository:
         """Create a new patient."""
         client = await self._get_client()
         try:
-            result = await client.table("patients").insert(patient_data).execute()
+            payload = sanitize_for_table("patients", patient_data)
+            result = await client.table("patients").insert(payload).execute()
             return result.data[0] if result.data else {}
         except Exception as e:
             logger.error(f"Failed to create patient: {str(e)}")
@@ -533,9 +548,10 @@ class UserRepository:
         """Update a patient."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("patients", patient_data)
             result = await (
                 client.table("patients")
-                .update(patient_data)
+                .update(payload)
                 .eq("id", patient_id)
                 .execute()
             )
@@ -623,7 +639,6 @@ class UserRepository:
                 "phone",
                 "gender",
                 "date_of_birth",
-                "avatar_url",
                 "mrn",
                 "blood_type",
                 "national_id",
@@ -660,13 +675,11 @@ class UserRepository:
                 "region_id",
                 "hospital_id",
                 "specialty",
-                "department",
             ],
             "nurses": [
                 "first_name",
                 "last_name",
                 "phone",
-                "avatar_url",
                 "license_number",
                 "department",
                 "country_id",
@@ -677,7 +690,6 @@ class UserRepository:
                 "first_name",
                 "last_name",
                 "phone",
-                "avatar_url",
                 "department",
                 "country_id",
                 "region_id",
@@ -697,9 +709,10 @@ class UserRepository:
             target_table = table_map.get(role)
             if target_table and target_table in table_fields:
                 allowed_fields = table_fields[target_table]
-                filtered_data = {
-                    k: v for k, v in profile_data.items() if k in allowed_fields
-                }
+                filtered_data = sanitize_for_table(
+                    target_table,
+                    {k: v for k, v in profile_data.items() if k in allowed_fields},
+                )
                 if filtered_data:
                     result = (
                         await client.table(target_table)
@@ -713,9 +726,9 @@ class UserRepository:
         tasks = []
         for table, allowed_fields in table_fields.items():
             # Filter profile_data to only include fields that exist in this table
-            filtered_data = {
-                k: v for k, v in profile_data.items() if k in allowed_fields
-            }
+            filtered_data = sanitize_for_table(
+                table, {k: v for k, v in profile_data.items() if k in allowed_fields}
+            )
             if filtered_data:
                 tasks.append(
                     client.table(table)

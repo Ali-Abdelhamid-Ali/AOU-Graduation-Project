@@ -1,14 +1,83 @@
-﻿"""File Service - Secure Medical Document Management."""
+"""File Service - Secure Medical Document Management."""
 
 import uuid
 from datetime import datetime
-from typing import Dict, Any, Optional
-from src.repositories.storage_repository import StorageRepository
-from src.repositories.clinical_repository import ClinicalRepository
-from src.observability.audit import log_audit, AuditAction
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from src.observability.audit import AuditAction, log_audit
 from src.observability.logger import get_logger
+from src.repositories.clinical_repository import ClinicalRepository
+from src.repositories.storage_repository import StorageRepository
 
 logger = get_logger("service.file")
+
+
+MRI_FILE_SUFFIXES = (".dcm", ".dicom", ".jpg", ".jpeg", ".png", ".nii", ".nii.gz")
+GENERAL_MEDICAL_FILE_TYPES = ("ecg", "mri")
+DEFAULT_STORAGE_BUCKET = "medical-files"
+STORAGE_BUCKET_BY_FILE_TYPE = {
+    "ecg": "ecg-files",
+    "mri": "mri-files",
+}
+
+
+def get_preserved_extension(file_name: str) -> str:
+    """Preserve compound extensions such as `.nii.gz` for stored filenames."""
+    normalized_name = (file_name or "").lower()
+    if normalized_name.endswith(".nii.gz"):
+        return ".nii.gz"
+
+    suffix = Path(file_name or "").suffix.lower()
+    return suffix or ".bin"
+
+
+def normalize_upload_content_type(file_name: str, content_type: Optional[str]) -> str:
+    """Normalize browser-specific MIME types to storage-safe values."""
+    normalized_type = (content_type or "").split(";")[0].strip().lower()
+    extension = get_preserved_extension(file_name)
+
+    if extension in {".nii", ".nii.gz", ".gz"}:
+        return "application/octet-stream"
+    if extension in {".dcm", ".dicom"}:
+        return "application/dicom"
+    if extension == ".pdf":
+        return "application/pdf"
+    if extension in {".jpg", ".jpeg"}:
+        return "image/jpeg"
+    if extension == ".png":
+        return "image/png"
+    if normalized_type in {"application/x-gzip", "application/gzip"}:
+        return "application/octet-stream"
+
+    return normalized_type or "application/octet-stream"
+
+
+def is_supported_mri_upload(file_name: str, content_type: Optional[str]) -> bool:
+    """Validate MRI uploads including NIfTI and DICOM payloads."""
+    normalized_name = (file_name or "").lower()
+    if not normalized_name.endswith(MRI_FILE_SUFFIXES):
+        return False
+
+    return normalize_upload_content_type(file_name, content_type) in {
+        "application/dicom",
+        "application/octet-stream",
+        "image/jpeg",
+        "image/png",
+    }
+
+
+def resolve_storage_bucket(
+    file_type: Optional[str] = None, storage_bucket: Optional[str] = None
+) -> str:
+    """Resolve the storage bucket from persisted metadata or file type."""
+    if storage_bucket:
+        return storage_bucket
+
+    normalized_file_type = str(file_type or "").strip().lower()
+    return STORAGE_BUCKET_BY_FILE_TYPE.get(
+        normalized_file_type, DEFAULT_STORAGE_BUCKET
+    )
 
 
 class FileService:
@@ -27,21 +96,29 @@ class FileService:
         content: bytes,
         content_type: str,
         file_type: str,
+        description: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Orchestrates storage upload and metadata persistence."""
 
         try:
-            # 1. Generate secure path
-            ext = file_name.split(".")[-1] if "." in file_name else "bin"
+            normalized_content_type = normalize_upload_content_type(
+                file_name, content_type
+            )
+            storage_bucket = resolve_storage_bucket(file_type=file_type)
+
             unique_name = (
-                f"{uuid.uuid4().hex}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}"
+                f"{uuid.uuid4().hex}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                f"{get_preserved_extension(file_name)}"
             )
             storage_path = f"{patient_id}/{case_id}/{unique_name}"
 
-            # 2. Upload to storage
-            await self.storage_repo.upload_file(storage_path, content, content_type)
+            await self.storage_repo.upload_file(
+                storage_path,
+                content,
+                normalized_content_type,
+                bucket_name=storage_bucket,
+            )
 
-            # 3. Create DB Record (Metadata)
             metadata = {
                 "case_id": case_id,
                 "patient_id": patient_id,
@@ -50,7 +127,9 @@ class FileService:
                 "file_name": file_name,
                 "file_path": storage_path,
                 "file_size": len(content),
-                "mime_type": content_type,
+                "mime_type": normalized_content_type,
+                "storage_bucket": storage_bucket,
+                "description": description,
                 "is_analyzed": False,
             }
 
@@ -65,6 +144,7 @@ class FileService:
                     "file_id": file_record["id"],
                     "action": "upload_file",
                     "file_type": file_type,
+                    "storage_bucket": storage_bucket,
                 },
             )
 
@@ -84,7 +164,13 @@ class FileService:
             if not file_meta:
                 raise Exception("File not found")
 
-            url = await self.storage_repo.get_signed_url(file_meta["file_path"])
+            storage_bucket = resolve_storage_bucket(
+                file_type=file_meta.get("file_type"),
+                storage_bucket=file_meta.get("storage_bucket"),
+            )
+            url = await self.storage_repo.get_signed_url(
+                file_meta["file_path"], bucket_name=storage_bucket
+            )
 
             log_audit(
                 AuditAction.ACCESS_MEDICAL_DATA,
@@ -111,12 +197,20 @@ class FileService:
         """Upload ECG signal file and create corresponding signal record."""
 
         try:
-            # 1. Upload medical file
-            file_record = await self.upload_medical_file(
-                user_id, patient_id, case_id, file_name, content, content_type, "ecg"
+            normalized_content_type = normalize_upload_content_type(
+                file_name, content_type
             )
 
-            # 2. Create ECG signal record
+            file_record = await self.upload_medical_file(
+                user_id,
+                patient_id,
+                case_id,
+                file_name,
+                content,
+                normalized_content_type,
+                "ecg",
+            )
+
             signal_data = {
                 "patient_id": patient_id,
                 "case_id": case_id,
@@ -124,7 +218,7 @@ class FileService:
                 "signal_data": {
                     "file_name": file_name,
                     "file_size": len(content),
-                    "content_type": content_type,
+                    "content_type": normalized_content_type,
                     "uploaded_at": datetime.now().isoformat(),
                 },
             }
@@ -164,12 +258,20 @@ class FileService:
         """Upload MRI scan file and create corresponding scan record."""
 
         try:
-            # 1. Upload medical file
-            file_record = await self.upload_medical_file(
-                user_id, patient_id, case_id, file_name, content, content_type, "mri"
+            normalized_content_type = normalize_upload_content_type(
+                file_name, content_type
             )
 
-            # 2. Create MRI scan record
+            file_record = await self.upload_medical_file(
+                user_id,
+                patient_id,
+                case_id,
+                file_name,
+                content,
+                normalized_content_type,
+                "mri",
+            )
+
             scan_data = {
                 "patient_id": patient_id,
                 "case_id": case_id,
@@ -177,9 +279,9 @@ class FileService:
                 "dicom_metadata": {
                     "file_name": file_name,
                     "file_size": len(content),
-                    "content_type": content_type,
+                    "content_type": normalized_content_type,
                     "uploaded_at": datetime.now().isoformat(),
-                    "is_dicom": content_type == "application/dicom"
+                    "is_dicom": normalized_content_type == "application/dicom"
                     or file_name.lower().endswith(".dcm"),
                 },
             }
@@ -213,15 +315,18 @@ class FileService:
         """Delete a medical file from storage and mark as deleted in database."""
 
         try:
-            # 1. Get file metadata
             file_meta = await self.clinical_repo.get_medical_file(file_id)
             if not file_meta:
                 raise Exception("File not found")
 
-            # 2. Delete from storage
-            await self.storage_repo.delete_file(file_meta["file_path"])
+            storage_bucket = resolve_storage_bucket(
+                file_type=file_meta.get("file_type"),
+                storage_bucket=file_meta.get("storage_bucket"),
+            )
+            await self.storage_repo.delete_file(
+                file_meta["file_path"], bucket_name=storage_bucket
+            )
 
-            # 3. Mark as deleted in database
             success = await self.clinical_repo.delete_medical_file(
                 file_id, user_id, reason
             )
@@ -267,4 +372,3 @@ class FileService:
         except Exception as e:
             logger.error(f"Failed to upload avatar for user {user_id}: {str(e)}")
             raise
-

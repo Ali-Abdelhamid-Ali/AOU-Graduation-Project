@@ -5,10 +5,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.05), transparent 40%),
+    linear-gradient(180deg, #0a0d12 0%, #020408 100%);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
 }
 
 .canvas {
@@ -22,13 +24,16 @@
   top: 16px;
   right: 16px;
   z-index: 10;
+  pointer-events: none;
 }
 
 .badge {
   display: inline-block;
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.95);
-  color: #667eea;
+  background: rgba(7, 17, 31, 0.82);
+  color: #e0f2fe;
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  backdrop-filter: blur(12px);
   border-radius: 20px;
   font-weight: 700;
   font-size: 0.75rem;
@@ -44,7 +49,9 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.05), transparent 40%),
+    linear-gradient(180deg, #0a0d12 0%, #020408 100%);
   border-radius: 16px;
 }
 
@@ -71,4 +78,16 @@
   color: white;
   font-weight: 600;
   font-size: 0.9rem;
+}
+
+.loaderPill {
+  padding: 0.7rem 1rem;
+  background: rgba(7, 17, 31, 0.85);
+  color: #e0f2fe;
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }

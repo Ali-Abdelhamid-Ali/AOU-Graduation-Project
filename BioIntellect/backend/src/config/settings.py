@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     supabase_url: str = Field(default="", alias="SUPABASE_URL")
     supabase_anon_key: str = Field(default="", alias="SUPABASE_ANON_KEY")
     supabase_service_role_key: str = Field(default="", alias="SUPABASE_SERVICE_ROLE_KEY")
+    mri_segmentation_service_url: str = Field(
+        default="http://127.0.0.1:7860", alias="MRI_SEGMENTATION_SERVICE_URL"
+    )
+    mri_segmentation_timeout_seconds: int = Field(
+        default=300, alias="MRI_SEGMENTATION_TIMEOUT_SECONDS"
+    )
 
     cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
     trusted_hosts: str = Field(default="localhost,127.0.0.1", alias="TRUSTED_HOSTS")

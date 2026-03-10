@@ -1,14 +1,14 @@
 ﻿"""Auth Service - Business Logic for Authentication."""
 
-from typing import Dict, Any, Optional
 import random
 from datetime import datetime
+from typing import Any, Dict, Optional
 
-from src.repositories.auth_repository import AuthRepository
-from src.validators.auth_dto import SignUpDTO, SignInDTO
+from src.observability.audit import AuditAction, log_audit
 from src.observability.logger import get_logger
-from src.observability.audit import log_audit, AuditAction
+from src.repositories.auth_repository import AuthRepository
 from src.services.infrastructure.memory_cache import global_cache
+from src.validators.auth_dto import SignInDTO, SignUpDTO
 
 logger = get_logger("service.auth")
 
@@ -25,6 +25,23 @@ class AuthService:
     def __init__(self, auth_repo: AuthRepository):
         self.auth_repo = auth_repo
 
+    async def _resolve_profile_id(
+        self,
+        table: str,
+        user_id: str,
+        profile_response: Any | None = None,
+    ) -> Optional[str]:
+        """Resolve the profile row id created for a given auth user."""
+        if getattr(profile_response, "data", None):
+            profile_id = profile_response.data[0].get("id")
+            if profile_id:
+                return str(profile_id)
+
+        profile = await self.auth_repo.get_profile_by_user_id(table, user_id)
+        if profile and profile.get("id"):
+            return str(profile["id"])
+        return None
+
     def _generate_mrn(self, hospital_id: Optional[str] = None) -> str:
         """Generates a unique Medical Record Number."""
         # Simplified: In production, this would query a sequence or hospital-specific logic
@@ -40,9 +57,9 @@ class AuthService:
         user_id = None
         try:
             role = data.role.value
-            if role in {"admin", "super_admin"}:
+            if role != "patient":
                 raise ValueError(
-                    "Public signup does not allow administrative roles"
+                    "Public signup currently supports patient accounts only. Staff accounts must be created by an administrator."
                 )
             table = ROLE_TABLE_MAP.get(role)
             if not table:
@@ -215,14 +232,21 @@ class AuthService:
                 profile_data["role"] = role
 
             # Execute Profile Insertion
-            await self.auth_repo.create_profile(table, profile_data)
+            profile_response = await self.auth_repo.create_profile(table, profile_data)
             logger.info(f"Profile created in {table} for {user_id}")
 
             # 4. Handle Doctor Specialty Linking
             if role == "doctor" and profile_data.get("specialty"):
                 try:
+                    doctor_profile_id = await self._resolve_profile_id(
+                        table, user_id, profile_response
+                    )
+                    if not doctor_profile_id:
+                        raise ValueError(
+                            "Doctor profile was created but its primary key could not be resolved"
+                        )
                     await self.auth_repo.link_doctor_specialty(
-                        user_id, profile_data["specialty"]
+                        doctor_profile_id, profile_data["specialty"]
                     )
                 except Exception as e:
                     logger.warning(f"Failed to link doctor specialty: {str(e)}")

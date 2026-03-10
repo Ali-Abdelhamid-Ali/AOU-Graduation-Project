@@ -82,6 +82,7 @@ export const MedicalLlm = ({ onBack }) => {
                 conversation_type: isPatient ? 'patient_llm' : 'doctor_llm',
                 patient_id: patientId,
                 doctor_id: isPatient ? null : currentUser.id,
+                hospital_id: currentUser?.hospital_id,
                 title: 'Medical Consultation'
             })
 

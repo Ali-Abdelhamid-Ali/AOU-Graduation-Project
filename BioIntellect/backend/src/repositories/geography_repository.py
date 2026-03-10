@@ -1,8 +1,10 @@
 ﻿"""Geography Repository - Complete Geographic Data Access."""
 
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from src.db.supabase.client import SupabaseProvider
 from src.observability.logger import get_logger
+from src.repositories.schema_compat import sanitize_for_table
 from src.services.infrastructure.retry_utils import async_retry
 
 logger = get_logger("repository.geography")
@@ -65,7 +67,8 @@ class GeographyRepository:
         """Create a new country."""
         client = await self._get_client()
         try:
-            result = await client.table("countries").insert(country_data).execute()
+            payload = sanitize_for_table("countries", country_data)
+            result = await client.table("countries").insert(payload).execute()
             return result.data[0] if result.data else {}
         except Exception as e:
             logger.error(f"Failed to create country: {str(e)}")
@@ -78,9 +81,10 @@ class GeographyRepository:
         """Update a country."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("countries", country_data)
             result = await (
                 client.table("countries")
-                .update(country_data)
+                .update(payload)
                 .eq("id", country_id)
                 .execute()
             )
@@ -152,7 +156,8 @@ class GeographyRepository:
         """Create a new region."""
         client = await self._get_client()
         try:
-            result = await client.table("regions").insert(region_data).execute()
+            payload = sanitize_for_table("regions", region_data)
+            result = await client.table("regions").insert(payload).execute()
             return result.data[0] if result.data else {}
         except Exception as e:
             logger.error(f"Failed to create region: {str(e)}")
@@ -165,9 +170,10 @@ class GeographyRepository:
         """Update a region."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("regions", region_data)
             result = await (
                 client.table("regions")
-                .update(region_data)
+                .update(payload)
                 .eq("id", region_id)
                 .execute()
             )
@@ -239,7 +245,8 @@ class GeographyRepository:
         """Create a new hospital."""
         client = await self._get_client()
         try:
-            result = await client.table("hospitals").insert(hospital_data).execute()
+            payload = sanitize_for_table("hospitals", hospital_data)
+            result = await client.table("hospitals").insert(payload).execute()
             return result.data[0] if result.data else {}
         except Exception as e:
             logger.error(f"Failed to create hospital: {str(e)}")
@@ -252,9 +259,10 @@ class GeographyRepository:
         """Update a hospital."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("hospitals", hospital_data)
             result = await (
                 client.table("hospitals")
-                .update(hospital_data)
+                .update(payload)
                 .eq("id", hospital_id)
                 .execute()
             )

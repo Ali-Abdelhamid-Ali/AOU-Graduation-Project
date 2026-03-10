@@ -1,9 +1,12 @@
-﻿from typing import Generic, TypeVar, List, Optional, Any, Dict
+﻿import asyncio
+from typing import Any, Dict, Generic, List, Optional, TypeVar
+
 from supabase import AsyncClient
+
 from src.db.supabase.client import SupabaseProvider
 from src.observability.logger import get_logger
+from src.repositories.schema_compat import sanitize_for_table
 from src.services.infrastructure.memory_cache import global_cache
-import asyncio
 
 T = TypeVar("T")
 
@@ -100,9 +103,10 @@ class BaseRepository(Generic[T]):
             raise ValueError("Data must be a non-empty dictionary")
 
         client = await self._get_client()
+        payload = sanitize_for_table(self.table_name, data)
 
         async def _create():
-            return await client.table(self.table_name).insert(data).execute()
+            return await client.table(self.table_name).insert(payload).execute()
 
         try:
             result = await self._execute_with_retry(_create, is_idempotent=False)
@@ -121,11 +125,12 @@ class BaseRepository(Generic[T]):
     async def update(self, id_val: Any, data: Dict[str, Any]) -> Optional[T]:
         """Update a record by ID."""
         client = await self._get_client()
+        payload = sanitize_for_table(self.table_name, data)
 
         async def _update():
             return (
                 await client.table(self.table_name)
-                .update(data)
+                .update(payload)
                 .eq("id", id_val)
                 .execute()
             )

@@ -194,7 +194,7 @@ class UserRoleResponseDTO(BaseModel):
     expires_at: Optional[datetime]
     is_active: bool
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
 
 # =====================================================
@@ -1054,6 +1054,10 @@ class MRISegmentationResultCreateDTO(BaseModel):
     )
 
     # Findings
+    tumor_detected: Optional[bool] = Field(None, description="Whether tumor was detected")
+    confidence_score: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Overall confidence score"
+    )
     detected_abnormalities: Optional[List[Dict[str, Any]]] = Field(
         default=[], description="Detected abnormalities"
     )
@@ -1105,6 +1109,10 @@ class MRISegmentationResultUpdateDTO(BaseModel):
         None, description="Segmented regions"
     )
 
+    tumor_detected: Optional[bool] = Field(None, description="Whether tumor was detected")
+    confidence_score: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Overall confidence score"
+    )
     detected_abnormalities: Optional[List[Dict[str, Any]]] = Field(
         None, description="Detected abnormalities"
     )
@@ -1149,6 +1157,8 @@ class MRISegmentationResultResponseDTO(BaseModel):
 
     segmentation_mask_path: Optional[str]
     segmented_regions: List[Dict[str, Any]]
+    tumor_detected: Optional[bool]
+    confidence_score: Optional[float]
     detected_abnormalities: List[Dict[str, Any]]
     measurements: Dict[str, Any]
 

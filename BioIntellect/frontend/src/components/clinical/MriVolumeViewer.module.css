@@ -1,0 +1,367 @@
+.viewerShell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  height: 100%;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.groupLabel {
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.toggleButton,
+.resetButton,
+.textButton,
+.presetButton {
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  background: rgba(15, 23, 42, 0.72);
+  color: #dbeafe;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.toggleButtonActive,
+.presetButtonActive {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.62);
+  color: #f8fafc;
+}
+
+.toggleButton:hover,
+.resetButton:hover,
+.textButton:hover,
+.presetButton:hover {
+  border-color: rgba(56, 189, 248, 0.55);
+  transform: translateY(-1px);
+}
+
+.presetButton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  border-radius: 16px;
+  padding: 0.85rem 0.95rem;
+  text-align: left;
+  min-width: 0;
+}
+
+.presetButton small {
+  color: rgba(226, 232, 240, 0.72);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.textButton {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  background: rgba(2, 6, 23, 0.55);
+}
+
+.viewportFrame {
+  position: relative;
+  min-height: 460px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  background:
+    radial-gradient(circle at top, rgba(14, 165, 233, 0.08), transparent 35%),
+    linear-gradient(180deg, #020617 0%, #020b16 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.viewport {
+  width: 100%;
+  height: 100%;
+  min-height: 460px;
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  background: rgba(2, 6, 23, 0.62);
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.controlCard {
+  min-width: 0;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.72);
+  border: 1px solid rgba(125, 211, 252, 0.12);
+}
+
+.controlHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.helpText {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.66);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.inlineActions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.presetGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.classList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.classItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  color: #e2e8f0;
+  font-size: 0.88rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.classItem input {
+  margin: 0.18rem 0 0;
+}
+
+.classItemDisabled {
+  opacity: 0.45;
+}
+
+.classText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.classText strong {
+  font-size: 0.86rem;
+}
+
+.classText small {
+  color: rgba(226, 232, 240, 0.65);
+  line-height: 1.45;
+}
+
+.colorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  margin-top: 0.4rem;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.18);
+}
+
+.sliderStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.sliderGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: #e2e8f0;
+}
+
+.sliderGroup span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.sliderGroup small {
+  color: rgba(226, 232, 240, 0.65);
+  line-height: 1.45;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  color: #e2e8f0;
+}
+
+.sliderRow input[type='range'] {
+  width: 100%;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.switchRow input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+}
+
+.metadataGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.metadataCard {
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.68);
+  border: 1px solid rgba(125, 211, 252, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.metadataCard span {
+  color: rgba(226, 232, 240, 0.65);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metadataCard strong {
+  color: #f8fafc;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.stateContainer {
+  width: 100%;
+  height: 100%;
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top, rgba(14, 165, 233, 0.08), transparent 35%),
+    linear-gradient(180deg, #020617 0%, #020b16 100%);
+  color: #e2e8f0;
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.stateText {
+  max-width: 28rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #38bdf8;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1080px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .metadataGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .presetGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .viewport,
+  .viewportFrame,
+  .stateContainer {
+    min-height: 380px;
+  }
+}
+
+@media (max-width: 640px) {
+  .metadataGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .switchRow,
+  .controlHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

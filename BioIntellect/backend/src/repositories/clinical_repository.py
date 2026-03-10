@@ -1,6 +1,15 @@
-﻿from typing import Optional, Dict, Any, List
+﻿from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
 from src.db.supabase.client import SupabaseProvider
 from src.observability.logger import get_logger
+from src.repositories.schema_compat import (
+    build_follow_up_appointment,
+    build_mri_result_payload,
+    normalize_ecg_result_record,
+    normalize_mri_result_record,
+    sanitize_for_table,
+)
 from src.services.infrastructure.memory_cache import global_cache
 from src.services.infrastructure.retry_utils import async_retry
 
@@ -17,6 +26,37 @@ class ClinicalRepository:
     async def _get_client(self):
         return await SupabaseProvider.get_admin()
 
+    async def _get_hospital_case_ids(self, hospital_id: str) -> List[str]:
+        client = await self._get_client()
+        result = await (
+            client.table("medical_cases")
+            .select("id")
+            .eq("hospital_id", hospital_id)
+            .execute()
+        )
+        return [row["id"] for row in (result.data or []) if row.get("id")]
+
+    async def _list_follow_up_appointments(
+        self, filter_field: str, filter_value: str
+    ) -> List[Dict[str, Any]]:
+        client = await self._get_client()
+        result = await (
+            client.table("medical_cases")
+            .select(
+                "id, patient_id, assigned_doctor_id, follow_up_date, status, notes, chief_complaint, metadata"
+            )
+            .eq(filter_field, filter_value)
+            .not_.is_("follow_up_date", "null")
+            .order("follow_up_date", desc=False)
+            .execute()
+        )
+        appointments: List[Dict[str, Any]] = []
+        for case_record in result.data or []:
+            appointment = build_follow_up_appointment(case_record)
+            if appointment:
+                appointments.append(appointment)
+        return appointments
+
     # â”پâ”پâ”پâ”پ MEDICAL CASES â”پâ”پâ”پâ”پ
 
     @async_retry(max_retries=3)
@@ -26,7 +66,8 @@ class ClinicalRepository:
         """Create a new medical case."""
         client = await self._get_client()
         try:
-            result = await client.table("medical_cases").insert(case_data).execute()
+            payload = sanitize_for_table("medical_cases", case_data)
+            result = await client.table("medical_cases").insert(payload).execute()
             if result.data:
                 # Section 5.A: Invalidate related caches on write
                 await self.cache.delete("clinical:cases_by_status")
@@ -40,16 +81,9 @@ class ClinicalRepository:
         """Get medical case by ID with related data."""
         client = await self._get_client()
         try:
-            # Direct query with optimized joins
             result = await (
                 client.table("medical_cases")
-                .select("""
-                    id, case_number, status, priority, patient_id, doctor_id, hospital_id, created_at,
-                    confidence_score, primary_diagnosis,
-                    patients(id, mrn, first_name, last_name, email, phone),
-                    doctors(id, first_name, last_name, specialty),
-                    hospitals(id, hospital_name_en)
-                """)
+                .select("*")
                 .eq("id", case_id)
                 .single()
                 .execute()
@@ -66,8 +100,9 @@ class ClinicalRepository:
         """Update medical case."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("medical_cases", data)
             result = await (
-                client.table("medical_cases").update(data).eq("id", case_id).execute()
+                client.table("medical_cases").update(payload).eq("id", case_id).execute()
             )
             if result.data:
                 # Section 5.A: Invalidate related caches on write
@@ -87,14 +122,7 @@ class ClinicalRepository:
         """List medical cases with filtering and optimized selection."""
         client = await self._get_client()
         try:
-            # Optimized Selection: Avoid matching all columns if possible, but * is acceptable with limits
-            # Crucial: Using nested selects for relations (N+1 fix)
-            query = client.table("medical_cases").select("""
-                id, case_number, status, priority, patient_id, doctor_id, hospital_id, created_at,
-                patients(id, mrn, first_name, last_name),
-                doctors(id, first_name, last_name),
-                hospitals(id, hospital_name_en)
-            """)
+            query = client.table("medical_cases").select("*")
 
             if filters:
                 for key, val in filters.items():
@@ -137,7 +165,7 @@ class ClinicalRepository:
         try:
             data = {
                 "is_archived": True,
-                "archived_at": "now()",
+                "archived_at": datetime.now(timezone.utc).isoformat(),
                 "archived_by": archived_by,
             }
             if reason:
@@ -270,10 +298,13 @@ class ClinicalRepository:
         """Count files for a hospital."""
         client = await self._get_client()
         try:
+            case_ids = await self._get_hospital_case_ids(hospital_id)
+            if not case_ids:
+                return 0
             result = await (
                 client.table("medical_files")
                 .select("id", count="exact")
-                .eq("hospital_id", hospital_id)
+                .in_("case_id", case_ids)
                 .eq("is_deleted", False)
                 .execute()
             )
@@ -305,10 +336,13 @@ class ClinicalRepository:
         """Get hospital files grouped by type."""
         client = await self._get_client()
         try:
+            case_ids = await self._get_hospital_case_ids(hospital_id)
+            if not case_ids:
+                return {}
             result = await (
                 client.table("medical_files")
                 .select("file_type")
-                .eq("hospital_id", hospital_id)
+                .in_("case_id", case_ids)
                 .eq("is_deleted", False)
                 .execute()
             )
@@ -346,15 +380,26 @@ class ClinicalRepository:
         try:
             result = await (
                 client.table("medical_cases")
-                .select("patient_id, patients(id, mrn, first_name, last_name)")
-                .eq("doctor_id", doctor_id)
+                .select("patient_id")
+                .eq("assigned_doctor_id", doctor_id)
                 .execute()
             )
-            patients = {}
-            for row in result.data:
-                if row["patient_id"] not in patients:
-                    patients[row["patient_id"]] = row["patients"]
-            return list(patients.values())
+            patient_ids = list(
+                {
+                    row["patient_id"]
+                    for row in (result.data or [])
+                    if row.get("patient_id")
+                }
+            )
+            if not patient_ids:
+                return []
+            patients_result = await (
+                client.table("patients")
+                .select("id, mrn, first_name, last_name")
+                .in_("id", patient_ids)
+                .execute()
+            )
+            return patients_result.data or []
         except Exception as e:
             logger.error(f"Failed to get doctor patients: {str(e)}")
             return []
@@ -365,10 +410,8 @@ class ClinicalRepository:
         try:
             result = await (
                 client.table("medical_cases")
-                .select(
-                    "id, case_number, status, created_at, patients(id, mrn, first_name, last_name)"
-                )
-                .eq("doctor_id", doctor_id)
+                .select("*")
+                .eq("assigned_doctor_id", doctor_id)
                 .order("created_at", desc=True)
                 .execute()
             )
@@ -379,18 +422,10 @@ class ClinicalRepository:
 
     async def get_doctor_appointments(self, doctor_id: str) -> List[Dict[str, Any]]:
         """Get appointments for a doctor."""
-        client = await self._get_client()
         try:
-            result = await (
-                client.table("appointments")
-                .select(
-                    "id, appointment_date, appointment_time, status, patients(id, mrn, first_name, last_name)"
-                )
-                .eq("doctor_id", doctor_id)
-                .order("appointment_date")
-                .execute()
+            return await self._list_follow_up_appointments(
+                "assigned_doctor_id", doctor_id
             )
-            return result.data or []
         except Exception as e:
             logger.error(f"Failed to get doctor appointments: {str(e)}")
             return []
@@ -402,7 +437,7 @@ class ClinicalRepository:
             result = await (
                 client.table("medical_cases")
                 .select("status")
-                .eq("doctor_id", doctor_id)
+                .eq("assigned_doctor_id", doctor_id)
                 .execute()
             )
             counts: dict[str, int] = {}
@@ -420,10 +455,9 @@ class ClinicalRepository:
         try:
             result = await (
                 client.table("medical_cases")
-                .select(
-                    "id, case_number, status, created_at, doctors(id, first_name, last_name)"
-                )
+                .select("*")
                 .eq("patient_id", patient_id)
+                .order("created_at", desc=True)
                 .execute()
             )
             return result.data or []
@@ -433,17 +467,8 @@ class ClinicalRepository:
 
     async def get_patient_appointments(self, patient_id: str) -> List[Dict[str, Any]]:
         """Get appointments for a patient."""
-        client = await self._get_client()
         try:
-            result = await (
-                client.table("appointments")
-                .select(
-                    "id, appointment_date, appointment_time, status, doctors(id, first_name, last_name)"
-                )
-                .eq("patient_id", patient_id)
-                .execute()
-            )
-            return result.data or []
+            return await self._list_follow_up_appointments("patient_id", patient_id)
         except Exception as e:
             logger.error(f"Failed to get patient appointments: {str(e)}")
             return []
@@ -454,7 +479,9 @@ class ClinicalRepository:
         try:
             result = await (
                 client.table("medical_files")
-                .select("id, file_name, file_type, bucket_name, file_path, created_at")
+                .select(
+                    "id, case_id, patient_id, uploaded_by, file_type, file_name, file_path, file_size, mime_type, storage_bucket, description, metadata, is_analyzed, analyzed_at, is_deleted, deleted_at, deleted_by, created_at, updated_at"
+                )
                 .eq("patient_id", patient_id)
                 .eq("is_deleted", False)
                 .execute()
@@ -512,9 +539,8 @@ class ClinicalRepository:
         """Create a medical file record."""
         client = await self._get_client()
         try:
-            # We only need the ID and maybe another field if needed for UI feedback
-            # Using select("id") after insert to reduce payload size
-            result = await client.table("medical_files").insert(file_data).execute()
+            payload = sanitize_for_table("medical_files", file_data)
+            result = await client.table("medical_files").insert(payload).execute()
             return result.data[0] if result.data else None
         except Exception as e:
             logger.error(f"Failed to create medical file: {str(e)}")
@@ -526,11 +552,7 @@ class ClinicalRepository:
         try:
             result = await (
                 client.table("medical_files")
-                .select("""
-                id, file_name, file_type, bucket_name, file_path, created_at,
-                patients(id, mrn, first_name, last_name),
-                medical_cases(id, case_number)
-            """)
+                .select("*")
                 .eq("id", file_id)
                 .single()
                 .execute()
@@ -549,15 +571,7 @@ class ClinicalRepository:
         """List medical files with filtering."""
         client = await self._get_client()
         try:
-            query = (
-                client.table("medical_files")
-                .select("""
-                id, file_name, file_type, bucket_name, file_path, created_at,
-                patients(id, mrn, first_name, last_name),
-                medical_cases(id, case_number)
-            """)
-                .eq("is_deleted", False)
-            )
+            query = client.table("medical_files").select("*").eq("is_deleted", False)
 
             if filters:
                 for key, val in filters.items():
@@ -581,9 +595,10 @@ class ClinicalRepository:
         """Update medical file."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("medical_files", file_data)
             result = await (
                 client.table("medical_files")
-                .update(file_data)
+                .update(payload)
                 .eq("id", file_id)
                 .execute()
             )
@@ -599,12 +614,20 @@ class ClinicalRepository:
         """Delete a medical file."""
         client = await self._get_client()
         try:
-            data = {"is_deleted": True, "deleted_at": "now()", "deleted_by": deleted_by}
+            data = {
+                "is_deleted": True,
+                "deleted_at": datetime.now(timezone.utc).isoformat(),
+                "deleted_by": deleted_by,
+            }
             if reason:
                 data["notes"] = reason
+            payload = sanitize_for_table("medical_files", data)
 
             result = await (
-                client.table("medical_files").update(data).eq("id", file_id).execute()
+                client.table("medical_files")
+                .update(payload)
+                .eq("id", file_id)
+                .execute()
             )
             return len(result.data) > 0
         except Exception as e:
@@ -620,7 +643,8 @@ class ClinicalRepository:
         """Create ECG signal record."""
         client = await self._get_client()
         try:
-            result = await client.table("ecg_signals").insert(signal_data).execute()
+            payload = sanitize_for_table("ecg_signals", signal_data)
+            result = await client.table("ecg_signals").insert(payload).execute()
             return result.data[0] if result.data else None
         except Exception as e:
             logger.error(f"Failed to create ECG signal: {str(e)}")
@@ -632,12 +656,7 @@ class ClinicalRepository:
         try:
             result = await (
                 client.table("ecg_signals")
-                .select("""
-                *,
-                patients(id, mrn, first_name, last_name),
-                medical_files(id, file_name),
-                medical_cases(id, case_number)
-            """)
+                .select("*")
                 .eq("id", signal_id)
                 .single()
                 .execute()
@@ -656,12 +675,7 @@ class ClinicalRepository:
         """List ECG signals with filtering."""
         client = await self._get_client()
         try:
-            query = client.table("ecg_signals").select("""
-                *,
-                patients(id, mrn, first_name, last_name),
-                medical_files(id, file_name),
-                medical_cases(id, case_number)
-            """)
+            query = client.table("ecg_signals").select("*")
 
             if filters:
                 for key, val in filters.items():
@@ -699,7 +713,8 @@ class ClinicalRepository:
         """Create ECG analysis result."""
         client = await self._get_client()
         try:
-            result = await client.table("ecg_results").insert(result_data).execute()
+            payload = sanitize_for_table("ecg_results", result_data)
+            result = await client.table("ecg_results").insert(payload).execute()
             return result.data[0] if result.data else None
         except Exception as e:
             logger.error(f"Failed to create ECG result: {str(e)}")
@@ -711,12 +726,7 @@ class ClinicalRepository:
         try:
             result = await (
                 client.table("ecg_results")
-                .select("""
-                *,
-                patients(id, mrn, first_name, last_name),
-                medical_cases(id, case_number),
-                doctors(id, first_name, last_name)
-            """)
+                .select("*")
                 .eq("id", result_id)
                 .single()
                 .execute()
@@ -733,8 +743,12 @@ class ClinicalRepository:
         """Update ECG result (for review)."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("ecg_results", data)
             result = await (
-                client.table("ecg_results").update(data).eq("id", result_id).execute()
+                client.table("ecg_results")
+                .update(payload)
+                .eq("id", result_id)
+                .execute()
             )
             return result.data[0] if result.data else None
         except Exception as e:
@@ -750,12 +764,7 @@ class ClinicalRepository:
         """List ECG results with filtering."""
         client = await self._get_client()
         try:
-            query = client.table("ecg_results").select("""
-                *,
-                patients(id, mrn, first_name, last_name),
-                medical_cases(id, case_number),
-                doctors(id, first_name, last_name)
-            """)
+            query = client.table("ecg_results").select("*")
 
             if filters:
                 for key, val in filters.items():
@@ -794,7 +803,8 @@ class ClinicalRepository:
         """Create MRI scan record."""
         client = await self._get_client()
         try:
-            result = await client.table("mri_scans").insert(scan_data).execute()
+            payload = sanitize_for_table("mri_scans", scan_data)
+            result = await client.table("mri_scans").insert(payload).execute()
             return result.data[0] if result.data else None
         except Exception as e:
             logger.error(f"Failed to create MRI scan: {str(e)}")
@@ -806,12 +816,7 @@ class ClinicalRepository:
         try:
             result = await (
                 client.table("mri_scans")
-                .select("""
-                id, created_at, scan_type, file_id, case_id, patient_id, status,
-                patients(id, mrn, first_name, last_name),
-                medical_files(id, file_name),
-                medical_cases(id, case_number)
-            """)
+                .select("*")
                 .eq("id", scan_id)
                 .single()
                 .execute()
@@ -830,12 +835,7 @@ class ClinicalRepository:
         """List MRI scans with filtering."""
         client = await self._get_client()
         try:
-            query = client.table("mri_scans").select("""
-                id, created_at, scan_type, status, patient_id,
-                patients(id, mrn, first_name, last_name),
-                medical_files(id, file_name),
-                medical_cases(id, case_number)
-            """)
+            query = client.table("mri_scans").select("*")
 
             if filters:
                 for key, val in filters.items():
@@ -873,10 +873,13 @@ class ClinicalRepository:
         """Create MRI segmentation result."""
         client = await self._get_client()
         try:
+            payload = build_mri_result_payload(result_data)
             result = await (
-                client.table("mri_segmentation_results").insert(result_data).execute()
+                client.table("mri_segmentation_results").insert(payload).execute()
             )
-            return result.data[0] if result.data else None
+            return (
+                normalize_mri_result_record(result.data[0]) if result.data else None
+            )
         except Exception as e:
             logger.error(f"Failed to create MRI result: {str(e)}")
             raise
@@ -887,17 +890,12 @@ class ClinicalRepository:
         try:
             result = await (
                 client.table("mri_segmentation_results")
-                .select("""
-                id, created_at, case_id, patient_id, doctor_id, tumor_detected, confidence_score,
-                patients(id, mrn, first_name, last_name),
-                medical_cases(id, case_number),
-                doctors(id, first_name, last_name)
-            """)
+                .select("*")
                 .eq("id", result_id)
                 .single()
                 .execute()
             )
-            return result.data
+            return normalize_mri_result_record(result.data)
         except Exception as e:
             logger.error(f"Failed to get MRI result {result_id}: {str(e)}")
             raise
@@ -908,13 +906,16 @@ class ClinicalRepository:
         """Update MRI result (for review)."""
         client = await self._get_client()
         try:
+            payload = build_mri_result_payload(data)
             result = await (
                 client.table("mri_segmentation_results")
-                .update(data)
+                .update(payload)
                 .eq("id", result_id)
                 .execute()
             )
-            return result.data[0] if result.data else None
+            return (
+                normalize_mri_result_record(result.data[0]) if result.data else None
+            )
         except Exception as e:
             logger.error(f"Failed to update MRI result {result_id}: {str(e)}")
             raise
@@ -928,12 +929,7 @@ class ClinicalRepository:
         """List MRI results with filtering."""
         client = await self._get_client()
         try:
-            query = client.table("mri_segmentation_results").select("""
-                *,
-                patients(id, mrn, first_name, last_name),
-                medical_cases(id, case_number),
-                doctors(id, first_name, last_name)
-            """)
+            query = client.table("mri_segmentation_results").select("*")
 
             if filters:
                 for key, val in filters.items():
@@ -945,7 +941,9 @@ class ClinicalRepository:
                 .range(offset, offset + limit - 1)
                 .execute()
             )
-            return result.data or []
+            return [
+                normalize_mri_result_record(record) for record in (result.data or [])
+            ]
         except Exception as e:
             logger.error(f"Failed to list MRI results: {str(e)}")
             raise
@@ -973,9 +971,8 @@ class ClinicalRepository:
         """Create a generated report."""
         client = await self._get_client()
         try:
-            result = await (
-                client.table("generated_reports").insert(report_data).execute()
-            )
+            payload = sanitize_for_table("generated_reports", report_data)
+            result = await client.table("generated_reports").insert(payload).execute()
             return result.data[0] if result.data else None
         except Exception as e:
             logger.error(f"Failed to create report: {str(e)}")
@@ -987,12 +984,7 @@ class ClinicalRepository:
         try:
             result = await (
                 client.table("generated_reports")
-                .select("""
-                id, created_at, report_type, status, patient_id, doctor_id, case_id,
-                patients(id, mrn, first_name, last_name),
-                medical_cases(id, case_number),
-                doctors(id, first_name, last_name)
-            """)
+                .select("*")
                 .eq("id", report_id)
                 .single()
                 .execute()
@@ -1008,9 +1000,10 @@ class ClinicalRepository:
         """Update report."""
         client = await self._get_client()
         try:
+            payload = sanitize_for_table("generated_reports", report_data)
             result = await (
                 client.table("generated_reports")
-                .update(report_data)
+                .update(payload)
                 .eq("id", report_id)
                 .execute()
             )
@@ -1028,12 +1021,7 @@ class ClinicalRepository:
         """List reports with filtering."""
         client = await self._get_client()
         try:
-            query = client.table("generated_reports").select("""
-                *,
-                patients(id, mrn, first_name, last_name),
-                medical_cases(id, case_number),
-                doctors(id, first_name, last_name)
-            """)
+            query = client.table("generated_reports").select("*")
 
             if filters:
                 for key, val in filters.items():
@@ -1062,7 +1050,7 @@ class ClinicalRepository:
             data = {
                 "status": "approved",
                 "approved_by_doctor_id": approved_by_doctor_id,
-                "approved_at": "now()",
+                "approved_at": datetime.now(timezone.utc).isoformat(),
             }
             if approval_notes:
                 data["approval_notes"] = approval_notes
@@ -1101,18 +1089,18 @@ class ClinicalRepository:
             # Prepare independent queries
             t1 = (
                 client.table("medical_cases")
-                .select("""
-                id, case_number, status, priority, patient_id, created_at,
-                doctors(id, first_name, last_name),
-                hospitals(id, hospital_name_en)
-            """)
+                .select(
+                    "id, case_number, status, priority, patient_id, hospital_id, assigned_doctor_id, created_at"
+                )
                 .eq("patient_id", patient_id)
                 .order("created_at", desc=True)
             )
 
             t2 = (
                 client.table("ecg_results")
-                .select("id, confidence_score, primary_diagnosis, created_at")
+                .select(
+                    "id, rhythm_classification, rhythm_confidence, analysis_status, created_at"
+                )
                 .eq("patient_id", patient_id)
                 .order("created_at", desc=True)
                 .limit(10)
@@ -1120,7 +1108,9 @@ class ClinicalRepository:
 
             t3 = (
                 client.table("mri_segmentation_results")
-                .select("id, tumor_detected, confidence_score, created_at")
+                .select(
+                    "id, analysis_status, detected_abnormalities, measurements, severity_score, created_at"
+                )
                 .eq("patient_id", patient_id)
                 .order("created_at", desc=True)
                 .limit(10)
@@ -1140,8 +1130,14 @@ class ClinicalRepository:
 
             return {
                 "cases": get_data(res_cases, "cases"),
-                "ecg_results": get_data(res_ecg, "ecg_results"),
-                "mri_results": get_data(res_mri, "mri_results"),
+                "ecg_results": [
+                    normalize_ecg_result_record(record)
+                    for record in get_data(res_ecg, "ecg_results")
+                ],
+                "mri_results": [
+                    normalize_mri_result_record(record)
+                    for record in get_data(res_mri, "mri_results")
+                ],
             }
         except Exception as e:
             logger.error(f"Failed to get patient history for {patient_id}: {str(e)}")

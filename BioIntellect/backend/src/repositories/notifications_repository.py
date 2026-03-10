@@ -6,10 +6,15 @@ Handles CRUD operations for the notifications system with WebSocket support.
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
-from uuid import UUID
 
 from src.db.supabase.client import SupabaseProvider
 from src.observability.logger import get_logger
+from src.repositories.schema_compat import (
+    build_notification_payload,
+    build_preferences_setting,
+    map_notification_type,
+    normalize_notification_record,
+)
 
 logger = get_logger("repository.notifications")
 
@@ -22,7 +27,7 @@ class NotificationsRepository:
 
     async def _get_client(self):
         """Get Supabase client."""
-        return await SupabaseProvider.get_client()
+        return await SupabaseProvider.get_admin()
 
     # â”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پâ”پ
     # CREATE OPERATIONS
@@ -59,22 +64,17 @@ class NotificationsRepository:
         """
         try:
             client = await self._get_client()
-
-            notification_data = {
-                "recipient_id": recipient_id,
-                "type": type,
-                "title": title,
-                "message": message,
-                "priority": priority,
-                "metadata": metadata or {},
-            }
-
-            if sender_id:
-                notification_data["sender_id"] = sender_id
-            if action_url:
-                notification_data["action_url"] = action_url
-            if expires_at:
-                notification_data["expires_at"] = expires_at.isoformat()
+            notification_data = build_notification_payload(
+                user_id=recipient_id,
+                notification_type=type,
+                title=title,
+                message=message,
+                priority=priority,
+                metadata=metadata or {},
+                action_url=action_url,
+                expires_at=expires_at,
+                sender_id=sender_id,
+            )
 
             result = (
                 await client.table("notifications").insert(notification_data).execute()
@@ -84,7 +84,7 @@ class NotificationsRepository:
                 logger.info(
                     f"Notification created: {result.data[0]['id']} for user {recipient_id}"
                 )
-                return result.data[0]
+                return normalize_notification_record(result.data[0])
             else:
                 logger.error("Failed to create notification - no data returned")
                 return {}
@@ -118,16 +118,16 @@ class NotificationsRepository:
             client = await self._get_client()
 
             notifications_data = [
-                {
-                    "recipient_id": recipient_id,
-                    "type": type,
-                    "title": title,
-                    "message": message,
-                    "priority": kwargs.get("priority", "normal"),
-                    "metadata": kwargs.get("metadata", {}),
-                    "sender_id": kwargs.get("sender_id"),
-                    "action_url": kwargs.get("action_url"),
-                }
+                build_notification_payload(
+                    user_id=recipient_id,
+                    notification_type=type,
+                    title=title,
+                    message=message,
+                    priority=kwargs.get("priority", "normal"),
+                    metadata=kwargs.get("metadata", {}),
+                    action_url=kwargs.get("action_url"),
+                    sender_id=kwargs.get("sender_id"),
+                )
                 for recipient_id in recipient_ids
             ]
 
@@ -138,7 +138,9 @@ class NotificationsRepository:
             logger.info(
                 f"Bulk notifications created for {len(recipient_ids)} recipients"
             )
-            return result.data or []
+            return [
+                normalize_notification_record(record) for record in (result.data or [])
+            ]
 
         except Exception as e:
             logger.error(f"Failed to create bulk notifications: {str(e)}")
@@ -175,7 +177,7 @@ class NotificationsRepository:
             query = (
                 client.table("notifications")
                 .select("*")
-                .eq("recipient_id", user_id)
+                .eq("user_id", user_id)
                 .order("created_at", desc=True)
                 .range(offset, offset + limit - 1)
             )
@@ -184,11 +186,15 @@ class NotificationsRepository:
                 query = query.eq("is_read", False)
 
             if notification_type:
-                query = query.eq("type", notification_type)
+                query = query.eq(
+                    "notification_type", map_notification_type(notification_type)
+                )
 
             result = await query.execute()
 
-            return result.data or []
+            return [
+                normalize_notification_record(record) for record in (result.data or [])
+            ]
 
         except Exception as e:
             logger.error(f"Failed to get notifications for user {user_id}: {str(e)}")
@@ -210,7 +216,7 @@ class NotificationsRepository:
             result = (
                 await client.table("notifications")
                 .select("id", count="exact")
-                .eq("recipient_id", user_id)
+                .eq("user_id", user_id)
                 .eq("is_read", False)
                 .execute()
             )
@@ -236,7 +242,7 @@ class NotificationsRepository:
                 .execute()
             )
 
-            return result.data
+            return normalize_notification_record(result.data)
 
         except Exception as e:
             logger.error(f"Failed to get notification {notification_id}: {str(e)}")
@@ -291,7 +297,7 @@ class NotificationsRepository:
             result = (
                 await client.table("notifications")
                 .update({"is_read": True, "read_at": datetime.now().isoformat()})
-                .eq("recipient_id", user_id)
+                .eq("user_id", user_id)
                 .eq("is_read", False)
                 .execute()
             )
@@ -370,14 +376,18 @@ class NotificationsRepository:
             client = await self._get_client()
 
             result = (
-                await client.table("notification_preferences")
-                .select("*")
-                .eq("user_id", user_id)
+                await client.table("system_settings")
+                .select("setting_value")
+                .eq("scope", "user")
+                .eq("scope_id", user_id)
+                .eq("setting_key", "notification_preferences")
+                .order("updated_at", desc=True)
+                .limit(1)
                 .single()
                 .execute()
             )
 
-            return result.data or {}
+            return (result.data or {}).get("setting_value") or {}
 
         except Exception as e:
             logger.error(f"Failed to get preferences for user {user_id}: {str(e)}")
@@ -389,12 +399,36 @@ class NotificationsRepository:
         """Update notification preferences for a user."""
         try:
             client = await self._get_client()
-
-            result = (
-                await client.table("notification_preferences")
-                .upsert({"user_id": user_id, **preferences})
+            existing = await (
+                client.table("system_settings")
+                .select("id, setting_value")
+                .eq("scope", "user")
+                .eq("scope_id", user_id)
+                .eq("setting_key", "notification_preferences")
+                .order("updated_at", desc=True)
+                .limit(1)
                 .execute()
             )
+            existing_record = (existing.data or [None])[0]
+            merged_preferences = dict(
+                (existing_record or {}).get("setting_value") or {}
+            )
+            merged_preferences.update(preferences)
+            payload = build_preferences_setting(
+                user_id,
+                merged_preferences,
+                setting_id=(existing_record or {}).get("id"),
+            )
+
+            if existing_record:
+                result = await (
+                    client.table("system_settings")
+                    .update(payload)
+                    .eq("id", existing_record["id"])
+                    .execute()
+                )
+            else:
+                result = await client.table("system_settings").insert(payload).execute()
 
             if result.data:
                 logger.info(f"Updated notification preferences for user {user_id}")

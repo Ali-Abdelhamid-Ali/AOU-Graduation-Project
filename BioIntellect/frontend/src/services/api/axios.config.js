@@ -1,19 +1,5 @@
 import axios from 'axios';
-
-const normalizeApiBaseUrl = (url) => {
-    const fallback = 'http://localhost:8001/v1';
-    const value = url || fallback;
-
-    if (!import.meta.env.DEV) {
-        return value;
-    }
-
-    return value
-        .replace('://localhost:8000', '://localhost:8001')
-        .replace('://127.0.0.1:8000', '://127.0.0.1:8001');
-};
-
-const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL);
+import { API_BASE_URL } from './baseUrl';
 
 /**
  * Resilient API Client with:
@@ -86,7 +72,19 @@ apiClient.interceptors.response.use(
             // Logic for silent token refresh would go here
         }
 
-        return Promise.reject(error.response?.data || { detail: 'Network Error' });
+        if (!error.response) {
+            const detail =
+                error.code === 'ECONNABORTED'
+                    ? `The API request timed out while contacting ${API_BASE_URL}.`
+                    : `Cannot reach the API server at ${API_BASE_URL}.`;
+
+            return Promise.reject({
+                detail,
+                code: error.code || 'NETWORK_ERROR',
+            });
+        }
+
+        return Promise.reject(error.response.data);
     }
 );
 

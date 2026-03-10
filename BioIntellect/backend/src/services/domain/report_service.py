@@ -2,9 +2,10 @@
 
 import random
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+from src.observability.audit import AuditAction, log_audit
 from src.repositories.report_repository import ReportRepository
-from src.observability.audit import log_audit, AuditAction
 
 
 class ReportService:
@@ -20,7 +21,7 @@ class ReportService:
     async def create_report(self, user_id: str, data: Any) -> Dict[str, Any]:
         """Consolidates clinical data into a report record."""
         # Defensive check: Convert Pydantic model to dict if needed
-        if hasattr(data, "dict") and callable(getattr(data, "dict")):
+        if hasattr(data, "dict") and callable(data.dict):
             data = data.dict()
         report_data = {
             "report_number": self._generate_report_number(
@@ -28,15 +29,20 @@ class ReportService:
             ),
             "patient_id": data["patient_id"],
             "case_id": data.get("case_id"),
+            "doctor_id": data.get("doctor_id") or user_id,
             "report_type": data["report_type"],
             "ecg_result_id": data.get("ecg_result_id"),
             "mri_result_id": data.get("mri_result_id"),
             "title": data["title"],
             "summary": data.get("summary"),
             "content": data.get("content", {}),
+            "generated_by_model": data.get("generated_by_model"),
+            "model_version": data.get("model_version"),
+            "template_used": data.get("template_used"),
             "status": "draft",
             "is_final": False,
-            "created_by": user_id,
+            "version": data.get("version", 1),
+            "metadata": data.get("metadata", {}),
         }
 
         result = await self.repo.create(report_data)

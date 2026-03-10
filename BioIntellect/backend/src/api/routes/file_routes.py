@@ -1,16 +1,24 @@
-﻿"""File Routes & Controller - Medical Document API."""
+"""File Routes & Controller - Medical Document API."""
+# ruff: noqa: B008
 
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
-from typing import Optional, Any
-from src.services.domain.file_service import FileService
-from src.repositories.storage_repository import StorageRepository
+from typing import Any, Optional
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+
+from src.observability.logger import get_logger
 from src.repositories.clinical_repository import ClinicalRepository
+from src.repositories.storage_repository import StorageRepository
 from src.security.auth_middleware import (
+    Permission,
     get_current_user,
     require_permission,
-    Permission,
 )
-from src.observability.logger import get_logger
+from src.services.domain.file_service import (
+    GENERAL_MEDICAL_FILE_TYPES,
+    FileService,
+    is_supported_mri_upload,
+    normalize_upload_content_type,
+)
 
 logger = get_logger("routes.file")
 
@@ -31,13 +39,14 @@ def get_file_service():
 
 
 @router.post(
-    "/upload", dependencies=[Depends(require_permission(Permission.CREATE_CASE))]
+    "/upload", dependencies=[Depends(require_permission(Permission.UPLOAD_FILES))]
 )
 async def upload_file(
     file: UploadFile = File(...),
     case_id: str = Form(...),
     patient_id: str = Form(...),
     file_type: str = Form(...),
+    description: Optional[str] = Form(None),
     user: dict[str, Any] = Depends(get_current_user),
     service: FileService = Depends(get_file_service),
 ):
@@ -45,29 +54,43 @@ async def upload_file(
     try:
         content = await file.read()
 
-        # Validate file size (max 50MB)
         if len(content) > 50 * 1024 * 1024:
             raise HTTPException(
                 status_code=413, detail="File too large. Maximum size is 50MB."
             )
 
-        # Validate file type
-        valid_types = ["ecg", "mri", "pdf", "image"]
-        if file_type not in valid_types:
+        if file_type not in GENERAL_MEDICAL_FILE_TYPES:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid file type. Must be one of: {', '.join(valid_types)}",
+                detail=(
+                    "Invalid file type. Must be one of: "
+                    f"{', '.join(GENERAL_MEDICAL_FILE_TYPES)}"
+                ),
             )
 
         filename = file.filename or "unknown_file"
+        normalized_content_type = normalize_upload_content_type(
+            filename, file.content_type
+        )
+        if file_type == "mri" and not is_supported_mri_upload(
+            filename, normalized_content_type
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Invalid MRI file format. Supported formats: .nii, .nii.gz, "
+                    ".dcm, .jpg, .jpeg, .png"
+                ),
+            )
         record = await service.upload_medical_file(
             user["id"],
             patient_id,
             case_id,
             filename,
             content,
-            file.content_type or "application/octet-stream",
+            normalized_content_type,
             file_type,
+            description=description,
         )
 
         logger.info(f"File uploaded successfully by user {user['id']}: {record['id']}")
@@ -77,11 +100,13 @@ async def upload_file(
         raise
     except Exception as e:
         logger.error(f"File upload failed for user {user['id']}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to upload file")
+        raise HTTPException(
+            status_code=500, detail=str(e) or "Failed to upload file"
+        ) from e
 
 
 @router.post(
-    "/ecg/upload", dependencies=[Depends(require_permission(Permission.CREATE_CASE))]
+    "/ecg/upload", dependencies=[Depends(require_permission(Permission.UPLOAD_FILES))]
 )
 async def upload_ecg_signal(
     file: UploadFile = File(...),
@@ -94,13 +119,11 @@ async def upload_ecg_signal(
     try:
         content = await file.read()
 
-        # Validate file size (max 10MB for ECG)
         if len(content) > 10 * 1024 * 1024:
             raise HTTPException(
                 status_code=413, detail="ECG file too large. Maximum size is 10MB."
             )
 
-        # Validate file type for ECG
         filename = file.filename or ""
         valid_ecg_types = [
             "application/dicom",
@@ -134,11 +157,11 @@ async def upload_ecg_signal(
         raise
     except Exception as e:
         logger.error(f"ECG upload failed for user {user['id']}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to upload ECG signal")
+        raise HTTPException(status_code=500, detail="Failed to upload ECG signal") from e
 
 
 @router.post(
-    "/mri/upload", dependencies=[Depends(require_permission(Permission.CREATE_CASE))]
+    "/mri/upload", dependencies=[Depends(require_permission(Permission.UPLOAD_FILES))]
 )
 async def upload_mri_scan(
     file: UploadFile = File(...),
@@ -151,26 +174,22 @@ async def upload_mri_scan(
     try:
         content = await file.read()
 
-        # Validate file size (max 100MB for MRI)
         if len(content) > 100 * 1024 * 1024:
             raise HTTPException(
                 status_code=413, detail="MRI file too large. Maximum size is 100MB."
             )
 
-        # Validate file type for MRI
         filename = file.filename or ""
-        valid_mri_types = [
-            "application/dicom",
-            "application/octet-stream",
-            "image/jpeg",
-            "image/png",
-        ]
-        if file.content_type not in valid_mri_types and not filename.lower().endswith(
-            (".dcm", ".jpg", ".jpeg", ".png")
-        ):
+        normalized_content_type = normalize_upload_content_type(
+            filename, file.content_type
+        )
+        if not is_supported_mri_upload(filename, normalized_content_type):
             raise HTTPException(
                 status_code=400,
-                detail="Invalid MRI file format. Must be DICOM or medical image format.",
+                detail=(
+                    "Invalid MRI file format. Supported formats: .nii, .nii.gz, "
+                    ".dcm, .jpg, .jpeg, .png"
+                ),
             )
 
         result = await service.upload_mri_scan(
@@ -179,7 +198,7 @@ async def upload_mri_scan(
             case_id,
             filename,
             content,
-            file.content_type or "application/octet-stream",
+            normalized_content_type,
         )
 
         logger.info(
@@ -191,7 +210,9 @@ async def upload_mri_scan(
         raise
     except Exception as e:
         logger.error(f"MRI upload failed for user {user['id']}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to upload MRI scan")
+        raise HTTPException(
+            status_code=500, detail=str(e) or "Failed to upload MRI scan"
+        ) from e
 
 
 @router.get(
@@ -211,7 +232,7 @@ async def get_download_url(
 
     except Exception as e:
         logger.error(f"Failed to get download URL for file {file_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to get download URL")
+        raise HTTPException(status_code=500, detail="Failed to get download URL") from e
 
 
 @router.delete(
@@ -239,5 +260,4 @@ async def delete_medical_file(
         raise
     except Exception as e:
         logger.error(f"Failed to delete file {file_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to delete file")
-
+        raise HTTPException(status_code=500, detail="Failed to delete file") from e

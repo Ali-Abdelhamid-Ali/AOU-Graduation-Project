@@ -1,8 +1,10 @@
 ﻿"""Auth Repository - Data Access for Authentication and Profiles."""
 
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from src.db.supabase.client import SupabaseProvider
 from src.observability.logger import get_logger
+from src.repositories.schema_compat import sanitize_for_table
 from src.services.infrastructure.retry_utils import async_retry
 
 logger = get_logger("repository.auth")
@@ -55,28 +57,15 @@ class AuthRepository:
     async def create_profile(self, table: str, profile_data: Dict[str, Any]):
         """Create role-specific profile record."""
         client = await self._get_admin()
-        return await client.table(table).upsert(profile_data).execute()
+        payload = sanitize_for_table(table, profile_data)
+        return await client.table(table).upsert(payload).execute()
 
     async def get_profile_by_user_id(
         self, table: str, user_id: str
     ) -> Optional[Dict[str, Any]]:
-        """Fetch profile for a specific user ID. Handles potential duplicates gracefully."""
+        """Fetch the full role profile for a specific auth user."""
         client = await self._get_admin()
-
-        # Use table-specific column selection since 'role' only exists in administrators table
-        if table == "administrators":
-            columns = "id, first_name, last_name, hospital_id, role, created_at"
-        else:
-            # doctors, patients, nurses don't have a 'role' column
-            columns = "id, first_name, last_name, hospital_id, created_at"
-
-        result = await (
-            client.table(table)
-            .select(columns)
-            .eq("user_id", user_id)
-            .limit(1)
-            .execute()
-        )
+        result = await client.table(table).select("*").eq("user_id", user_id).limit(1).execute()
         return result.data[0] if result.data else None
 
     async def resolve_user_role(
@@ -207,6 +196,9 @@ class AuthRepository:
         spec_id = spec.data[0]["id"]
 
         # 2. Link
-        data = {"doctor_id": doctor_id, "specialty_id": spec_id, "is_primary": True}
-        return await client.table("doctor_specialties").insert(data).execute()
+        payload = sanitize_for_table(
+            "doctor_specialties",
+            {"doctor_id": doctor_id, "specialty_id": spec_id, "is_primary": True},
+        )
+        return await client.table("doctor_specialties").insert(payload).execute()
 

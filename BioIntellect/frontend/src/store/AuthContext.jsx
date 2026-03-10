@@ -133,12 +133,19 @@ export const AuthProvider = ({ children }) => {
     const rawRole = String(apiUser?.role || '').trim().toLowerCase()
     const normalizedRole = ROLE_ALIAS_MAP[rawRole] || rawRole || null
     const profile = apiUser?.profile || {}
+    const profileId = profile?.id || apiUser?.id
+    const authUserId = apiUser?.id
 
     const fullUser = {
       ...profile,
-      id: apiUser?.id,
+      id: profileId,
+      profile_id: profileId,
+      auth_user_id: authUserId,
+      user_id: authUserId,
       email: apiUser?.email,
       user_role: normalizedRole,
+      photo_url: profile?.photo_url || profile?.avatar_url || null,
+      avatar_url: profile?.avatar_url || profile?.photo_url || null,
       _raw_profile: profile,
     }
 
@@ -300,11 +307,12 @@ export const AuthProvider = ({ children }) => {
       clearError()
       try {
         const response = await usersAPI.createPatient(buildPatientPayload(patientData))
+        const payload = response.data || response
         return {
           success: true,
-          userId: response.user_id || response.id,
-          mrn: response.mrn,
-          data: response,
+          userId: payload.user_id || payload.id,
+          mrn: payload.mrn,
+          data: payload,
         }
       } catch (err) {
         const message = normalizeApiError(err, 'Patient registration failed')
@@ -323,10 +331,11 @@ export const AuthProvider = ({ children }) => {
       clearError()
       try {
         const response = await usersAPI.createDoctor(buildDoctorPayload(doctorData))
+        const payload = response.data || response
         return {
           success: true,
-          userId: response.user_id || response.id,
-          data: response,
+          userId: payload.user_id || payload.id,
+          data: payload,
         }
       } catch (err) {
         const message = normalizeApiError(err, 'Doctor registration failed')
@@ -345,10 +354,11 @@ export const AuthProvider = ({ children }) => {
       clearError()
       try {
         const response = await usersAPI.createAdministrator(buildAdminPayload(adminData))
+        const payload = response.data || response
         return {
           success: true,
-          userId: response.user_id || response.id,
-          data: response,
+          userId: payload.user_id || payload.id,
+          data: payload,
         }
       } catch (err) {
         const message = normalizeApiError(err, 'Administrator registration failed')

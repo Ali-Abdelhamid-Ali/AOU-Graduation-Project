@@ -6,6 +6,7 @@ import { ROLES, ROLE_ALIAS_MAP } from '@/config/roles'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 import { ProtectedRoute } from '@/components/common/ProtectedRoute'
 import { ScrollToTop } from '@/components/common/ScrollToTop'
+import { getDashboardHomeRoute } from '@/utils/dashboardRoutes'
 import './index.css'
 
 // Lazy Load Pages for Production Performance (FCP/TTI Optimization)
@@ -20,6 +21,7 @@ const ForcePasswordReset = lazy(() => import('@/pages/auth/ForcePasswordReset').
 
 // Dashboards
 const AdminDashboard = lazy(() => import('@/pages/dashboards/AdminDashboard').then(m => ({ default: m.AdminDashboard })))
+const DoctorDashboard = lazy(() => import('@/pages/dashboards/DoctorDashboard').then(m => ({ default: m.DoctorDashboard })))
 const PatientDashboard = lazy(() => import('@/pages/dashboards/PatientDashboard').then(m => ({ default: m.PatientDashboard })))
 const PatientLayout = lazy(() => import('@/components/layout/PatientLayout').then(m => ({ default: m.PatientLayout || m.default })))
 
@@ -83,7 +85,7 @@ const LoadingScreen = () => (
 
 import { useNavigate } from 'react-router-dom'
 
-function AppRoutes() {
+export function AppRoutes() {
   const { userRole, signOut, mustResetPassword, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -129,11 +131,7 @@ function AppRoutes() {
           <Login
             onLoginSuccess={(role) => {
               const r = ROLE_ALIAS_MAP[role?.toLowerCase()];
-              if ([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE].includes(r)) {
-                navigate('/admin-dashboard')
-              } else {
-                navigate('/patient-dashboard')
-              }
+              navigate(getDashboardHomeRoute(r))
             }}
             onSignUpClick={() => navigate('/signup')}
             onForgotPasswordClick={() => navigate('/reset-password')}
@@ -166,8 +164,8 @@ function AppRoutes() {
         } />
 
         {/* Protected Dashboard Routes (RBAC) */}
-        <Route path="/admin-dashboard" element={
-          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE]}>
+        <Route path="/admin-dashboard/*" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.NURSE]}>
             <AdminDashboard
               userRole={userRole}
               onLogout={signOut}
@@ -175,10 +173,16 @@ function AppRoutes() {
               onCreateDoctor={() => navigate('/create-doctor')}
               onCreateAdmin={() => navigate('/create-admin')}
               onEcgAnalysis={() => navigate('/ecg-analysis')}
-              onMriSegmentation={() => navigate('/mri-segmentation')}
+              onMriSegmentation={() => navigate('/mri-analysis')}
               onMedicalLlm={() => navigate('/medical-llm')}
               onPatientDirectory={() => navigate('/patient-directory')}
             />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/doctor-dashboard/*" element={
+          <ProtectedRoute allowedRoles={[ROLES.DOCTOR]}>
+            <DoctorDashboard onLogout={signOut} />
           </ProtectedRoute>
         } />
 
@@ -192,11 +196,6 @@ function AppRoutes() {
           <Route path="/patient-profile" element={<PatientHealthPortal />} />
           <Route path="/patient-security" element={<PatientSecurity />} />
           <Route path="/patient-appointments" element={<PatientAppointments />} />
-
-          {/* AI Modules Integrated within Patient Portal */}
-          <Route path="/ecg-analysis" element={<EcgAnalysis onBack={handleBack} />} />
-          <Route path="/mri-segmentation" element={<MriSegmentation onBack={handleBack} />} />
-          <Route path="/medical-llm" element={<MedicalLlm onBack={handleBack} />} />
         </Route>
 
         {/* Sub-modules (Protected) */}
@@ -229,6 +228,12 @@ function AppRoutes() {
         <Route path="/ecg-analysis" element={
           <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE]}>
             <EcgAnalysis onBack={handleBack} />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/mri-analysis" element={
+          <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE]}>
+            <MriSegmentation onBack={handleBack} />
           </ProtectedRoute>
         } />
 
@@ -268,4 +273,3 @@ function App() {
 }
 
 export default App
-

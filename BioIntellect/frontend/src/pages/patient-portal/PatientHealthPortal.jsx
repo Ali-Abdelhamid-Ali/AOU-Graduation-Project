@@ -7,6 +7,10 @@ import { SelectField } from '@/components/ui/SelectField'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
 import { genderOptions, bloodTypeOptions } from '@/config/options'
+import {
+    formatListForInput,
+    formatMedicationListForInput
+} from '@/utils/userFormUtils'
 import styles from './PatientHealthPortal.module.css'
 
 export const PatientHealthPortal = () => {
@@ -65,9 +69,9 @@ export const PatientHealthPortal = () => {
                 emergency_contact_name: currentUser.emergency_contact_name || '',
                 emergency_contact_phone: currentUser.emergency_contact_phone || '',
                 emergency_contact_relation: currentUser.emergency_contact_relation || '',
-                allergies: Array.isArray(currentUser.allergies) ? currentUser.allergies.join(', ') : '',
-                chronic_conditions: Array.isArray(currentUser.chronic_conditions) ? currentUser.chronic_conditions.join(', ') : '',
-                current_medications: Array.isArray(currentUser.current_medications) ? currentUser.current_medications.join(', ') : '',
+                allergies: formatListForInput(currentUser.allergies),
+                chronic_conditions: formatListForInput(currentUser.chronic_conditions),
+                current_medications: formatMedicationListForInput(currentUser.current_medications),
                 notes: currentUser.notes || ''
             })
 

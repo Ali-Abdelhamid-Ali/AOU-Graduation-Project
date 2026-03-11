@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@/store/AuthContext'
 import { medicalService } from '@/services/medical.service'
 import { mriSegmentationService } from '@/services/clinical.service'
+import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { MriPatientView } from '../../components/clinical/MriPatientView'
 import { MriDoctorView } from '../../components/clinical/MriDoctorView'
 import { patientsAPI } from '@/services/api'
@@ -242,6 +243,7 @@ export const MriSegmentation = ({ onBack }) => {
   const [analysisError, setAnalysisError] = useState(null)
   const [patients, setPatients] = useState([])
   const [selectedPatientId, setSelectedPatientId] = useState('')
+  const [patientLoadError, setPatientLoadError] = useState('')
   const [modelInfo, setModelInfo] = useState(null)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [doctorConfirmed, setDoctorConfirmed] = useState(false)
@@ -267,10 +269,21 @@ export const MriSegmentation = ({ onBack }) => {
         try {
           const response = await patientsAPI.list()
           if (response.success) {
-            setPatients(response.data)
+            const loadedPatients = response.data || []
+            setPatients(loadedPatients)
+            setSelectedPatientId((current) => current || loadedPatients[0]?.id || '')
+            setPatientLoadError(
+              loadedPatients.length
+                ? ''
+                : 'No patient records are available for this doctor account yet.'
+            )
           }
         } catch (loadError) {
           console.error('Failed to load patients:', loadError)
+          setPatients([])
+          setPatientLoadError(
+            getApiErrorMessage(loadError, 'Failed to load the patient list.')
+          )
         }
       }
 
@@ -890,6 +903,13 @@ export const MriSegmentation = ({ onBack }) => {
                       value: patient.id,
                       label: `${patient.first_name} ${patient.last_name || ''} (${patient.mrn})`,
                     }))}
+                    disabled={!patients.length}
+                    error={patientLoadError || undefined}
+                    helperText={
+                      !patientLoadError
+                        ? 'Choose the patient whose MRI study will receive this segmentation run.'
+                        : undefined
+                    }
                     required
                   />
                 </div>

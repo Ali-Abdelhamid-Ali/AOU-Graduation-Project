@@ -3,11 +3,9 @@ import securityIcon from '@/assets/images/icons/security.png'
 import insightsIcon from '@/assets/images/icons/insights.png'
 import cardioIcon from '@/assets/images/icons/cardio.png'
 import neuroIcon from '@/assets/images/icons/neuro.png'
-import labIcon from '@/assets/images/icons/lab.png'
 
 export const getAdminCards = (userSpecialty, handlers) => {
     const {
-        onCreatePatient,
         onCreateDoctor,
         onCreateAdmin,
         onEcgAnalysis,
@@ -77,14 +75,6 @@ export const getAdminCards = (userSpecialty, handlers) => {
             color: '#6366f1',
             tag: 'ADVISOR',
             clinical: true
-        },
-        {
-            id: 'audit',
-            title: 'System Audit Logs',
-            description: 'Immutable clinical activity logs and data access monitoring (HIPAA/GDPR).',
-            icon: labIcon,
-            action: () => alert('Audit logs under security review.'),
-            color: '#f59e0b'
         }
     ];
 

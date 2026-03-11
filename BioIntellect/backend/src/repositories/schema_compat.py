@@ -580,6 +580,17 @@ def sanitize_for_table(table_name: str, data: Mapping[str, Any] | None) -> dict[
     return {key: value for key, value in data.items() if key in allowed}
 
 
+def select_columns_for_table(table_name: str, columns: list[str] | tuple[str, ...]) -> str:
+    """Keep only columns that exist in the active schema before building a select list."""
+    allowed = _TABLE_COLUMNS.get(table_name)
+    normalized_columns = [column.strip() for column in columns if str(column).strip()]
+
+    if not allowed:
+        return ", ".join(normalized_columns)
+
+    return ", ".join(column for column in normalized_columns if column in allowed)
+
+
 def map_notification_type(value: str | None) -> str:
     """Translate legacy notification labels into schema enum values."""
     if not value:
@@ -793,19 +804,27 @@ def build_follow_up_appointment(
     if not status:
         case_status = str(case_record.get("status") or "").lower()
         status = "completed" if case_status in {"completed", "archived"} else "scheduled"
+    status = " ".join(
+        fragment.capitalize()
+        for fragment in str(status or "scheduled").replace("_", " ").split()
+    ) or "Scheduled"
+    appointment_type = str(metadata.get("appointment_type") or "Follow-up").strip() or "Follow-up"
 
     appointment = {
         "id": str(case_record.get("id") or ""),
         "case_id": case_record.get("id"),
+        "case_number": case_record.get("case_number"),
         "patient_id": case_record.get("patient_id"),
         "doctor_id": case_record.get("assigned_doctor_id"),
         "appointment_date": appointment_date,
         "appointment_time": metadata.get("appointment_time"),
         "status": status,
+        "appointment_type": appointment_type,
         "notes": metadata.get("appointment_notes") or case_record.get("notes"),
         "reason": metadata.get("appointment_reason")
         or case_record.get("chief_complaint"),
-        "department": metadata.get("department"),
+        "department": metadata.get("department")
+        or (doctor or {}).get("specialty"),
         "patients": dict(patient) if patient else None,
         "doctors": dict(doctor) if doctor else None,
     }

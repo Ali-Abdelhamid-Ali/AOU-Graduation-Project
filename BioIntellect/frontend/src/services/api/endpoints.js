@@ -129,6 +129,8 @@ export const analyticsAPI = {
   getDashboardStats: () => apiClient.get('/analytics/dashboard'),
   getTrends: () => apiClient.get('/analytics/trends'),
   getAppointments: () => apiClient.get('/analytics/appointments'),
+  createAppointment: async (data) =>
+    normalizeEnvelope(await apiClient.post('/analytics/appointments', data)),
   updateAppointment: (id, data) =>
     apiClient.put(`/analytics/appointments/${id}`, data),
 }

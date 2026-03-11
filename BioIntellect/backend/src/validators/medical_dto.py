@@ -1345,6 +1345,8 @@ class UserProfileUpdateDTO(BaseModel):
     blood_type: Optional[str] = None
     national_id: Optional[str] = None
     passport_number: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
     insurance_provider: Optional[str] = None
     insurance_number: Optional[str] = None
     emergency_contact_name: Optional[str] = None

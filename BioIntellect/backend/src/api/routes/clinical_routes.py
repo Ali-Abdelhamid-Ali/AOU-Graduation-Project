@@ -1337,13 +1337,82 @@ async def get_patient_friendly_mri_result(
     case_id: str,
     user: dict[str, Any] = Depends(get_current_user),
 ):
-    """Return a patient-friendly placeholder summary for MRI results."""
-    _ensure_clinical_permission(user, Permission.UPLOAD_FILES)
+    """Return a patient-friendly summary derived from the persisted MRI result."""
+    repo = ClinicalRepository()
+    case_record = await repo.get_medical_case(case_id)
+    if not case_record:
+        raise HTTPException(status_code=404, detail="Medical case not found")
+
+    _ensure_clinical_permission(
+        user, Permission.VIEW_PATIENT, case_record.get("patient_id")
+    )
+
+    results = await repo.list_mri_results({"case_id": case_id}, limit=5, offset=0)
+    latest_result = results[0] if results else None
+
+    if not latest_result:
+        return {
+            "case_id": case_id,
+            "summary": "Your MRI scan has been uploaded and is waiting for a finalized AI result.",
+            "next_step": "Please check back after the imaging workflow finishes or speak with your care team.",
+            "status": "pending_result",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    abnormalities = latest_result.get("detected_abnormalities") or []
+    if not isinstance(abnormalities, list):
+        abnormalities = [str(abnormalities)]
+
+    recommendations = latest_result.get("ai_recommendations") or []
+    if not isinstance(recommendations, list):
+        recommendations = [str(recommendations)]
+
+    measurements = latest_result.get("measurements") or {}
+    if not isinstance(measurements, dict):
+        measurements = {}
+
+    severity_score = latest_result.get("severity_score")
+    tumor_detected = bool(latest_result.get("tumor_detected"))
+    created_at = latest_result.get("updated_at") or latest_result.get("created_at")
+
+    if tumor_detected:
+        summary = (
+            "The saved MRI analysis found an area that needs clinician review."
+            if not abnormalities
+            else f"The saved MRI analysis highlighted: {abnormalities[0]}."
+        )
+        next_step = (
+            recommendations[0]
+            if recommendations
+            else "Please review this result with your doctor for final interpretation."
+        )
+    else:
+        summary = (
+            "The saved MRI analysis did not flag a major abnormality in this study."
+        )
+        next_step = (
+            recommendations[0]
+            if recommendations
+            else "Continue follow-up with your care team if symptoms change or persist."
+        )
+
+    measurement_summary = {
+        key: value
+        for key, value in measurements.items()
+        if not str(key).startswith("_")
+    }
+
     return {
         "case_id": case_id,
-        "summary": "Your MRI scan has been processed and is ready for clinician review.",
-        "next_step": "Please discuss the result with your physician for a final interpretation.",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "result_id": latest_result.get("id"),
+        "summary": summary,
+        "next_step": next_step,
+        "status": latest_result.get("analysis_status") or "completed",
+        "reviewed": bool(latest_result.get("is_reviewed")),
+        "severity_score": severity_score,
+        "key_findings": abnormalities[:3],
+        "measurements": measurement_summary,
+        "generated_at": created_at or datetime.now(timezone.utc).isoformat(),
     }
 
 

@@ -22,6 +22,22 @@ class AuthRepository:
     async def _get_anon(self):
         return await SupabaseProvider.get_client()
 
+    async def _get_profile_by_identity(
+        self, client: Any, table: str, user_id: str, columns: str = "*"
+    ) -> Optional[Dict[str, Any]]:
+        """Support both schema-correct user_id rows and legacy id-keyed rows."""
+        for key in ("user_id", "id"):
+            result = (
+                await client.table(table)
+                .select(columns)
+                .eq(key, user_id)
+                .limit(1)
+                .execute()
+            )
+            if result.data:
+                return result.data[0]
+        return None
+
     @async_retry(max_retries=3)
     async def create_auth_user(
         self, email: str, password: str, metadata: Dict[str, Any]
@@ -65,8 +81,7 @@ class AuthRepository:
     ) -> Optional[Dict[str, Any]]:
         """Fetch the full role profile for a specific auth user."""
         client = await self._get_admin()
-        result = await client.table(table).select("*").eq("user_id", user_id).limit(1).execute()
-        return result.data[0] if result.data else None
+        return await self._get_profile_by_identity(client, table, user_id)
 
     async def resolve_user_role(
         self, user_id: str, metadata_role: Optional[str] = None
@@ -99,14 +114,10 @@ class AuthRepository:
             ("patients", "patient"),
         ):
             try:
-                result = await (
-                    client.table(table_name)
-                    .select("user_id")
-                    .eq("user_id", user_id)
-                    .limit(1)
-                    .execute()
+                profile = await self._get_profile_by_identity(
+                    client, table_name, user_id, "id, user_id"
                 )
-                if result.data:
+                if profile:
                     return role_name
             except Exception:
                 continue

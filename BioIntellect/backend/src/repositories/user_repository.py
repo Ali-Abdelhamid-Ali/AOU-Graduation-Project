@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from src.db.supabase.client import SupabaseProvider
 from src.observability.logger import get_logger
-from src.repositories.schema_compat import sanitize_for_table
+from src.repositories.schema_compat import sanitize_for_table, select_columns_for_table
 from src.services.infrastructure.retry_utils import async_retry
 
 logger = get_logger("repository.user")
@@ -14,6 +14,46 @@ _USER_ROLE_SELECT_COLUMNS = (
     "is_active, created_at"
 )
 
+_PATIENT_SELECT_COLUMNS = select_columns_for_table(
+    "patients",
+    (
+        "id",
+        "user_id",
+        "hospital_id",
+        "mrn",
+        "first_name",
+        "last_name",
+        "first_name_ar",
+        "last_name_ar",
+        "email",
+        "phone",
+        "gender",
+        "date_of_birth",
+        "blood_type",
+        "avatar_url",
+        "national_id",
+        "passport_number",
+        "address",
+        "city",
+        "region_id",
+        "country_id",
+        "emergency_contact_name",
+        "emergency_contact_phone",
+        "emergency_contact_relation",
+        "allergies",
+        "chronic_conditions",
+        "current_medications",
+        "insurance_provider",
+        "insurance_number",
+        "primary_doctor_id",
+        "is_active",
+        "notes",
+        "settings",
+        "created_at",
+        "updated_at",
+    ),
+)
+
 
 class UserRepository:
     def __init__(self):
@@ -21,6 +61,38 @@ class UserRepository:
 
     async def _get_client(self):
         return await SupabaseProvider.get_admin()
+
+    async def _get_profile_from_table(
+        self, client: Any, table: str, user_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Read profiles using user_id first, then legacy rows keyed by id."""
+        for key in ("user_id", "id"):
+            result = (
+                await client.table(table)
+                .select("*")
+                .eq(key, user_id)
+                .limit(1)
+                .execute()
+            )
+            if result.data:
+                return result.data[0]
+        return None
+
+    async def _resolve_profile_lookup_key(
+        self, client: Any, table: str, user_id: str
+    ) -> Optional[str]:
+        """Find the active lookup key for profile rows."""
+        for key in ("user_id", "id"):
+            result = (
+                await client.table(table)
+                .select("id")
+                .eq(key, user_id)
+                .limit(1)
+                .execute()
+            )
+            if result.data:
+                return key
+        return None
 
     # â”پâ”پâ”پâ”پ USER ROLES â”پâ”پâ”پâ”پ
 
@@ -476,10 +548,7 @@ class UserRepository:
         """List all patients with optional filtering."""
         client = await self._get_client()
         try:
-            # Plan Section 7.B: Specific selectors
-            query = client.table("patients").select(
-                "id, mrn, first_name, last_name, hospital_id, created_at"
-            )
+            query = client.table("patients").select(_PATIENT_SELECT_COLUMNS)
 
             if filters:
                 for key, val in filters.items():
@@ -490,7 +559,8 @@ class UserRepository:
                             for unsafe in ("%", "_", ",", "(", ")", "{", "}"):
                                 search_term = search_term.replace(unsafe, "")
                             query = query.or_(
-                                f"first_name.ilike.%{search_term}%,last_name.ilike.%{search_term}%,mrn.ilike.%{search_term}%"
+                                "first_name.ilike.%{0}%,last_name.ilike.%{0}%,"
+                                "mrn.ilike.%{0}%,phone.ilike.%{0}%".format(search_term)
                             )
                         else:
                             query = query.eq(key, val)
@@ -549,10 +619,19 @@ class UserRepository:
         client = await self._get_client()
         try:
             payload = sanitize_for_table("patients", patient_data)
-            result = await (
-                client.table("patients")
+            result = (
+                await client.table("patients")
                 .update(payload)
                 .eq("id", patient_id)
+                .execute()
+            )
+            if result.data:
+                return result.data[0]
+
+            result = (
+                await client.table("patients")
+                .update(payload)
+                .eq("user_id", patient_id)
                 .execute()
             )
             return result.data[0] if result.data else None
@@ -579,8 +658,6 @@ class UserRepository:
         self, user_id: str, role: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """Get current user's profile from appropriate table."""
-        import asyncio
-
         client = await self._get_client()
 
         # If role is provided, query only that specific table
@@ -594,28 +671,14 @@ class UserRepository:
             }
             target_table = table_map.get(role)
             if target_table:
-                result = (
-                    await client.table(target_table)
-                    .select("*")
-                    .eq("user_id", user_id)
-                    .limit(1)
-                    .execute()
-                )
-                return result.data[0] if result.data else None
+                return await self._get_profile_from_table(client, target_table, user_id)
 
-        # Fallback to parallel execution if role is unknown or not provided
+        # Fallback to known profile tables when the role is missing or stale.
         tables = ["patients", "doctors", "nurses", "administrators"]
-
-        tasks = [
-            client.table(table).select("*").eq("user_id", user_id).limit(1).execute()
-            for table in tables
-        ]
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        for res in results:
-            if not isinstance(res, BaseException) and res.data:
-                return res.data[0]
+        for table in tables:
+            profile = await self._get_profile_from_table(client, table, user_id)
+            if profile:
+                return profile
 
         return None
 
@@ -624,8 +687,6 @@ class UserRepository:
         self, user_id: str, profile_data: Dict[str, Any], role: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """Updates user profile data across role tables safely."""
-        import asyncio
-
         client = await self._get_client()
 
         # Define allowed fields for each table to prevent Supabase errors
@@ -714,37 +775,36 @@ class UserRepository:
                     {k: v for k, v in profile_data.items() if k in allowed_fields},
                 )
                 if filtered_data:
-                    result = (
-                        await client.table(target_table)
+                    lookup_key = await self._resolve_profile_lookup_key(
+                        client, target_table, user_id
+                    )
+                    if not lookup_key:
+                        return None
+                    await (
+                        client.table(target_table)
                         .update(filtered_data)
-                        .eq("user_id", user_id)
+                        .eq(lookup_key, user_id)
                         .execute()
                     )
-                    return result.data[0] if result.data else None
+                return await self._get_profile_from_table(client, target_table, user_id)
 
         # Fallback to checked loop if role not provided or unknown
-        tasks = []
         for table, allowed_fields in table_fields.items():
             # Filter profile_data to only include fields that exist in this table
             filtered_data = sanitize_for_table(
                 table, {k: v for k, v in profile_data.items() if k in allowed_fields}
             )
             if filtered_data:
-                tasks.append(
+                lookup_key = await self._resolve_profile_lookup_key(client, table, user_id)
+                if not lookup_key:
+                    continue
+                await (
                     client.table(table)
                     .update(filtered_data)
-                    .eq("user_id", user_id)
+                    .eq(lookup_key, user_id)
                     .execute()
                 )
-
-        if not tasks:
-            return None
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        for res in results:
-            if not isinstance(res, BaseException) and getattr(res, "data", None):
-                return res.data[0]
+                return await self._get_profile_from_table(client, table, user_id)
 
         return None
 

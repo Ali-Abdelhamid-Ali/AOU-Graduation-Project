@@ -4,6 +4,7 @@ import { useAuth } from '@/store/AuthContext'
 import { TopBar } from '@/components/layout/TopBar'
 import { InputField } from '@/components/ui/InputField'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
+import { validateStrongPassword } from '@/utils/userFormUtils'
 import styles from './ResetPassword.module.css'
 
 /**
@@ -79,16 +80,9 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin, onBack }) => {
   const validateUpdateForm = () => {
     const { new_password, confirm_password } = passwordData
 
-    // Enforce 16-character complex password rules
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{16,}$/
-
-    if (!new_password) {
-      setValidationError('New password is required')
-      return false
-    }
-
-    if (!passwordRegex.test(new_password)) {
-      setValidationError('Password must be at least 16 characters and include uppercase, lowercase, numbers, and symbols for clinical-grade security.')
+    const passwordError = validateStrongPassword(new_password)
+    if (passwordError) {
+      setValidationError(passwordError)
       return false
     }
 
@@ -117,6 +111,7 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin, onBack }) => {
     const result = await updatePassword(passwordData.new_password, logoutAll)
     if (result && result.success) {
       setView('complete')
+      onResetSuccess?.(result)
       // Optional: auto-login or redirect after delay
     }
   }
@@ -153,7 +148,7 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin, onBack }) => {
                 onChange={(e) => handlePasswordChange('new_password', e.target.value)}
                 error={validationError}
                 required
-                helperText="For clinical-grade security, use 16+ characters with mixed cases, numbers, and symbols."
+                helperText="Use 8+ characters with uppercase, lowercase, a number, and a special character."
                 autoComplete="new-password"
               />
               <InputField

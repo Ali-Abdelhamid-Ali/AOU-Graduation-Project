@@ -12,6 +12,7 @@ from src.repositories.schema_compat import (
     normalize_audit_log,
     normalize_ecg_result_record,
     normalize_mri_result_record,
+    sanitize_for_table,
 )
 from src.services.infrastructure.memory_cache import global_cache
 from src.services.infrastructure.retry_utils import async_retry
@@ -44,46 +45,86 @@ class AnalyticsRepository:
         except (TypeError, ValueError):
             return None
 
-    async def _list_follow_up_appointments(self, patient_id: str) -> List[Dict[str, Any]]:
+    async def _fetch_people_maps(
+        self, case_rows: List[Dict[str, Any]]
+    ) -> tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
         client = await self._get_client()
-        result = await (
-            client.table("medical_cases")
-            .select(
-                "id, patient_id, assigned_doctor_id, follow_up_date, status, notes, chief_complaint, metadata"
-            )
-            .eq("patient_id", patient_id)
-            .not_.is_("follow_up_date", "null")
-            .order("follow_up_date", desc=True)
-            .execute()
-        )
-
-        case_rows = result.data or []
+        patient_ids = {row.get("patient_id") for row in case_rows if row.get("patient_id")}
         doctor_ids = {
             row.get("assigned_doctor_id")
             for row in case_rows
             if row.get("assigned_doctor_id")
         }
+
+        patients_by_id: Dict[str, Dict[str, Any]] = {}
+        if patient_ids:
+            patients_result = await (
+                client.table("patients")
+                .select("id, hospital_id, primary_doctor_id, first_name, last_name, mrn")
+                .in_("id", list(patient_ids))
+                .execute()
+            )
+            patients_by_id = {
+                row["id"]: row for row in (patients_result.data or []) if row.get("id")
+            }
+
         doctors_by_id: Dict[str, Dict[str, Any]] = {}
         if doctor_ids:
             doctors_result = await (
                 client.table("doctors")
-                .select("id, first_name, last_name, qualification")
+                .select("id, first_name, last_name, qualification, specialty")
                 .in_("id", list(doctor_ids))
                 .execute()
             )
             doctors_by_id = {
                 row["id"]: row for row in (doctors_result.data or []) if row.get("id")
             }
+        return patients_by_id, doctors_by_id
+
+    async def _hydrate_follow_up_appointments(
+        self, case_rows: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        patients_by_id, doctors_by_id = await self._fetch_people_maps(case_rows)
 
         appointments: List[Dict[str, Any]] = []
         for row in case_rows:
             appointment = build_follow_up_appointment(
                 row,
+                patient=patients_by_id.get(str(row.get("patient_id") or "")),
                 doctor=doctors_by_id.get(str(row.get("assigned_doctor_id") or "")),
             )
             if appointment:
                 appointments.append(appointment)
         return appointments
+
+    async def _get_follow_up_case_rows(
+        self,
+        *,
+        filter_field: Optional[str] = None,
+        filter_value: Optional[str] = None,
+        hospital_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        client = await self._get_client()
+        query = client.table("medical_cases").select(
+            "id, case_number, patient_id, hospital_id, assigned_doctor_id, created_by_doctor_id, follow_up_date, status, priority, notes, chief_complaint, metadata"
+        )
+        if filter_field and filter_value:
+            query = query.eq(filter_field, filter_value)
+        if hospital_id:
+            query = query.eq("hospital_id", hospital_id)
+
+        result = await (
+            query.not_.is_("follow_up_date", "null")
+            .order("follow_up_date", desc=False)
+            .execute()
+        )
+        return result.data or []
+
+    async def _list_follow_up_appointments(self, patient_id: str) -> List[Dict[str, Any]]:
+        case_rows = await self._get_follow_up_case_rows(
+            filter_field="patient_id", filter_value=patient_id
+        )
+        return await self._hydrate_follow_up_appointments(case_rows)
 
     async def _list_api_audit_logs_since(self, start_time: str) -> List[Dict[str, Any]]:
         client = await self._get_client()
@@ -180,14 +221,58 @@ class AnalyticsRepository:
     async def get_health_trends(
         self, patient_id: str, days: int = 30
     ) -> List[Dict[str, Any]]:
-        """Fetch health trend data for visualizations."""
-        return [
-            {"date": "2024-03-01", "score": 85},
-            {"date": "2024-03-05", "score": 88},
-            {"date": "2024-03-10", "score": 92},
-            {"date": "2024-03-15", "score": 90},
-            {"date": "2024-03-20", "score": 95},
+        """Fetch health trend data derived from persisted ECG and MRI results."""
+        client = await self._get_client()
+        start_date = (datetime.now() - timedelta(days=max(days, 1))).isoformat()
+
+        ecg_result, mri_result = await asyncio.gather(
+            client.table("ecg_results")
+            .select("created_at, rhythm_confidence")
+            .eq("patient_id", patient_id)
+            .gte("created_at", start_date)
+            .order("created_at", desc=False)
+            .limit(100)
+            .execute(),
+            client.table("mri_segmentation_results")
+            .select("created_at, severity_score")
+            .eq("patient_id", patient_id)
+            .gte("created_at", start_date)
+            .order("created_at", desc=False)
+            .limit(100)
+            .execute(),
+            return_exceptions=True,
+        )
+
+        buckets: Dict[str, List[float]] = {}
+
+        if not isinstance(ecg_result, Exception):
+            for row in ecg_result.data or []:
+                timestamp = str(row.get("created_at") or "")
+                date_key = timestamp[:10]
+                if not date_key:
+                    continue
+                score = float(row.get("rhythm_confidence") or 0) * 100
+                buckets.setdefault(date_key, []).append(max(0.0, min(score, 100.0)))
+
+        if not isinstance(mri_result, Exception):
+            for row in mri_result.data or []:
+                timestamp = str(row.get("created_at") or "")
+                date_key = timestamp[:10]
+                if not date_key:
+                    continue
+                severity = float(row.get("severity_score") or 0)
+                score = 100.0 - max(0.0, min(severity, 100.0))
+                buckets.setdefault(date_key, []).append(score)
+
+        trend = [
+            {
+                "date": date_key,
+                "score": round(sum(scores) / len(scores), 1),
+            }
+            for date_key, scores in sorted(buckets.items())
+            if scores
         ]
+        return trend[-8:]
 
     async def list_appointments(self, patient_id: str) -> List[Dict[str, Any]]:
         """Fetch follow-up appointments derived from medical cases."""
@@ -199,6 +284,107 @@ class AnalyticsRepository:
             )
             return []
 
+    async def list_appointments_for_user(
+        self,
+        *,
+        role: str,
+        actor_id: Optional[str] = None,
+        hospital_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Fetch appointments scoped to the current actor."""
+        try:
+            if role == "patient" and actor_id:
+                return await self._list_follow_up_appointments(actor_id)
+            if role == "doctor" and actor_id:
+                rows = await self._get_follow_up_case_rows(
+                    filter_field="assigned_doctor_id", filter_value=actor_id
+                )
+                return await self._hydrate_follow_up_appointments(rows)
+            if role in {"admin", "nurse"} and hospital_id:
+                rows = await self._get_follow_up_case_rows(hospital_id=hospital_id)
+                return await self._hydrate_follow_up_appointments(rows)
+            if role == "super_admin":
+                rows = await self._get_follow_up_case_rows()
+                return await self._hydrate_follow_up_appointments(rows)
+            return []
+        except Exception as e:
+            logger.error(f"Error listing appointments for role {role}: {str(e)}")
+            return []
+
+    async def get_patient_context(self, patient_id: str) -> Optional[Dict[str, Any]]:
+        client = await self._get_client()
+        result = await (
+            client.table("patients")
+            .select("id, hospital_id, primary_doctor_id, first_name, last_name, mrn")
+            .eq("id", patient_id)
+            .limit(1)
+            .execute()
+        )
+        return result.data[0] if result.data else None
+
+    async def get_appointment_case(self, appointment_id: str) -> Optional[Dict[str, Any]]:
+        client = await self._get_client()
+        result = await (
+            client.table("medical_cases")
+            .select(
+                "id, case_number, patient_id, hospital_id, assigned_doctor_id, created_by_doctor_id, follow_up_date, status, priority, notes, chief_complaint, metadata"
+            )
+            .eq("id", appointment_id)
+            .limit(1)
+            .execute()
+        )
+        return result.data[0] if result.data else None
+
+    async def get_appointment(self, appointment_id: str) -> Optional[Dict[str, Any]]:
+        case_record = await self.get_appointment_case(appointment_id)
+        if not case_record:
+            return None
+        appointments = await self._hydrate_follow_up_appointments([case_record])
+        return appointments[0] if appointments else None
+
+    @async_retry(max_retries=3)
+    async def create_appointment(self, data: dict):
+        """Create a follow-up appointment backed by the medical_cases schema."""
+        client = await self._get_client()
+        appointment_date = str(data.get("appointment_date") or "").strip()[:10]
+        if not appointment_date:
+            raise ValueError("Appointment date is required.")
+
+        metadata = {
+            "appointment_status": data.get("status") or "Scheduled",
+            "appointment_type": data.get("appointment_type") or "Follow-up",
+        }
+        for key, metadata_key in (
+            ("appointment_time", "appointment_time"),
+            ("reason", "appointment_reason"),
+            ("department", "department"),
+            ("notes", "appointment_notes"),
+        ):
+            if data.get(key) is not None:
+                metadata[metadata_key] = data.get(key)
+
+        payload = sanitize_for_table(
+            "medical_cases",
+            {
+                "patient_id": data.get("patient_id"),
+                "hospital_id": data.get("hospital_id"),
+                "assigned_doctor_id": data.get("doctor_id"),
+                "created_by_doctor_id": data.get("created_by_doctor_id"),
+                "status": data.get("case_status") or "open",
+                "priority": data.get("priority") or "normal",
+                "chief_complaint": data.get("reason"),
+                "notes": data.get("notes"),
+                "follow_up_date": appointment_date,
+                "metadata": metadata,
+            },
+        )
+
+        result = await client.table("medical_cases").insert(payload).execute()
+        if result.data:
+            await self.cache.clear()
+            return await self.get_appointment(result.data[0]["id"])
+        return None
+
     @async_retry(max_retries=3)
     async def update_appointment(self, appointment_id: str, data: dict):
         """Update follow-up appointment data stored on medical_cases."""
@@ -207,7 +393,7 @@ class AnalyticsRepository:
             current = await (
                 client.table("medical_cases")
                 .select(
-                    "id, patient_id, assigned_doctor_id, follow_up_date, status, notes, chief_complaint, metadata"
+                    "id, case_number, patient_id, hospital_id, assigned_doctor_id, created_by_doctor_id, follow_up_date, status, priority, notes, chief_complaint, metadata"
                 )
                 .eq("id", appointment_id)
                 .limit(1)
@@ -232,6 +418,8 @@ class AnalyticsRepository:
                 metadata["appointment_time"] = data.get("appointment_time")
             if data.get("status") is not None:
                 metadata["appointment_status"] = data.get("status")
+            if data.get("appointment_type") is not None:
+                metadata["appointment_type"] = data.get("appointment_type")
             if data.get("reason") is not None:
                 metadata["appointment_reason"] = data.get("reason")
             if data.get("department") is not None:
@@ -252,7 +440,7 @@ class AnalyticsRepository:
                 case_record = updated.data[0] if updated.data else case_record
 
             await self.cache.clear()
-            return build_follow_up_appointment(case_record)
+            return await self.get_appointment(appointment_id)
         except Exception as e:
             logger.error(f"Error updating appointment {appointment_id}: {str(e)}")
             return None

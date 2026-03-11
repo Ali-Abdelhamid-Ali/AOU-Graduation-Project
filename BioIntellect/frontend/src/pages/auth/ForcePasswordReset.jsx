@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useAuth } from '@/store/AuthContext'
-import { TopBar } from '@/components/layout/TopBar'
 import { InputField } from '@/components/ui/InputField'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
+import { validateStrongPassword } from '@/utils/userFormUtils'
 import styles from './ForcePasswordReset.module.css'
 
 export const ForcePasswordReset = () => {
@@ -20,8 +20,9 @@ export const ForcePasswordReset = () => {
         e.preventDefault()
         setError('')
 
-        if (formData.newPassword.length < 8) {
-            setError('Password must be at least 8 characters long.')
+        const passwordError = validateStrongPassword(formData.newPassword)
+        if (passwordError) {
+            setError(passwordError)
             return
         }
 
@@ -83,7 +84,8 @@ export const ForcePasswordReset = () => {
                             value={formData.newPassword}
                             onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
                             required
-                            placeholder="At least 8 characters"
+                            placeholder="Use 8+ characters"
+                            helperText="Include uppercase, lowercase, a number, and a special character."
                         />
                         <InputField
                             id="confirm-password"
@@ -129,7 +131,7 @@ export const ForcePasswordReset = () => {
                         <ul>
                             <li>Use 8+ characters</li>
                             <li>Mix uppercase & lowercase</li>
-                            <li>Include numbers & symbols</li>
+                            <li>Include a number and a symbol</li>
                         </ul>
                     </div>
                 </motion.div>

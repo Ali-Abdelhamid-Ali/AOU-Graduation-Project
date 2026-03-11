@@ -150,8 +150,11 @@ class ReportGenerationDTO(BaseModel):
 class AppointmentUpdateDTO(BaseModel):
     """DTO for updating appointment records."""
 
-    appointment_date: Optional[datetime] = Field(
+    appointment_date: Optional[date | datetime] = Field(
         None, description="New appointment date and time"
+    )
+    appointment_time: Optional[str] = Field(
+        None, description="Updated appointment time in HH:MM format"
     )
     status: Optional[str] = Field(
         None,
@@ -163,3 +166,35 @@ class AppointmentUpdateDTO(BaseModel):
     )
     department: Optional[str] = Field(None, description="Department if applicable")
     reason: Optional[str] = Field(None, description="Reason for appointment or update")
+    appointment_type: Optional[str] = Field(
+        None, description="Appointment type label shown to patients and staff"
+    )
+
+
+class AppointmentCreateDTO(BaseModel):
+    """DTO for creating follow-up appointments backed by medical cases."""
+
+    patient_id: Optional[str] = Field(
+        None, description="Patient profile ID. Required for staff-created appointments."
+    )
+    doctor_id: Optional[str] = Field(
+        None, description="Assigned doctor profile ID if known"
+    )
+    hospital_id: Optional[str] = Field(
+        None, description="Hospital ID. Defaults from the patient or signed-in user."
+    )
+    appointment_date: date | datetime = Field(
+        ..., description="Appointment date for the follow-up visit"
+    )
+    appointment_time: Optional[str] = Field(
+        None, description="Appointment time in HH:MM format"
+    )
+    appointment_type: str = Field(
+        default="Follow-up", description="Appointment type label"
+    )
+    reason: str = Field(
+        ..., min_length=5, max_length=500, description="Reason for the appointment"
+    )
+    department: Optional[str] = Field(None, description="Department or specialty")
+    notes: Optional[str] = Field(None, description="Additional scheduling notes")
+    priority: str = Field(default="normal", description="Medical case priority")

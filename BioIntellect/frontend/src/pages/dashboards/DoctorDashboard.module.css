@@ -4,33 +4,37 @@
 .actionCard,
 .patientCard,
 .errorBanner {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.86));
-  border: 1px solid rgba(0, 102, 204, 0.08);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
+  background:
+    radial-gradient(circle at top right, rgba(0, 168, 107, 0.08), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 252, 251, 0.92));
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 28px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
 
 .heroSection {
   display: grid;
   gap: var(--spacing-lg);
-  padding: clamp(1.2rem, 3vw, 2rem);
+  padding: clamp(1.25rem, 3vw, 2rem);
   margin-bottom: var(--spacing-lg);
 }
 
 .heroSection h2 {
-  margin-bottom: var(--spacing-sm);
+  margin: 0 0 var(--spacing-sm);
+  font-size: clamp(1.7rem, 2.8vw, 2.45rem);
+  letter-spacing: -0.03em;
 }
 
 .heroSection p {
-  margin-bottom: 0;
+  margin: 0;
 }
 
 .kicker {
   display: inline-flex;
   margin-bottom: var(--spacing-sm);
-  padding: 6px 12px;
+  padding: 7px 12px;
   border-radius: var(--radius-full);
-  background: var(--color-secondary-bg);
+  background: rgba(0, 168, 107, 0.1);
   color: var(--color-secondary-dark);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -72,7 +76,7 @@
 }
 
 .metricCard {
-  min-height: 160px;
+  min-height: 168px;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
@@ -84,8 +88,9 @@
 }
 
 .metricValue {
-  font-size: clamp(1.6rem, 4vw, 2.2rem);
-  line-height: 1.1;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .metricHelper,
@@ -96,6 +101,7 @@
 .emptyPanel p,
 .errorBanner p {
   margin: 0;
+  color: var(--color-text-muted);
 }
 
 .panelHeading,
@@ -114,7 +120,7 @@
 }
 
 .panelHeading h3 {
-  margin-bottom: 4px;
+  margin: 0 0 4px;
 }
 
 .actionGrid {
@@ -124,14 +130,20 @@
 .actionCard {
   text-align: start;
   padding: var(--spacing-lg);
-  border: 1px solid transparent;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(236, 253, 245, 0.82));
   cursor: pointer;
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .actionCard:hover:not(:disabled) {
   transform: translateY(-2px);
   border-color: rgba(0, 168, 107, 0.18);
+  box-shadow: 0 18px 32px rgba(0, 168, 107, 0.12);
 }
 
 .actionCardDisabled {
@@ -144,7 +156,7 @@
 .resultItem,
 .notificationItem {
   padding: var(--spacing-sm) 0;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .timelineItem:last-child,
@@ -156,7 +168,7 @@
 
 .timelineItem {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr);
+  grid-template-columns: 112px minmax(0, 1fr);
   gap: var(--spacing-md);
   align-items: start;
 }
@@ -176,7 +188,7 @@
 }
 
 .patientList {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
 .patientCard {
@@ -186,7 +198,7 @@
 }
 
 .patientCard span {
-  color: var(--color-text-muted);
+  color: var(--color-text-light);
   font-size: var(--font-size-sm);
 }
 
@@ -246,13 +258,15 @@
       rgba(255, 255, 255, 0.82) 12px,
       rgba(255, 255, 255, 0.82) 24px
     );
-  border-radius: var(--radius-lg);
+  border-radius: 22px;
   border: 1px dashed rgba(0, 168, 107, 0.16);
 }
 
 .errorBanner {
   margin-bottom: var(--spacing-lg);
-  background: linear-gradient(180deg, rgba(254, 226, 226, 0.96), rgba(255, 255, 255, 0.96));
+  background:
+    radial-gradient(circle at top right, rgba(239, 68, 68, 0.12), transparent 32%),
+    linear-gradient(180deg, rgba(254, 226, 226, 0.96), rgba(255, 255, 255, 0.96));
   border-color: rgba(239, 68, 68, 0.18);
 }
 
@@ -262,7 +276,7 @@
 
 .loadingCard {
   min-height: 160px;
-  border-radius: var(--radius-xl);
+  border-radius: 28px;
 }
 
 html.dark .heroSection,
@@ -271,7 +285,10 @@ html.dark .metricCard,
 html.dark .actionCard,
 html.dark .patientCard,
 html.dark .errorBanner {
-  background: linear-gradient(180deg, rgba(26, 26, 30, 0.96), rgba(17, 17, 20, 0.92));
+  background:
+    radial-gradient(circle at top right, rgba(0, 168, 107, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(20, 24, 34, 0.96), rgba(10, 14, 22, 0.94));
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 @media (max-width: 720px) {

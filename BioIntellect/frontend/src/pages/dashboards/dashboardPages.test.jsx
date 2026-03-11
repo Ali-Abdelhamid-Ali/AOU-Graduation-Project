@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 
 import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
 import { DoctorDashboard } from '@/pages/dashboards/DoctorDashboard'
@@ -29,6 +30,7 @@ vi.mock('@/store/AuthContext', () => ({
 const getAdminOverview = vi.fn()
 const getDoctorOverview = vi.fn()
 const listUsers = vi.fn()
+const listPatients = vi.fn()
 
 vi.mock('@/services/api', () => ({
   dashboardAPI: {
@@ -37,6 +39,9 @@ vi.mock('@/services/api', () => ({
   },
   usersAPI: {
     list: (...args) => listUsers(...args),
+  },
+  patientsAPI: {
+    list: (...args) => listPatients(...args),
   },
 }))
 
@@ -55,6 +60,7 @@ describe('dashboard pages', () => {
     getAdminOverview.mockReset()
     getDoctorOverview.mockReset()
     listUsers.mockReset()
+    listPatients.mockReset()
   })
 
   it('renders admin dashboard with unavailable capability panels and user table', async () => {
@@ -63,11 +69,11 @@ describe('dashboard pages', () => {
         stats: {
           patients: { label: 'Patients', value: 10, helper: '2 active users', available: true, tone: 'info' },
           doctors: { label: 'Doctors', value: 4, helper: '12 medical cases tracked', available: true, tone: 'success' },
-          appointments: { label: 'Appointments', value: null, helper: 'Scheduling module not configured in the current schema.', available: false, tone: 'warning' },
+          appointments: { label: 'Appointments', value: 6, helper: '2 upcoming follow-up appointments in the current scope.', available: true, tone: 'success' },
           revenue: { label: 'Revenue', value: null, helper: 'Billing and payments module not configured in the current schema.', available: false, tone: 'warning' },
         },
         charts: {
-          daily_appointments_trend: { available: false, message: 'Appointment scheduling module not configured.' },
+          daily_appointments_trend: { available: true, message: 'Daily follow-up load derived from medical_cases.follow_up_date.', data: [{ label: '2026-03-12', value: 2 }] },
           revenue_by_month: { available: false, message: 'Billing and payments module not configured.' },
           disease_distribution: {
             available: true,
@@ -86,7 +92,7 @@ describe('dashboard pages', () => {
         },
         alerts: [],
         capabilities: {
-          appointments: false,
+          appointments: true,
           billing: false,
           messaging: true,
           disease_distribution: true,
@@ -99,14 +105,22 @@ describe('dashboard pages', () => {
       if (type === 'doctors') return [{ id: 'doctor-1', first_name: 'Khaled', last_name: 'Hassan', specialty: 'Cardiology', hospital_name: 'Saudi German Hospital', is_active: true }]
       return []
     })
+    listPatients.mockResolvedValue({
+      data: [{ id: 'patient-1', first_name: 'Nour', last_name: 'Ali', medical_record_number: 'MRN-1', hospital_name: 'Saudi German Hospital', is_active: true }],
+    })
 
-    render(<AdminDashboard onLogout={vi.fn()} />)
+    render(
+      <MemoryRouter initialEntries={['/admin-dashboard']}>
+        <AdminDashboard onLogout={vi.fn()} />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Administrative Operations Dashboard')).toBeTruthy()
     })
 
-    expect(screen.getByText('Capability disabled')).toBeTruthy()
+    expect(screen.getAllByText('Capability disabled').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('6').length).toBeGreaterThan(0)
     expect(screen.getByText('User Management')).toBeTruthy()
     expect(screen.getByText('Nour Ali')).toBeTruthy()
     expect(screen.getByText('Khaled Hassan')).toBeTruthy()
@@ -116,9 +130,16 @@ describe('dashboard pages', () => {
     getDoctorOverview.mockResolvedValue({
       data: {
         today_schedule: {
-          available: false,
-          message: 'Scheduling module not configured.',
-          data: [],
+          available: true,
+          message: 'No appointments scheduled for today. Showing the next follow-up visits.',
+          data: [
+            {
+              id: 'appointment-1',
+              time: '09:00',
+              patient_name: 'Layla Nabil',
+              reason: 'Follow-up visit',
+            },
+          ],
         },
         patient_queue: [
           {
@@ -155,7 +176,7 @@ describe('dashboard pages', () => {
           },
         ],
         capabilities: {
-          appointments: false,
+          appointments: true,
           billing: false,
           messaging: true,
           disease_distribution: false,
@@ -163,15 +184,19 @@ describe('dashboard pages', () => {
       },
     })
 
-    render(<DoctorDashboard onLogout={vi.fn()} />)
+    render(
+      <MemoryRouter initialEntries={['/doctor-dashboard']}>
+        <DoctorDashboard onLogout={vi.fn()} />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
-      expect(screen.getByText('Doctor Dashboard')).toBeTruthy()
+      expect(screen.getByText('Atrial flutter')).toBeTruthy()
     })
 
-    expect(screen.getByText('Scheduling module not configured')).toBeTruthy()
-    expect(screen.getByText('Layla Nabil')).toBeTruthy()
-    expect(screen.getByText('Atrial flutter')).toBeTruthy()
+    expect(screen.getAllByText('Layla Nabil').length).toBeGreaterThan(0)
+    expect(screen.getByText('09:00')).toBeTruthy()
+    expect(screen.getAllByText('Layla Nabil').length).toBeGreaterThan(0)
     expect(screen.getByText('Unread message')).toBeTruthy()
   })
 })

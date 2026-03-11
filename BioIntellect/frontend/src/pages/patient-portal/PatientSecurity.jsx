@@ -3,10 +3,11 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@/store/AuthContext'
 import { InputField } from '@/components/ui/InputField'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
+import { validateStrongPassword } from '@/utils/userFormUtils'
 import styles from './PatientSecurity.module.css'
 
 export const PatientSecurity = () => {
-    const { updatePassword, signOut, currentUser } = useAuth()
+    const { updatePassword, signOut } = useAuth()
     const [view, setView] = useState('form') // 'form' | 'success'
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState({ type: '', text: '' })
@@ -30,10 +31,9 @@ export const PatientSecurity = () => {
             return
         }
 
-        // Enforce 16-character complex password rules
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]).{16,}$/
-        if (!passwordRegex.test(formData.newPassword)) {
-            setMessage({ type: 'error', text: 'Password must be at least 16 characters and include uppercase, lowercase, numbers, and symbols.' })
+        const passwordError = validateStrongPassword(formData.newPassword)
+        if (passwordError) {
+            setMessage({ type: 'error', text: passwordError })
             return
         }
 
@@ -132,8 +132,8 @@ export const PatientSecurity = () => {
                                 value={formData.newPassword}
                                 onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
                                 required
-                                placeholder="Min 16 characters"
-                                helperText="16+ characters, Uppercase, Lowercase, Number, Symbol"
+                                placeholder="Use 8+ characters"
+                                helperText="8+ characters, uppercase, lowercase, number, and symbol"
                             />
 
                             <InputField
@@ -197,7 +197,7 @@ export const PatientSecurity = () => {
                     >
                         Log Out From All Other Devices
                     </button>
-                    {message.type === 'success' && !view === 'success' && (
+                    {message.type === 'success' && view !== 'success' && (
                         <div className={`${styles.message} ${styles.success}`} style={{ marginTop: '1rem' }}>
                             {message.text}
                         </div>

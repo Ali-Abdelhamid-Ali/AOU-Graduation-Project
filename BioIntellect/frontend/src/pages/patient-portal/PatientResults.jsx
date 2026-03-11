@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom'
 import { medicalService } from '@/services/medical.service'
 import { Skeleton } from '@/components/ui/Skeleton'
 import SkeletonText from '@/components/ui/SkeletonText'
-import SkeletonCircle from '@/components/ui/SkeletonCircle'
 import styles from './PatientResults.module.css'
 
 export const PatientResults = () => {
@@ -129,7 +128,7 @@ export const PatientResults = () => {
                         <p className={styles.summary}>{result.summary}</p>
                         <button
                             className={styles.viewDetails}
-                            onClick={() => navigate(result.type === 'ecg' ? '/ecg-analysis' : '/mri-segmentation')}
+                            onClick={() => navigate(result.type === 'ecg' ? '/ecg-analysis' : '/mri-analysis')}
                         >
                             View Full Report →
                         </button>

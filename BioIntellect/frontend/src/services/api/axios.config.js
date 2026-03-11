@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_BASE_URL } from './baseUrl';
+import { normalizeApiErrorPayload } from '@/utils/apiErrorUtils';
 
 /**
  * Resilient API Client with:
@@ -78,13 +79,13 @@ apiClient.interceptors.response.use(
                     ? `The API request timed out while contacting ${API_BASE_URL}.`
                     : `Cannot reach the API server at ${API_BASE_URL}.`;
 
-            return Promise.reject({
+            return Promise.reject(normalizeApiErrorPayload({
                 detail,
                 code: error.code || 'NETWORK_ERROR',
-            });
+            }));
         }
 
-        return Promise.reject(error.response.data);
+        return Promise.reject(normalizeApiErrorPayload(error.response.data));
     }
 );
 

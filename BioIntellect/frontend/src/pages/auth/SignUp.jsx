@@ -7,7 +7,8 @@ import { InputField } from '@/components/ui/InputField'
 import { SelectField } from '@/components/ui/SelectField'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
-import { specialtyOptions, adminOptions } from '@/config/options'
+import { adminOptions } from '@/config/options'
+import { validateStrongPassword } from '@/utils/userFormUtils'
 import styles from './SignUp.module.css'
 
 export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
@@ -27,13 +28,20 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
     password: '',
     confirmPassword: '',
     role: 'admin',
-    dateOfBirth: '',
-    gender: 'male',
+    employeeId: '',
+    department: '',
     countryId: '',
     regionId: '',
     hospitalId: ''
   })
   const [validationErrors, setValidationErrors] = useState({})
+  const defaultCountryId = useMemo(() => {
+    if (!countries.length) {
+      return ''
+    }
+
+    return countries.find((country) => country.country_name === 'Egypt')?.country_id || countries[0].country_id
+  }, [countries])
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -66,30 +74,18 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
 
   // Set default country (Egypt) once countries are loaded
   useEffect(() => {
-    if (countries.length > 0 && !formData.countryId) {
-      const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
-      if (egypt) {
-        handleInputChange('countryId', egypt.country_id)
-        selectCountry(egypt.country_id)
-      }
+    if (!defaultCountryId || formData.countryId) {
+      return
     }
-  }, [countries])
 
-  // Determine available roles based on main role selection
-  const roleOptions = useMemo(() => {
-    if (userRole === 'doctor') {
-      return specialtyOptions
-    }
-    if (userRole === 'administrator') {
-      return adminOptions
-    }
-    return adminOptions
-  }, [userRole])
+    setFormData((prev) => ({
+      ...prev,
+      countryId: defaultCountryId,
+    }))
+    selectCountry(defaultCountryId)
+  }, [defaultCountryId, formData.countryId, selectCountry])
 
-  const genderOptions = [
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-  ]
+  const roleOptions = useMemo(() => adminOptions, [])
 
   const validateForm = () => {
     const errors = {}
@@ -105,19 +101,26 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
 
     if (!formData.password) {
       errors.password = 'Password is required'
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters'
+    } else {
+      const passwordError = validateStrongPassword(formData.password)
+      if (passwordError) {
+        errors.password = passwordError
+      }
     }
 
     if (formData.password !== formData.confirmPassword) {
       errors.confirmPassword = 'Passwords do not match'
     }
 
-    if (!formData.hospitalId) errors.hospitalId = 'Clinical hospital selection is required'
-
-    if (userRole === 'patient') {
-      if (!formData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required'
+    if (!formData.employeeId.trim()) {
+      errors.employeeId = 'Employee ID is required'
     }
+
+    if (!formData.department.trim()) {
+      errors.department = 'Department is required'
+    }
+
+    if (!formData.hospitalId) errors.hospitalId = 'Clinical hospital selection is required'
 
     return errors
   }
@@ -167,7 +170,7 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
           <div className={styles.header}>
             <h1 className={styles.title}>Create Account</h1>
             <p className={styles.subtitle}>
-              Join BioIntellect as a {userRole === 'doctor' ? 'Medical Professional' : 'System Administrator'}
+              Provision a BioIntellect administrator account with the required operational details.
             </p>
           </div>
 
@@ -211,13 +214,30 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
             />
 
             <SelectField
-              label={userRole === 'doctor' ? 'Specialty' : ['admin', 'administrator', 'super_admin'].includes(userRole) ? 'System Role' : 'Role'}
+              label="System Role"
               value={formData.role}
               onChange={(e) => handleInputChange('role', e.target.value)}
               options={roleOptions}
               error={validationErrors.role}
               required
             />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <InputField
+                label="Employee ID"
+                value={formData.employeeId}
+                onChange={(e) => handleInputChange('employeeId', e.target.value)}
+                error={validationErrors.employeeId}
+                required
+              />
+              <InputField
+                label="Department"
+                value={formData.department}
+                onChange={(e) => handleInputChange('department', e.target.value)}
+                error={validationErrors.department}
+                required
+              />
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <SearchableSelect
@@ -248,43 +268,6 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
               error={validationErrors.hospitalId}
             />
 
-            {userRole === 'doctor' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <InputField
-                  label="Medical License #"
-                  placeholder="LIC-XXXXX"
-                  value={formData.licenseNumber}
-                  onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
-                  required
-                />
-                <InputField
-                  label="Phone Number"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                />
-              </div>
-            )}
-
-            {userRole === 'patient' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <InputField
-                  label="Date of Birth"
-                  type="date"
-                  value={formData.dateOfBirth}
-                  onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                  error={validationErrors.dateOfBirth}
-                  required
-                />
-                <SelectField
-                  label="Gender"
-                  value={formData.gender}
-                  onChange={(e) => handleInputChange('gender', e.target.value)}
-                  options={genderOptions}
-                  required
-                />
-              </div>
-            )}
-
             <InputField
               label="Password"
               type="password"
@@ -292,6 +275,7 @@ export const SignUp = ({ onSignUpSuccess, onLoginClick, onBack }) => {
               onChange={(e) => handleInputChange('password', e.target.value)}
               error={validationErrors.password}
               required
+              helperText="Use 8+ characters with uppercase, lowercase, a number, and a special character."
             />
 
             <InputField

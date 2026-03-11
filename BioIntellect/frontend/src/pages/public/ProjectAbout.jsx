@@ -1,12 +1,18 @@
+import { Suspense, lazy } from 'react'
 import { motion } from 'framer-motion'
 import { TopBar } from '@/components/layout/TopBar'
-import { ProjectInfoModelViewer } from '../../components/clinical/ProjectInfoModelViewer'
 import styles from './ProjectAbout.module.css'
 
 // Professional Icon Imports
 import analyticsIcon from '@/assets/images/icons/analytics.png'
 import securityIcon from '@/assets/images/icons/security.png'
 import insightsIcon from '@/assets/images/icons/insights.png'
+
+const ProjectInfoModelViewer = lazy(() =>
+    import('../../components/clinical/ProjectInfoModelViewer').then((module) => ({
+        default: module.ProjectInfoModelViewer,
+    }))
+)
 
 /**
  * ProjectAbout Component - Clinical Gateway
@@ -62,7 +68,9 @@ export const ProjectAbout = ({ onBack }) => {
                         </div>
                         <div className={styles.volumetricStage}>
                             <div className={styles.webglCanvasWrapper}>
-                                <ProjectInfoModelViewer type="heart" />
+                                <Suspense fallback={null}>
+                                    <ProjectInfoModelViewer type="heart" />
+                                </Suspense>
                             </div>
                         </div>
                         <div className={styles.studioFooter}>
@@ -79,7 +87,9 @@ export const ProjectAbout = ({ onBack }) => {
                         </div>
                         <div className={styles.volumetricStage}>
                             <div className={styles.webglCanvasWrapper}>
-                                <ProjectInfoModelViewer type="brain" />
+                                <Suspense fallback={null}>
+                                    <ProjectInfoModelViewer type="brain" />
+                                </Suspense>
                             </div>
                         </div>
                         <div className={styles.studioFooter}>

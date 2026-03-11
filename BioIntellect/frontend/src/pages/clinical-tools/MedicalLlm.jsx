@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/store/AuthContext'
 import { llmAPI, patientsAPI } from '@/services/api'
+import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { TopBar } from '@/components/layout/TopBar'
 import { SelectField } from '@/components/ui/SelectField'
 import { LlmDisclaimer } from '../../components/clinical/LlmDisclaimer'
@@ -18,6 +19,7 @@ export const MedicalLlm = ({ onBack }) => {
     const [patients, setPatients] = useState([])
     const [selectedPatientId, setSelectedPatientId] = useState('')
     const [error, setError] = useState(null)
+    const [patientLoadError, setPatientLoadError] = useState('')
     const messagesEndRef = useRef(null)
     const isPatient = userRole === 'patient'
 
@@ -28,13 +30,21 @@ export const MedicalLlm = ({ onBack }) => {
                 try {
                     const response = await patientsAPI.list({ is_active: true, limit: 100 })
                     if (response.success) {
-                        setPatients(response.data)
-                        if (response.data.length > 0) {
-                            setSelectedPatientId(response.data[0].id)
-                        }
+                        const loadedPatients = response.data || []
+                        setPatients(loadedPatients)
+                        setSelectedPatientId(loadedPatients[0]?.id || '')
+                        setPatientLoadError(
+                            loadedPatients.length
+                                ? ''
+                                : 'No active patient records are available for this doctor account yet.'
+                        )
                     }
                 } catch (err) {
                     console.error('Failed to load patients:', err)
+                    setPatients([])
+                    setPatientLoadError(
+                        getApiErrorMessage(err, 'Failed to load the patient list.')
+                    )
                 }
             }
             loadPatients()
@@ -97,6 +107,7 @@ export const MedicalLlm = ({ onBack }) => {
     }
 
     const loadConversation = async (conversation) => {
+        setError(null)
         setCurrentConversation(conversation)
         try {
             const response = await llmAPI.getMessages(conversation.id)
@@ -111,6 +122,17 @@ export const MedicalLlm = ({ onBack }) => {
         } catch (err) {
             console.error('Failed to load messages:', err)
         }
+    }
+
+    const formatConversationTime = (value) => {
+        if (!value) {
+            return 'No activity yet'
+        }
+
+        return new Date(value).toLocaleString([], {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+        })
     }
 
     const sendMessage = async () => {
@@ -186,6 +208,13 @@ export const MedicalLlm = ({ onBack }) => {
                                         value: p.id,
                                         label: `${p.first_name} ${p.last_name}`
                                     }))}
+                                    disabled={!patients.length}
+                                    error={patientLoadError || undefined}
+                                    helperText={
+                                        !patientLoadError
+                                            ? 'Choose the patient whose conversation context you want to open.'
+                                            : undefined
+                                    }
                                 />
                             </div>
                             <div className={styles.contextItem}>
@@ -194,6 +223,28 @@ export const MedicalLlm = ({ onBack }) => {
                             </div>
                         </>
                     )}
+                    <div className={styles.contextItem}>
+                        <strong>Recent Conversations</strong>
+                        {conversations.length > 0 ? (
+                            <div className={styles.conversationList}>
+                                {conversations.map((conversation) => (
+                                    <button
+                                        key={conversation.id}
+                                        type="button"
+                                        className={`${styles.conversationButton} ${currentConversation?.id === conversation.id ? styles.conversationButtonActive : ''}`}
+                                        onClick={() => loadConversation(conversation)}
+                                    >
+                                        <span>{conversation.title || 'Medical Consultation'}</span>
+                                        <span className={styles.conversationMeta}>
+                                            {formatConversationTime(conversation.updated_at || conversation.created_at)}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className={styles.emptyConversationState}>Start a new conversation to create a reusable clinical thread.</p>
+                        )}
+                    </div>
                     <div className={styles.disclaimer}>
                         {userRole === 'patient' ? <PatientDisclaimer /> : <LlmDisclaimer />}
                     </div>

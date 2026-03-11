@@ -1,173 +1,465 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/store/AuthContext'
 import { useNavigate } from 'react-router-dom'
+
+import { useAuth } from '@/store/AuthContext'
 import { analyticsAPI } from '@/services/api'
-import { Skeleton } from '@/components/ui/Skeleton'
-import SkeletonText from '@/components/ui/SkeletonText'
-import SkeletonCircle from '@/components/ui/SkeletonCircle'
+import { medicalService } from '@/services/medical.service'
 import styles from './PatientDashboard.module.css'
 
-// Professional Icon Imports
-import cardioIcon from '@/assets/images/icons/cardio.png'
-import neuroIcon from '@/assets/images/icons/neuro.png'
-import insightsIcon from '@/assets/images/icons/insights.png'
+const formatDateLabel = (value) => {
+  if (!value) return 'Pending'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+const formatDateTimeLabel = (date, time) => {
+  if (!date) return 'Not scheduled'
+  const dateLabel = formatDateLabel(date)
+  return time ? `${dateLabel} at ${time}` : dateLabel
+}
+
+const normalizeStatus = (value) => {
+  const text = String(value || 'Scheduled')
+    .replace(/_/g, ' ')
+    .trim()
+  return text
+    ? text.replace(/\w\S*/g, (part) => part[0].toUpperCase() + part.slice(1).toLowerCase())
+    : 'Scheduled'
+}
+
+const normalizeAppointment = (appointment = {}) => ({
+  id: appointment.id,
+  doctor: appointment.doctors
+    ? `Dr. ${appointment.doctors.first_name} ${appointment.doctors.last_name}`
+    : 'Clinical Staff',
+  specialty: appointment.doctors?.specialty || 'Medical Specialist',
+  date: appointment.appointment_date,
+  time: appointment.appointment_time,
+  status: normalizeStatus(appointment.status),
+  type: appointment.appointment_type || 'Follow-up',
+})
+
+const normalizeResult = (type, record = {}) => {
+  const hasTumorFlag = record.tumor_detected === true || record.tumor_detected === 'true'
+
+  return {
+    id: `${type}-${record.id}`,
+    type: type.toUpperCase(),
+    date: record.analysis_completed_at || record.created_at,
+    status:
+      type === 'ecg'
+        ? (record.confidence_score ?? 0) > 0.8
+          ? 'Normal'
+          : 'Needs review'
+        : hasTumorFlag
+          ? 'Attention'
+          : 'Normal',
+    summary:
+      type === 'ecg'
+        ? record.primary_diagnosis || 'Automated ECG interpretation completed.'
+        : hasTumorFlag
+          ? `Possible finding: ${record.tumor_type || 'Further clinical review needed'}`
+          : 'No abnormal MRI growth pattern detected.',
+  }
+}
+
+const statusClassMap = {
+  Normal: styles.statusSuccess,
+  Scheduled: styles.statusInfo,
+  Completed: styles.statusSuccess,
+  Cancelled: styles.statusDanger,
+  Attention: styles.statusDanger,
+  'Needs review': styles.statusWarning,
+}
+
+const LoadingDashboard = () => (
+  <div className={styles.loadingGrid}>
+    {Array.from({ length: 6 }).map((_, index) => (
+      <div key={index} className={`skeleton ${styles.loadingCard}`} />
+    ))}
+  </div>
+)
 
 export const PatientDashboard = () => {
-    const { currentUser } = useAuth()
-    const navigate = useNavigate()
-    const [loading, setLoading] = useState(true)
-    const [stats, setStats] = useState({
-        totalReports: 0,
-        nextAppointment: 'None scheduled',
-        lastAnalysis: 'Loading...',
-        healthScore: 100,
-        trends: []
-    })
+  const { currentUser } = useAuth()
+  const navigate = useNavigate()
+  const [state, setState] = useState({
+    loading: true,
+    error: '',
+    data: {
+      stats: null,
+      appointments: [],
+      results: [],
+    },
+  })
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            if (!currentUser?.id) {
-                setLoading(false);
-                return;
-            }
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!currentUser?.id) {
+        setState((previous) => ({ ...previous, loading: false }))
+        return
+      }
 
-            setLoading(true);
-            try {
-                const response = await analyticsAPI.getDashboardStats()
-                if (response.success) {
-                    const data = response.data
-                    setStats({
-                        totalReports: data.total_reports || 0,
-                        nextAppointment: data.next_appointment || 'Not scheduled',
-                        lastAnalysis: data.last_analysis || 'Stable',
-                        healthScore: data.health_score || 100,
-                        trends: data.trends || []
-                    })
-                }
-            } catch (error) {
-                console.error('Error fetching dashboard stats:', error)
-            } finally {
-                setLoading(false)
-            }
-        }
+      setState({
+        loading: true,
+        error: '',
+        data: {
+          stats: null,
+          appointments: [],
+          results: [],
+        },
+      })
 
-        fetchDashboardData()
-    }, [currentUser])
+      const [statsResult, appointmentsResult, ecgResult, mriResult] = await Promise.allSettled([
+        analyticsAPI.getDashboardStats(),
+        analyticsAPI.getAppointments(),
+        medicalService.getEcgResults(currentUser.id),
+        medicalService.getMriResults(currentUser.id),
+      ])
 
-    const quickLinks = [
-        { id: 'ecg', title: 'ECG Analysis', icon: cardioIcon, color: '#ef4444', path: '/ecg-analysis' },
-        { id: 'mri', title: 'Brain Imaging', icon: neuroIcon, color: '#3b82f6', path: '/mri-segmentation' },
-        { id: 'llm', title: 'Medical Advisor', icon: insightsIcon, color: '#6366f1', path: '/medical-llm' }
-    ]
+      const failures = []
 
-    if (loading) {
-        return (
-            <div className={styles.loadingGrid}>
-                <div className={styles.heroSkeleton}>
-                    <Skeleton height="180px" borderRadius="24px" />
-                </div>
-                <div className={styles.statsSkeleton}>
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className={styles.skeletonCard}>
-                            <SkeletonCircle size="40px" />
-                            <SkeletonText lines={2} width="120px" />
-                        </div>
-                    ))}
-                </div>
-                <div className={styles.moduleSkeleton}>
-                    <SkeletonText lines={1} width="200px" />
-                    <div className={styles.moduleGridSkeleton}>
-                        {[1, 2, 3].map(i => (
-                            <Skeleton key={i} height="80px" borderRadius="16px" />
-                        ))}
-                    </div>
-                </div>
-            </div>
-        )
+      const stats =
+        statsResult.status === 'fulfilled' && statsResult.value?.success
+          ? statsResult.value.data
+          : (failures.push('stats'), null)
+
+      const appointments =
+        appointmentsResult.status === 'fulfilled' && appointmentsResult.value?.success
+          ? (appointmentsResult.value.data || [])
+              .map(normalizeAppointment)
+              .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())
+          : (failures.push('appointments'), [])
+
+      const ecgResults =
+        ecgResult.status === 'fulfilled'
+          ? ecgResult.value.map((item) => normalizeResult('ecg', item))
+          : (failures.push('ecg'), [])
+
+      const mriResults =
+        mriResult.status === 'fulfilled'
+          ? mriResult.value.map((item) => normalizeResult('mri', item))
+          : (failures.push('mri'), [])
+
+      const results = [...ecgResults, ...mriResults].sort(
+        (left, right) => new Date(right.date).getTime() - new Date(left.date).getTime()
+      )
+
+      setState({
+        loading: false,
+        error:
+          failures.length === 4
+            ? 'Unable to load your dashboard right now.'
+            : failures.length
+              ? 'Some dashboard panels are temporarily unavailable.'
+              : '',
+        data: {
+          stats,
+          appointments,
+          results,
+        },
+      })
     }
 
-    return (
-        <motion.div
-            className={styles.container}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-        >
-            <section className={styles.hero}>
-                <div className={styles.heroContent}>
-                    <h1 className={styles.welcomeText}>
-                        Welcome back, <span className={styles.highlight}>{currentUser?.first_name}</span>
-                    </h1>
-                    <p className={styles.heroSubtitle}>Your clinical overview and AI health insights are ready.</p>
-                </div>
-                <div className={styles.heroStats}>
-                    <div className={styles.statBox}>
-                        <span className={styles.statValue}>{stats.healthScore}%</span>
-                        <span className={styles.statLabel}>Health Score</span>
-                    </div>
-                </div>
-            </section>
+    fetchDashboardData()
+  }, [currentUser?.id])
 
-            <div className={styles.statsGrid}>
-                <motion.div className={styles.statCard} whileHover={{ y: -5 }}>
-                    <div className={styles.cardHeader}>
-                        <span className={styles.cardIcon}>📄</span>
-                        <h3 className={styles.cardTitle}>Total Reports</h3>
-                    </div>
-                    <p className={styles.cardValue}>{stats.totalReports}</p>
-                    <span className={styles.cardTrend}>+2 this month</span>
-                </motion.div>
+  const dashboardStats = state.data.stats || {}
+  const appointments = state.data.appointments
+  const results = state.data.results
 
-                <motion.div className={styles.statCard} whileHover={{ y: -5 }}>
-                    <div className={styles.cardHeader}>
-                        <span className={styles.cardIcon}>📅</span>
-                        <h3 className={styles.cardTitle}>Next Appointment</h3>
-                    </div>
-                    <p className={styles.cardValue}>{stats.nextAppointment}</p>
-                    <span className={styles.cardTrend}>General Checkup</span>
-                </motion.div>
+  const nextAppointment = useMemo(
+    () => appointments.find((item) => item.status !== 'Cancelled') || null,
+    [appointments]
+  )
 
-                <motion.div className={styles.statCard} whileHover={{ y: -5 }}>
-                    <div className={styles.cardHeader}>
-                        <span className={styles.cardIcon}>🧪</span>
-                        <h3 className={styles.cardTitle}>Last Analysis</h3>
-                    </div>
-                    <p className={styles.cardValue}>{stats.lastAnalysis}</p>
-                    <span className={styles.cardTrend}>Stable condition</span>
-                </motion.div>
+  const recentAppointments = useMemo(() => appointments.slice(0, 3), [appointments])
+  const recentResults = useMemo(() => results.slice(0, 4), [results])
+
+  const statCards = [
+    {
+      label: 'Health Score',
+      value: dashboardStats.health_score ?? 100,
+      helper: 'Latest consolidated wellness score from your dashboard feed.',
+    },
+    {
+      label: 'Total Reports',
+      value: dashboardStats.total_reports ?? results.length,
+      helper: 'ECG and MRI reports currently available to you.',
+    },
+    {
+      label: 'Next Appointment',
+      value: nextAppointment ? formatDateTimeLabel(nextAppointment.date, nextAppointment.time) : dashboardStats.next_appointment || 'Not scheduled',
+      helper: nextAppointment?.type || 'Book when your care team opens scheduling.',
+    },
+    {
+      label: 'Last Analysis',
+      value: dashboardStats.last_analysis || recentResults[0]?.status || 'No recent analysis',
+      helper: recentResults[0]?.summary || 'Your latest clinical interpretation will appear here.',
+    },
+  ]
+
+  const quickActions = [
+    {
+      glyph: 'EC',
+      title: 'Upload ECG Study',
+      description: 'You can upload ECG signals directly and review the resulting interpretation.',
+      path: '/ecg-analysis',
+    },
+    {
+      glyph: 'MR',
+      title: 'Upload MRI Study',
+      description: 'You can upload MRI scans directly for segmentation and follow-up review.',
+      path: '/mri-analysis',
+    },
+    {
+      glyph: 'RS',
+      title: 'Results Center',
+      description: 'Open your combined ECG and MRI results history.',
+      path: '/patient-results',
+    },
+    {
+      glyph: 'AP',
+      title: 'Appointments',
+      description: 'Review upcoming consultations and recent visits.',
+      path: '/patient-appointments',
+    },
+    {
+      glyph: 'PR',
+      title: 'Profile Settings',
+      description: 'Update demographics, history, and contact information.',
+      path: '/patient-profile',
+    },
+    {
+      glyph: 'SC',
+      title: 'Security Center',
+      description: 'Manage password strength and active sessions.',
+      path: '/patient-security',
+    },
+  ]
+
+  const trendBars = dashboardStats.trends || []
+
+  if (state.loading) {
+    return <LoadingDashboard />
+  }
+
+  return (
+    <motion.div
+      className={styles.container}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      {state.error ? (
+        <article className={styles.errorBanner}>
+          <strong>Dashboard data is partially unavailable</strong>
+          <p>{state.error}</p>
+        </article>
+      ) : null}
+
+      <section className={styles.hero}>
+        <div className={styles.heroContent}>
+          <span className={styles.heroKicker}>Patient overview</span>
+          <h1 className={styles.heroTitle}>
+            Welcome back, <span className={styles.highlight}>{currentUser?.first_name || 'Patient'}</span>
+          </h1>
+          <p className={styles.heroSubtitle}>
+            Track your results, prepare for appointments, and upload ECG or MRI studies directly from your own portal.
+          </p>
+
+          <div className={styles.heroActions}>
+            <button type="button" className={styles.primaryAction} onClick={() => navigate('/ecg-analysis')}>
+              Upload ECG
+            </button>
+            <button type="button" className={styles.primaryAction} onClick={() => navigate('/mri-analysis')}>
+              Upload MRI
+            </button>
+            <button type="button" className={styles.secondaryAction} onClick={() => navigate('/patient-results')}>
+              View Results
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.heroMeta}>
+          <div className={styles.heroMetaCard}>
+            <span>MRN</span>
+            <strong>{currentUser?.mrn || 'Pending assignment'}</strong>
+          </div>
+          <div className={styles.heroMetaCard}>
+            <span>Hospital</span>
+            <strong>{currentUser?.hospital_name || 'BioIntellect Medical Center'}</strong>
+          </div>
+          <div className={styles.heroMetaCard}>
+            <span>Latest result</span>
+            <strong>{recentResults[0]?.type || 'No recent result'}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.statsGrid}>
+        {statCards.map((item) => (
+          <article key={item.label} className={styles.statCard}>
+            <span className={styles.statLabel}>{item.label}</span>
+            <strong className={styles.statValue}>{item.value}</strong>
+            <p className={styles.statHelper}>{item.helper}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeading}>
+          <div>
+            <h2 className={styles.sectionTitle}>Quick Access</h2>
+            <p className={styles.sectionSubtitle}>
+              Only routes that already exist in your real patient portal are exposed here.
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.actionGrid}>
+          {quickActions.map((item) => (
+            <button
+              key={item.title}
+              type="button"
+              className={styles.actionCard}
+              onClick={() => navigate(item.path)}
+            >
+              <span className={styles.actionGlyph}>{item.glyph}</span>
+              <div className={styles.actionInfo}>
+                <strong>{item.title}</strong>
+                <p>{item.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.splitGrid}>
+        <article className={styles.listCard}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2 className={styles.sectionTitle}>Upcoming Appointments</h2>
+              <p className={styles.sectionSubtitle}>Your nearest consultations and visit context.</p>
             </div>
+          </div>
 
-            <section className={styles.quickModules}>
-                <h2 className={styles.sectionTitle}>Medical AI Modules</h2>
-                <div className={styles.moduleGrid}>
-                    {quickLinks.map((module) => (
-                        <motion.div
-                            key={module.id}
-                            className={styles.moduleCard}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => navigate(module.path)}
-                        >
-                            <div className={styles.moduleIcon} style={{ backgroundColor: `${module.color}15` }}>
-                                <img src={module.icon} alt={module.title} />
-                            </div>
-                            <div className={styles.moduleInfo}>
-                                <h3>{module.title}</h3>
-                                <p>Access specialized AI diagnostic tools.</p>
-                            </div>
-                        </motion.div>
-                    ))}
+          {recentAppointments.length ? (
+            <div className={styles.list}>
+              {recentAppointments.map((item) => (
+                <div key={item.id} className={styles.listItem}>
+                  <div>
+                    <strong>{item.doctor}</strong>
+                    <p>{item.specialty}</p>
+                  </div>
+                  <div className={styles.listMeta}>
+                    <span>{formatDateTimeLabel(item.date, item.time)}</span>
+                    <span className={`${styles.statusBadge} ${statusClassMap[item.status] || styles.statusInfo}`}>
+                      {item.status}
+                    </span>
+                  </div>
                 </div>
-            </section>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyState}>
+              <strong>No appointments yet</strong>
+              <p>Your booked consultations will appear here once scheduling data is available.</p>
+            </div>
+          )}
+        </article>
 
-            <section className={styles.recentActivity}>
-                <h2 className={styles.sectionTitle}>Recent Health Trends</h2>
-                <div className={styles.chartPlaceholder}>
-                    {stats.trends.map((t, i) => (
-                        <div key={i} className={styles.chartBar} style={{ height: `${t.score}%` }} title={`${t.date}: ${t.score}%`} />
-                    ))}
+        <article className={styles.listCard}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2 className={styles.sectionTitle}>Recent Results</h2>
+              <p className={styles.sectionSubtitle}>Combined ECG and MRI outcomes from your account.</p>
+            </div>
+          </div>
+
+          {recentResults.length ? (
+            <div className={styles.list}>
+              {recentResults.map((item) => (
+                <div key={item.id} className={styles.listItem}>
+                  <div>
+                    <strong>{item.type} Study</strong>
+                    <p>{item.summary}</p>
+                  </div>
+                  <div className={styles.listMeta}>
+                    <span>{formatDateLabel(item.date)}</span>
+                    <span className={`${styles.statusBadge} ${statusClassMap[item.status] || styles.statusInfo}`}>
+                      {item.status}
+                    </span>
+                  </div>
                 </div>
-            </section>
-        </motion.div>
-    )
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyState}>
+              <strong>No results yet</strong>
+              <p>Your uploaded studies and processed reports will show up here.</p>
+            </div>
+          )}
+        </article>
+      </section>
+
+      <section className={styles.splitGrid}>
+        <article className={styles.listCard}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2 className={styles.sectionTitle}>Portal Readiness</h2>
+              <p className={styles.sectionSubtitle}>Keep the essentials complete so care teams can act faster.</p>
+            </div>
+          </div>
+
+          <div className={styles.readinessGrid}>
+            <div className={styles.readinessCard}>
+              <span>Profile data</span>
+              <strong>{currentUser?.phone && currentUser?.address ? 'Complete' : 'Needs review'}</strong>
+              <p>Contact details and address help with secure communication and follow-up.</p>
+            </div>
+            <div className={styles.readinessCard}>
+              <span>Security posture</span>
+              <strong>Managed in portal</strong>
+              <p>Password and session controls are available in your security settings page.</p>
+            </div>
+            <div className={styles.readinessCard}>
+              <span>Diagnostic access</span>
+              <strong>ECG and MRI enabled</strong>
+              <p>You can upload both study types yourself without waiting for a doctor-only entry point.</p>
+            </div>
+          </div>
+        </article>
+
+        <article className={styles.listCard}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2 className={styles.sectionTitle}>Health Trend Snapshot</h2>
+              <p className={styles.sectionSubtitle}>Recent scoring pattern from your analytics feed.</p>
+            </div>
+          </div>
+
+          {trendBars.length ? (
+            <div className={styles.trendChart}>
+              {trendBars.map((item, index) => (
+                <div key={`${item.date || 'trend'}-${index}`} className={styles.trendColumn}>
+                  <span className={styles.trendValue}>{item.score}%</span>
+                  <div className={styles.trendTrack}>
+                    <span className={styles.trendBar} style={{ height: `${Math.max(item.score, 12)}%` }} />
+                  </div>
+                  <span className={styles.trendLabel}>{formatDateLabel(item.date)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyState}>
+              <strong>No trend data yet</strong>
+              <p>Trend bars will appear when analytics snapshots become available for your account.</p>
+            </div>
+          )}
+        </article>
+      </section>
+    </motion.div>
+  )
 }

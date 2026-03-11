@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/store/AuthContext'
 import { useGeography } from '@/hooks/useGeography'
@@ -8,6 +8,7 @@ import { SelectField } from '@/components/ui/SelectField'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
 import { specialtyOptions, genderOptions } from '@/config/options'
+import { validateMinimumPassword } from '@/utils/userFormUtils'
 import styles from './CreateDoctor.module.css'
 
 const CreateDoctor = ({ onBack, userRole }) => {
@@ -32,13 +33,10 @@ const CreateDoctor = ({ onBack, userRole }) => {
         specialty: '',
         phone: '',
         licenseNumber: '',
-        nationalId: '',
         gender: 'male',
         dateOfBirth: '',
         bio: '',
         qualifications: '',
-        workingHours: '',
-        languagesSpoken: '',
         countryId: '',
         regionId: '',
         hospitalId: ''
@@ -46,6 +44,13 @@ const CreateDoctor = ({ onBack, userRole }) => {
 
     const [validationErrors, setValidationErrors] = useState({})
     const [success, setSuccess] = useState(false)
+    const defaultCountryId = useMemo(() => {
+        if (!countries.length) {
+            return ''
+        }
+
+        return countries.find((country) => country.country_name === 'Egypt')?.country_id || countries[0].country_id
+    }, [countries])
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }))
@@ -75,14 +80,13 @@ const CreateDoctor = ({ onBack, userRole }) => {
 
     // Set default country (Egypt) once countries are loaded
     useEffect(() => {
-        if (countries.length > 0 && !formData.countryId) {
-            const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
-            if (egypt) {
-                handleInputChange('countryId', egypt.country_id)
-                selectCountry(egypt.country_id)
-            }
+        if (!defaultCountryId || formData.countryId) {
+            return
         }
-    }, [countries, formData.countryId, selectCountry])
+
+        setFormData(prev => ({ ...prev, countryId: defaultCountryId }))
+        selectCountry(defaultCountryId)
+    }, [defaultCountryId, formData.countryId, selectCountry])
 
     const validateForm = () => {
         const errors = {}
@@ -97,8 +101,11 @@ const CreateDoctor = ({ onBack, userRole }) => {
 
         if (!formData.password) {
             errors.password = 'Password is required'
-        } else if (formData.password.length < 6) {
-            errors.password = 'Password must be at least 6 characters'
+        } else {
+            const passwordError = validateMinimumPassword(formData.password, 8)
+            if (passwordError) {
+                errors.password = passwordError
+            }
         }
 
         if (formData.password !== formData.confirmPassword) {
@@ -129,8 +136,8 @@ const CreateDoctor = ({ onBack, userRole }) => {
                     setSuccess(false); setFormData({
                         firstName: '', lastName: '', firstNameAr: '', lastNameAr: '',
                         email: '', password: '', confirmPassword: '', specialty: '', phone: '',
-                        licenseNumber: '', nationalId: '', gender: 'male', dateOfBirth: '',
-                        bio: '', qualifications: '', workingHours: '', languagesSpoken: '',
+                        licenseNumber: '', gender: 'male', dateOfBirth: '',
+                        bio: '', qualifications: '',
                         countryId: '', regionId: '', hospitalId: ''
                     })
                 }} />
@@ -151,8 +158,8 @@ const CreateDoctor = ({ onBack, userRole }) => {
                                     setSuccess(false); setFormData({
                                         firstName: '', lastName: '', firstNameAr: '', lastNameAr: '',
                                         email: '', password: '', confirmPassword: '', specialty: '', phone: '',
-                                        licenseNumber: '', nationalId: '', gender: 'male', dateOfBirth: '',
-                                        bio: '', qualifications: '', workingHours: '', languagesSpoken: '',
+                                        licenseNumber: '', gender: 'male', dateOfBirth: '',
+                                        bio: '', qualifications: '',
                                         countryId: '', regionId: '', hospitalId: ''
                                     })
                                 }}>Provision Another Staff Member</AnimatedButton>
@@ -238,12 +245,6 @@ const CreateDoctor = ({ onBack, userRole }) => {
                                 error={validationErrors.licenseNumber}
                                 required
                             />
-                            <InputField
-                                label="National ID"
-                                placeholder="Optional"
-                                value={formData.nationalId}
-                                onChange={(e) => handleInputChange('nationalId', e.target.value)}
-                            />
                             <SelectField
                                 label="Gender"
                                 value={formData.gender}
@@ -319,18 +320,6 @@ const CreateDoctor = ({ onBack, userRole }) => {
                                     value={formData.qualifications}
                                     onChange={(e) => handleInputChange('qualifications', e.target.value)}
                                     multiline
-                                />
-                                <InputField
-                                    label="Working Hours / Schedule"
-                                    value={formData.workingHours}
-                                    onChange={(e) => handleInputChange('workingHours', e.target.value)}
-                                    placeholder="e.g. Sun-Thu 9am-5pm"
-                                />
-                                <InputField
-                                    label="Languages Spoken"
-                                    value={formData.languagesSpoken}
-                                    onChange={(e) => handleInputChange('languagesSpoken', e.target.value)}
-                                    placeholder="e.g. Arabic, English"
                                 />
                             </div>
                         </div>

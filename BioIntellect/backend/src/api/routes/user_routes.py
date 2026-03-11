@@ -853,7 +853,9 @@ async def update_my_profile(
     """Update current user's profile."""
     try:
         profile = await repo.update_my_profile(
-            user["id"], profile_data.dict(exclude_unset=True), role=user.get("role")
+            user["id"],
+            profile_data.model_dump(exclude_unset=True),
+            role=user.get("role"),
         )
         if not profile:
             raise HTTPException(status_code=404, detail="Profile not found")

@@ -43,16 +43,54 @@ class ClinicalRepository:
         result = await (
             client.table("medical_cases")
             .select(
-                "id, patient_id, assigned_doctor_id, follow_up_date, status, notes, chief_complaint, metadata"
+                "id, case_number, patient_id, assigned_doctor_id, follow_up_date, status, notes, chief_complaint, metadata"
             )
             .eq(filter_field, filter_value)
             .not_.is_("follow_up_date", "null")
             .order("follow_up_date", desc=False)
             .execute()
         )
+        case_rows = result.data or []
+        patient_ids = {row.get("patient_id") for row in case_rows if row.get("patient_id")}
+        doctor_ids = {
+            row.get("assigned_doctor_id")
+            for row in case_rows
+            if row.get("assigned_doctor_id")
+        }
+
+        patients_by_id: Dict[str, Dict[str, Any]] = {}
+        if patient_ids:
+            patients_result = await (
+                client.table("patients")
+                .select("id, first_name, last_name, mrn")
+                .in_("id", list(patient_ids))
+                .execute()
+            )
+            patients_by_id = {
+                row["id"]: row for row in (patients_result.data or []) if row.get("id")
+            }
+
+        doctors_by_id: Dict[str, Dict[str, Any]] = {}
+        if doctor_ids:
+            doctors_result = await (
+                client.table("doctors")
+                .select("id, first_name, last_name, qualification, specialty")
+                .in_("id", list(doctor_ids))
+                .execute()
+            )
+            doctors_by_id = {
+                row["id"]: row for row in (doctors_result.data or []) if row.get("id")
+            }
+
         appointments: List[Dict[str, Any]] = []
-        for case_record in result.data or []:
-            appointment = build_follow_up_appointment(case_record)
+        for case_record in case_rows:
+            appointment = build_follow_up_appointment(
+                case_record,
+                patient=patients_by_id.get(str(case_record.get("patient_id") or "")),
+                doctor=doctors_by_id.get(
+                    str(case_record.get("assigned_doctor_id") or "")
+                ),
+            )
             if appointment:
                 appointments.append(appointment)
         return appointments

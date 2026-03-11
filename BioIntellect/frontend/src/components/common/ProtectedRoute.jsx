@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/store/AuthContext';
+import { getDashboardHomeRoute } from '@/utils/dashboardRoutes';
 
 /**
  * ProtectedRoute Component
@@ -28,7 +29,7 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
         // Prevent Infinite Redirect Loop:
         // Only navigate if the target fallback path is different from the current path.
-        const fallbackPath = userRole === 'patient' ? '/patient-dashboard' : '/admin-dashboard';
+        const fallbackPath = getDashboardHomeRoute(userRole);
 
         if (location.pathname !== fallbackPath) {
             return <Navigate to={fallbackPath} replace />;

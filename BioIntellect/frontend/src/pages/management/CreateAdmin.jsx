@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/store/AuthContext'
 import { useGeography } from '@/hooks/useGeography'
@@ -7,6 +7,7 @@ import { InputField } from '@/components/ui/InputField'
 import { SelectField } from '@/components/ui/SelectField'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
+import { validateMinimumPassword } from '@/utils/userFormUtils'
 import styles from './CreateDoctor.module.css' // Reusing styles for consistency
 import { adminOptions } from '@/config/options'
 
@@ -24,16 +25,13 @@ const CreateAdmin = ({ onBack, userRole }) => {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
-        firstNameAr: '',
-        lastNameAr: '',
         email: '',
         role: '',
         password: '',
         confirmPassword: '',
         phone: '',
         department: '',
-        nationalId: '', // [NEW]
-        employeeId: '', // [NEW]
+        employeeId: '',
         countryId: '',
         regionId: '',
         hospitalId: ''
@@ -41,6 +39,13 @@ const CreateAdmin = ({ onBack, userRole }) => {
 
     const [validationErrors, setValidationErrors] = useState({})
     const [success, setSuccess] = useState(false)
+    const defaultCountryId = useMemo(() => {
+        if (!countries.length) {
+            return ''
+        }
+
+        return countries.find((country) => country.country_name === 'Egypt')?.country_id || countries[0].country_id
+    }, [countries])
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }))
@@ -67,14 +72,13 @@ const CreateAdmin = ({ onBack, userRole }) => {
 
     // Set default country (Egypt) once countries are loaded
     useEffect(() => {
-        if (countries.length > 0 && !formData.countryId) {
-            const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
-            if (egypt) {
-                handleInputChange('countryId', egypt.country_id)
-                selectCountry(egypt.country_id)
-            }
+        if (!defaultCountryId || formData.countryId) {
+            return
         }
-    }, [countries])
+
+        setFormData(prev => ({ ...prev, countryId: defaultCountryId }))
+        selectCountry(defaultCountryId)
+    }, [defaultCountryId, formData.countryId, selectCountry])
 
     const validateForm = () => {
         const errors = {}
@@ -86,8 +90,11 @@ const CreateAdmin = ({ onBack, userRole }) => {
 
         if (!formData.password) {
             errors.password = 'Password is required'
-        } else if (formData.password.length < 6) {
-            errors.password = 'Password must be at least 6 characters'
+        } else {
+            const passwordError = validateMinimumPassword(formData.password, 8)
+            if (passwordError) {
+                errors.password = passwordError
+            }
         }
 
         if (formData.password !== formData.confirmPassword) {
@@ -116,9 +123,9 @@ const CreateAdmin = ({ onBack, userRole }) => {
             <div className={styles.pageWrapper}>
                 <TopBar userRole="admin" onBack={() => {
                     setSuccess(false); setFormData({
-                        firstName: '', lastName: '', firstNameAr: '', lastNameAr: '',
+                        firstName: '', lastName: '',
                         email: '', role: '', password: '', confirmPassword: '',
-                        phone: '', department: '', nationalId: '', employeeId: '',
+                        phone: '', department: '', employeeId: '',
                         countryId: '', regionId: '', hospitalId: ''
                     })
                 }} />
@@ -137,9 +144,9 @@ const CreateAdmin = ({ onBack, userRole }) => {
                             <div className={styles.successActions}>
                                 <AnimatedButton variant="primary" fullWidth onClick={() => {
                                     setSuccess(false); setFormData({
-                                        firstName: '', lastName: '', firstNameAr: '', lastNameAr: '',
+                                        firstName: '', lastName: '',
                                         email: '', role: '', password: '', confirmPassword: '',
-                                        phone: '', department: '', nationalId: '', employeeId: '',
+                                        phone: '', department: '', employeeId: '',
                                         countryId: '', regionId: '', hospitalId: ''
                                     })
                                 }}>Provision Another Administrator</AnimatedButton>
@@ -187,18 +194,6 @@ const CreateAdmin = ({ onBack, userRole }) => {
                                     required
                                 />
                             </div>
-                            <div className={styles.grid2}>
-                                <InputField
-                                    label="First Name (Arabic)"
-                                    value={formData.firstNameAr}
-                                    onChange={(e) => handleInputChange('firstNameAr', e.target.value)}
-                                />
-                                <InputField
-                                    label="Last Name (Arabic)"
-                                    value={formData.lastNameAr}
-                                    onChange={(e) => handleInputChange('lastNameAr', e.target.value)}
-                                />
-                            </div>
                             <InputField
                                 label="System Email"
                                 type="email"
@@ -232,11 +227,6 @@ const CreateAdmin = ({ onBack, userRole }) => {
                                 label="Employee ID"
                                 value={formData.employeeId}
                                 onChange={(e) => handleInputChange('employeeId', e.target.value)}
-                            />
-                            <InputField
-                                label="National ID"
-                                value={formData.nationalId}
-                                onChange={(e) => handleInputChange('nationalId', e.target.value)}
                             />
                             <SearchableSelect
                                 label="Country"

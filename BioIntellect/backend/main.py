@@ -227,6 +227,10 @@ def create_app() -> FastAPI:
             "version": "1.0.0",
         }
 
+    @app.get(f"{api_prefix}/health", tags=["system"], include_in_schema=False)
+    async def versioned_liveness_check() -> Dict[str, Any]:
+        return await liveness_check()
+
     async def _readiness_payload() -> Dict[str, Any]:
         health_status: Dict[str, Any] = {
             "status": "ready",
@@ -271,12 +275,22 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=503, detail=health_status)
         return health_status
 
+    @app.get(
+        f"{api_prefix}/health/ready", tags=["system"], include_in_schema=False
+    )
+    async def versioned_readiness_check() -> Dict[str, Any]:
+        return await readiness_check()
+
     @app.get("/ready", tags=["system"])
     async def readiness_alias() -> Dict[str, Any]:
         health_status = await _readiness_payload()
         if health_status["status"] == "not_ready":
             raise HTTPException(status_code=503, detail=health_status)
         return health_status
+
+    @app.get(f"{api_prefix}/ready", tags=["system"], include_in_schema=False)
+    async def versioned_readiness_alias() -> Dict[str, Any]:
+        return await readiness_alias()
 
     @app.get("/swagger-diagnosis")
     async def swagger_diagnosis():

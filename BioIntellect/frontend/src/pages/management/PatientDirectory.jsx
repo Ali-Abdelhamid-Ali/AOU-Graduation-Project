@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/store/AuthContext'
 import { TopBar } from '@/components/layout/TopBar'
-import { AnimatedButton } from '@/components/ui/AnimatedButton'
 import { patientsAPI } from '@/services/api'
 import styles from './PatientDirectory.module.css'
 
@@ -59,11 +58,19 @@ export const PatientDirectory = ({ onBack }) => {
                 blood_type: editData.blood_type
             }
 
-            const response = await patientsAPI.update(selectedPatient.user_id || selectedPatient.id, updatePayload)
+            const response = await patientsAPI.update(selectedPatient.id, updatePayload)
             if (!response.success) throw new Error('Update failed')
 
             setSaveStatus('success')
-            setSelectedPatient({ ...selectedPatient, ...editData })
+            const updatedPatient = {
+                ...selectedPatient,
+                ...response.data,
+                ...editData
+            }
+            setSelectedPatient(updatedPatient)
+            setPatients(prev => prev.map(patient => (
+                patient.id === updatedPatient.id ? { ...patient, ...updatedPatient } : patient
+            )))
             setIsEditing(false)
 
             setTimeout(() => setSaveStatus(null), 3000)

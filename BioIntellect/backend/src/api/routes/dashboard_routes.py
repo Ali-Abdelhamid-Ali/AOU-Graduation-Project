@@ -181,6 +181,42 @@ def _build_disease_distribution(rows: list[dict[str, Any]]) -> list[dict[str, An
     return [{"label": label, "value": count} for label, count in counter.most_common(6)]
 
 
+def _normalize_appointment_status(value: Any) -> str:
+    text = str(value or "Scheduled").replace("_", " ").strip()
+    return " ".join(fragment.capitalize() for fragment in text.split()) or "Scheduled"
+
+
+def _build_appointment_trend(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    counter: Counter[str] = Counter()
+    for row in rows:
+        date_value = str(row.get("follow_up_date") or "").strip()[:10]
+        if date_value:
+            counter[date_value] += 1
+    return [{"label": label, "value": count} for label, count in sorted(counter.items())[-10:]]
+
+
+def _summarize_appointment_scope(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    today = datetime.now(timezone.utc).date().isoformat()
+    active = 0
+    upcoming = 0
+
+    for row in rows:
+        metadata = row.get("metadata")
+        metadata = metadata if isinstance(metadata, dict) else {}
+        status = _normalize_appointment_status(metadata.get("appointment_status"))
+        if status != "Cancelled":
+            active += 1
+        if str(row.get("follow_up_date") or "")[:10] >= today and status != "Cancelled":
+            upcoming += 1
+
+    return {
+        "total": len(rows),
+        "active": active,
+        "upcoming": upcoming,
+        "trend": _build_appointment_trend(rows),
+    }
+
+
 def _build_admin_alerts(
     system_health: dict[str, Any],
     logs: list[dict[str, Any]],
@@ -263,9 +299,10 @@ def build_admin_overview_payload(sources: dict[str, Any]) -> dict[str, Any]:
     recent_notifications = sources.get("recent_notifications") or []
     recent_audit_logs = sources.get("recent_audit_logs") or []
     disease_distribution = _build_disease_distribution(sources.get("disease_rows") or [])
+    appointment_scope = _summarize_appointment_scope(sources.get("appointment_rows") or [])
 
     capabilities = {
-        "appointments": False,
+        "appointments": True,
         "billing": False,
         "messaging": True,
         "disease_distribution": bool(disease_distribution),
@@ -287,10 +324,13 @@ def build_admin_overview_payload(sources: dict[str, Any]) -> dict[str, Any]:
             ),
             "appointments": _build_metric_card(
                 "Appointments",
-                None,
-                helper="Scheduling module not configured in the current schema.",
-                available=False,
-                tone="warning",
+                appointment_scope["active"],
+                helper=(
+                    f"{appointment_scope['upcoming']} upcoming follow-up appointments in the current scope."
+                    if appointment_scope["upcoming"]
+                    else "No upcoming follow-up appointments are scheduled yet."
+                ),
+                tone="success" if appointment_scope["active"] else "info",
             ),
             "revenue": _build_metric_card(
                 "Revenue",
@@ -301,9 +341,15 @@ def build_admin_overview_payload(sources: dict[str, Any]) -> dict[str, Any]:
             ),
         },
         "charts": {
-            "daily_appointments_trend": _build_unavailable_chart(
-                "Appointment scheduling module not configured."
-            ),
+            "daily_appointments_trend": {
+                "available": True,
+                "data": appointment_scope["trend"],
+                "message": (
+                    "Daily follow-up load derived from medical_cases.follow_up_date."
+                    if appointment_scope["trend"]
+                    else "No follow-up appointments have been scheduled in this scope yet."
+                ),
+            },
             "revenue_by_month": _build_unavailable_chart(
                 "Billing and payments module not configured."
             ),
@@ -455,8 +501,38 @@ def build_doctor_overview_payload(user: dict[str, Any], sources: dict[str, Any])
         reverse=True,
     )
 
+    today_iso = datetime.now(timezone.utc).date().isoformat()
+    schedule_entries = []
+    for appointment in appointments:
+        patient = appointment.get("patients") or {}
+        if isinstance(patient, list):
+            patient = patient[0] if patient else {}
+        schedule_entries.append(
+            {
+                "id": str(appointment.get("id") or ""),
+                "date": appointment.get("appointment_date"),
+                "time": appointment.get("appointment_time") or "Time TBD",
+                "patient_name": _safe_name(patient, fallback="Patient"),
+                "title": f"{appointment.get('appointment_type') or 'Follow-up'} appointment",
+                "reason": appointment.get("reason") or "Follow-up visit",
+                "status": _normalize_appointment_status(appointment.get("status")),
+            }
+        )
+
+    today_schedule = [
+        entry for entry in schedule_entries if str(entry.get("date") or "") == today_iso
+    ]
+    schedule_message = (
+        "Today's appointments loaded from the follow-up schedule."
+        if today_schedule
+        else "No appointments scheduled for today. Showing the next follow-up visits."
+        if schedule_entries
+        else "No follow-up appointments are scheduled yet."
+    )
+    displayed_schedule = today_schedule or schedule_entries[:8]
+
     capabilities = {
-        "appointments": False,
+        "appointments": True,
         "billing": False,
         "messaging": True,
         "disease_distribution": False,
@@ -464,13 +540,9 @@ def build_doctor_overview_payload(user: dict[str, Any], sources: dict[str, Any])
 
     return {
         "today_schedule": {
-            "available": bool(appointments),
-            "message": (
-                "Scheduling module not configured."
-                if not appointments
-                else "Schedule loaded from appointments source."
-            ),
-            "data": appointments,
+            "available": True,
+            "message": schedule_message,
+            "data": displayed_schedule,
         },
         "patient_queue": queue_items[:8],
         "quick_stats": {
@@ -522,6 +594,15 @@ async def collect_admin_overview_sources(
 ) -> dict[str, Any]:
     client = await SupabaseProvider.get_admin()
     time_col = await dashboard_repo._resolve_audit_time_column(client)
+    appointment_query = (
+        client.table("medical_cases")
+        .select("id, hospital_id, follow_up_date, status, metadata")
+        .not_.is_("follow_up_date", "null")
+        .order("follow_up_date", desc=False)
+        .limit(500)
+    )
+    if user.get("role") != "super_admin" and user.get("hospital_id"):
+        appointment_query = appointment_query.eq("hospital_id", user["hospital_id"])
 
     (
         system_health,
@@ -532,6 +613,7 @@ async def collect_admin_overview_sources(
         audit_result,
         disease_result,
         recent_notifications,
+        appointment_result,
     ) = await asyncio.gather(
         dashboard_repo.get_system_health_metrics(),
         dashboard_repo.get_user_activity_metrics(),
@@ -541,6 +623,7 @@ async def collect_admin_overview_sources(
         client.table("audit_logs").select("*").order(time_col, desc=True).limit(20).execute(),
         client.table("medical_cases").select("diagnosis, diagnosis_icd10, created_at").order("created_at", desc=True).limit(500).execute(),
         notifications_repo.get_user_notifications(user["id"], limit=10),
+        appointment_query.execute(),
     )
 
     return {
@@ -552,6 +635,7 @@ async def collect_admin_overview_sources(
         "recent_audit_logs": audit_result.data or [],
         "disease_rows": disease_result.data or [],
         "recent_notifications": recent_notifications,
+        "appointment_rows": appointment_result.data or [],
     }
 
 

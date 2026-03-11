@@ -8,7 +8,13 @@ import {
   useState,
 } from 'react'
 import { authAPI, usersAPI, geographyAPI } from '@/services/api'
+import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { ROLES, CLINICAL_ROLES, ROLE_ALIAS_MAP, normalizeRole } from '@/config/roles'
+import {
+  normalizeMedicationList,
+  normalizePatientProfileUpdatePayload,
+  splitDelimitedValues,
+} from '@/utils/userFormUtils'
 
 const AuthContext = createContext()
 
@@ -16,7 +22,7 @@ const CURRENT_USER_KEY = 'biointellect_current_user'
 const ACCESS_TOKEN_KEY = 'biointellect_access_token'
 const USER_ROLE_KEY = 'biointellect_user_role'
 
-const normalizeApiError = (err, fallback) => err?.detail || err?.message || fallback
+const normalizeApiError = (err, fallback) => getApiErrorMessage(err, fallback)
 
 const toBackendRole = (role) => {
   if (!role) return role
@@ -66,10 +72,12 @@ const buildPatientPayload = (data) => ({
     data.emergency_contact_phone || data.emergencyContactPhone,
   emergency_contact_relation:
     data.emergency_contact_relation || data.emergencyContactRelation,
-  allergies: data.allergies || [],
-  chronic_conditions: data.chronic_conditions || data.chronicConditions || [],
-  current_medications: (data.current_medications || data.currentMedications || []).map(
-    (item) => (typeof item === 'string' ? { name: item } : item)
+  allergies: splitDelimitedValues(data.allergies || []),
+  chronic_conditions: splitDelimitedValues(
+    data.chronic_conditions || data.chronicConditions || []
+  ),
+  current_medications: normalizeMedicationList(
+    data.current_medications || data.currentMedications || []
   ),
   insurance_provider: data.insurance_provider || data.insuranceProvider,
   insurance_number: data.insurance_number || data.insuranceNumber,
@@ -376,7 +384,29 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(true)
       clearError()
       try {
-        await usersAPI.updateProfile(updatedData)
+        const response = await usersAPI.updateProfile(
+          normalizePatientProfileUpdatePayload(updatedData)
+        )
+        const updatedProfile = response?.data
+
+        if (updatedProfile) {
+          setCurrentUser((prev) => {
+            if (!prev) return prev
+
+            const nextUser = {
+              ...prev,
+              ...updatedProfile,
+              id: updatedProfile.id ?? prev.id,
+              profile_id: updatedProfile.id ?? prev.profile_id,
+              user_id: updatedProfile.user_id ?? prev.user_id,
+              auth_user_id: prev.auth_user_id ?? updatedProfile.user_id ?? prev.user_id,
+            }
+
+            localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(nextUser))
+            return nextUser
+          })
+        }
+
         await refreshUser()
         return { success: true }
       } catch (err) {

@@ -8,6 +8,10 @@ import { SelectField } from '@/components/ui/SelectField'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
 import { genderOptions, bloodTypeOptions } from '@/config/options'
+import {
+    splitDelimitedValues,
+    validateMinimumPassword
+} from '@/utils/userFormUtils'
 import styles from './CreatePatient.module.css'
 
 const CreatePatient = ({ onBack, userRole }) => {
@@ -85,8 +89,7 @@ const CreatePatient = ({ onBack, userRole }) => {
     }
 
     const validatePassword = (pass) => {
-        if (pass.length < 6) return "Password must be at least 6 characters long."
-        return null
+        return validateMinimumPassword(pass, 8) || null
     }
 
     // Set default country (Egypt) once countries are loaded
@@ -124,9 +127,9 @@ const CreatePatient = ({ onBack, userRole }) => {
         // Standardized Payload Construction
         const payload = {
             ...resolveNames(formData),
-            allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
-            chronicConditions: formData.chronicConditions ? formData.chronicConditions.split(',').map(s => s.trim()) : [],
-            currentMedications: formData.currentMedications ? formData.currentMedications.split(',').map(s => s.trim()) : []
+            allergies: splitDelimitedValues(formData.allergies),
+            chronicConditions: splitDelimitedValues(formData.chronicConditions),
+            currentMedications: splitDelimitedValues(formData.currentMedications)
         }
 
         const result = await registerPatient(payload)

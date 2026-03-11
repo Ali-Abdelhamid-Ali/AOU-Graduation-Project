@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@/store/AuthContext'
 import { patientsAPI } from '@/services/api'
 import { medicalService } from '@/services/medical.service'
+import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { TopBar } from '@/components/layout/TopBar'
 import { SelectField } from '@/components/ui/SelectField'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
@@ -19,6 +20,7 @@ export const EcgAnalysis = ({ onBack }) => {
     const [error, setError] = useState(null)
     const [patients, setPatients] = useState([])
     const [selectedPatientId, setSelectedPatientId] = useState('')
+    const [patientLoadError, setPatientLoadError] = useState('')
 
     useEffect(() => {
         if (userRole !== 'patient') {
@@ -26,10 +28,21 @@ export const EcgAnalysis = ({ onBack }) => {
                 try {
                     const response = await patientsAPI.list({ is_active: true, limit: 100 })
                     if (response.success) {
-                        setPatients(response.data)
+                        const loadedPatients = response.data || []
+                        setPatients(loadedPatients)
+                        setSelectedPatientId((current) => current || loadedPatients[0]?.id || '')
+                        setPatientLoadError(
+                            loadedPatients.length
+                                ? ''
+                                : 'No active patient records are available for this doctor account yet.'
+                        )
                     }
                 } catch (err) {
                     console.error('Failed to load patients:', err)
+                    setPatients([])
+                    setPatientLoadError(
+                        getApiErrorMessage(err, 'Failed to load the patient list.')
+                    )
                 }
             }
             loadPatients()
@@ -131,6 +144,13 @@ export const EcgAnalysis = ({ onBack }) => {
                                         value: p.id,
                                         label: `${p.first_name} ${p.last_name} (${p.mrn})`
                                     }))}
+                                    disabled={!patients.length}
+                                    error={patientLoadError || undefined}
+                                    helperText={
+                                        !patientLoadError
+                                            ? 'Choose the patient whose ECG study you want to analyze.'
+                                            : undefined
+                                    }
                                     required
                                 />
                             </div>

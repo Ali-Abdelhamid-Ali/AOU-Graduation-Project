@@ -67,6 +67,50 @@
     font-weight: 600;
 }
 
+.conversationList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.conversationButton {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--color-border);
+    background: var(--color-background);
+    color: var(--color-text);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.conversationButton:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-primary);
+}
+
+.conversationButtonActive {
+    border-color: var(--color-primary);
+    background: var(--color-primary-bg);
+}
+
+.conversationMeta {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.emptyConversationState {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+}
+
 .disclaimer {
     font-size: 0.8rem;
     color: var(--color-text-light);

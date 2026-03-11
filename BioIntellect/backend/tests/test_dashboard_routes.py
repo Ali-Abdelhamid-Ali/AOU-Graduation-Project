@@ -36,6 +36,20 @@ async def test_get_admin_overview_returns_composite_payload(monkeypatch) -> None
                 {"diagnosis_icd10": "G93", "diagnosis": "Brain edema"},
             ],
             "recent_notifications": [],
+            "appointment_rows": [
+                {
+                    "id": "case-1",
+                    "follow_up_date": "2026-03-12",
+                    "status": "open",
+                    "metadata": {"appointment_status": "Scheduled"},
+                },
+                {
+                    "id": "case-2",
+                    "follow_up_date": "2026-03-13",
+                    "status": "open",
+                    "metadata": {"appointment_status": "Scheduled"},
+                },
+            ],
         }
 
     monkeypatch.setattr(dashboard_routes, "collect_admin_overview_sources", fake_collect)
@@ -48,9 +62,10 @@ async def test_get_admin_overview_returns_composite_payload(monkeypatch) -> None
 
     assert response["success"] is True
     assert response["data"]["stats"]["patients"]["value"] == 140
-    assert response["data"]["charts"]["daily_appointments_trend"]["available"] is False
+    assert response["data"]["stats"]["appointments"]["value"] == 2
+    assert response["data"]["charts"]["daily_appointments_trend"]["available"] is True
     assert response["data"]["capabilities"] == {
-        "appointments": False,
+        "appointments": True,
         "billing": False,
         "messaging": True,
         "disease_distribution": True,
@@ -120,7 +135,7 @@ async def test_get_doctor_overview_returns_capability_aware_schedule(monkeypatch
     )
 
     assert response["success"] is True
-    assert response["data"]["today_schedule"]["available"] is False
+    assert response["data"]["today_schedule"]["available"] is True
     assert response["data"]["quick_stats"]["total_patients"]["value"] == 1
     assert response["data"]["quick_stats"]["pending_reports"]["value"] == 1
     assert response["data"]["quick_stats"]["unread_messages"]["value"] == 3
@@ -145,13 +160,17 @@ def test_build_admin_overview_payload_flags_missing_modules() -> None:
             "recent_audit_logs": [],
             "disease_rows": [],
             "recent_notifications": [],
+            "appointment_rows": [],
         }
     )
 
-    assert payload["stats"]["appointments"]["available"] is False
+    assert payload["stats"]["appointments"]["available"] is True
+    assert payload["stats"]["appointments"]["value"] == 0
     assert payload["stats"]["revenue"]["available"] is False
     assert payload["capabilities"]["billing"] is False
+    assert payload["capabilities"]["appointments"] is True
     assert payload["charts"]["disease_distribution"]["available"] is False
+    assert payload["charts"]["daily_appointments_trend"]["available"] is True
 
 
 @pytest.mark.unit
@@ -191,4 +210,5 @@ def test_build_doctor_overview_payload_aggregates_unique_patients() -> None:
 
     assert payload["quick_stats"]["total_patients"]["value"] == 1
     assert len(payload["patient_queue"]) == 2
-    assert payload["capabilities"]["appointments"] is False
+    assert payload["today_schedule"]["available"] is True
+    assert payload["capabilities"]["appointments"] is True

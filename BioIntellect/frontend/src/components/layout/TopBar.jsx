@@ -62,7 +62,7 @@ export const TopBar = ({ userRole = null, onBack = null, onLogout = null }) => {
           {onLogout && (
             <button
               className={styles.logoutButton}
-              onClick={onLogout}
+              onClick={() => onLogout()}
               aria-label="Sign out"
             >
               Sign Out

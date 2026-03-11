@@ -21,7 +21,7 @@ import styles from './Login.module.css'
  * - Sign up link
  */
 
-export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick, onBack }) => {
+export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
   const { signIn, isLoading, error, clearError, userRole } = useAuth()
   const formRef = useSlideInAnimation(true, 'up')
   const errorRef = useRef(null)
@@ -76,8 +76,6 @@ export const Login = ({ onLoginSuccess, onSignUpClick, onForgotPasswordClick, on
 
     if (!formData.password) {
       errors.password = 'Password is required'
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters'
     }
 
     return errors

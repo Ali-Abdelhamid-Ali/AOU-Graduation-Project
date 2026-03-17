@@ -22,6 +22,9 @@ class AuthRepository:
     async def _get_anon(self):
         return await SupabaseProvider.get_client()
 
+    async def _create_anon(self):
+        return await SupabaseProvider.create_anon_client()
+
     async def _get_profile_by_identity(
         self, client: Any, table: str, user_id: str, columns: str = "*"
     ) -> Optional[Dict[str, Any]]:
@@ -129,14 +132,14 @@ class AuthRepository:
 
     async def sign_in(self, email: str, password: str):
         """Standard user sign in."""
-        client = await self._get_anon()
+        client = await self._create_anon()
         return await client.auth.sign_in_with_password(
             {"email": email, "password": password}
         )
 
     async def get_user_from_token(self, access_token: str) -> Dict[str, str]:
         """Resolve user identity from an access token."""
-        client = await self._get_anon()
+        client = await self._create_anon()
         user_response = await client.auth.get_user(access_token)
         user = getattr(user_response, "user", None)
         if user is None:
@@ -149,9 +152,14 @@ class AuthRepository:
 
         return {"id": user_id, "email": user_email}
 
+    async def refresh_session(self, refresh_token: str):
+        """Refresh a session using a dedicated anon client."""
+        client = await self._create_anon()
+        return await client.auth.refresh_session(refresh_token)
+
     async def reset_password(self, email: str, redirect_to: Optional[str] = None):
         """Send password reset email."""
-        client = await self._get_anon()
+        client = await self._create_anon()
         options = {"redirect_to": redirect_to} if redirect_to else None
         return await client.auth.reset_password_for_email(email, options=options)
 

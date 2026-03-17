@@ -150,7 +150,7 @@ const CreateDoctor = ({ onBack, userRole }) => {
                                 Doctor <strong>{formData.firstName} {formData.lastName}</strong> has been successfully registered.
                                 <br /><br />
                                 <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>
-                                    ⚠️ Activation email sent. The doctor must confirm their email before signing in.
+                                    Account created successfully. Share login credentials manually through your approved clinical onboarding process.
                                 </span>
                             </p>
                             <div className={styles.successActions}>

@@ -16,6 +16,13 @@ class SupabaseProvider:
     _instance_admin: Optional[AsyncClient] = None
 
     @staticmethod
+    def _build_options() -> AsyncClientOptions:
+        return AsyncClientOptions(
+            postgrest_client_timeout=60,
+            storage_client_timeout=60,
+        )
+
+    @staticmethod
     def _require_env(name: str) -> str:
         from os import getenv
 
@@ -32,12 +39,15 @@ class SupabaseProvider:
             cls._instance_anon = await create_async_client(
                 url,
                 anon_key,
-                options=AsyncClientOptions(
-                    postgrest_client_timeout=60,
-                    storage_client_timeout=60,
-                ),
+                options=cls._build_options(),
             )
         return cls._instance_anon
+
+    @classmethod
+    async def create_anon_client(cls) -> AsyncClient:
+        url = cls._require_env("SUPABASE_URL")
+        anon_key = cls._require_env("SUPABASE_ANON_KEY")
+        return await create_async_client(url, anon_key, options=cls._build_options())
 
     @classmethod
     async def get_admin(cls) -> AsyncClient:
@@ -47,10 +57,7 @@ class SupabaseProvider:
             cls._instance_admin = await create_async_client(
                 url,
                 service_key,
-                options=AsyncClientOptions(
-                    postgrest_client_timeout=60,
-                    storage_client_timeout=60,
-                ),
+                options=cls._build_options(),
             )
         return cls._instance_admin
 

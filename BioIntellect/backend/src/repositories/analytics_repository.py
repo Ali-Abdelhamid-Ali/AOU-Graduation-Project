@@ -350,6 +350,9 @@ class AnalyticsRepository:
         if not appointment_date:
             raise ValueError("Appointment date is required.")
 
+        import uuid
+        case_number = f"APT-{str(uuid.uuid4())[:8].upper()}"
+
         metadata = {
             "appointment_status": data.get("status") or "Scheduled",
             "appointment_type": data.get("appointment_type") or "Follow-up",
@@ -366,6 +369,7 @@ class AnalyticsRepository:
         payload = sanitize_for_table(
             "medical_cases",
             {
+                "case_number": case_number,
                 "patient_id": data.get("patient_id"),
                 "hospital_id": data.get("hospital_id"),
                 "assigned_doctor_id": data.get("doctor_id"),

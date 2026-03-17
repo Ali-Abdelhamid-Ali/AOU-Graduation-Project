@@ -21,13 +21,25 @@ export const brandingConfig = {
         supportEmail: 'sghcare@sghegy.com'
     },
 
-    // Statistics
-    stats: {
-        availability: '24/7',
-        patientsServed: '150k+',
-        specializedStaff: '500+',
-        uptime: '99.9%'
-    },
+    // Platform Highlights
+    platformHighlights: [
+        {
+            value: 'ECG + MRI',
+            label: 'Clinical Workflows'
+        },
+        {
+            value: 'Role-Based',
+            label: 'Access Control'
+        },
+        {
+            value: 'API-Backed',
+            label: 'Operational Modules'
+        },
+        {
+            value: 'Audit-Aware',
+            label: 'Security Posture'
+        }
+    ],
 
     // Institutional Links
     links: {

@@ -175,6 +175,15 @@
     font-weight: 700;
 }
 
+.pendingBadge {
+    padding: 0.4rem 1rem;
+    background: var(--color-warning-bg);
+    color: var(--color-warning-dark);
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
 .classification {
     font-size: 2.25rem;
     font-weight: 800;
@@ -215,38 +224,20 @@
 
 .chartPlaceholder {
     height: 200px;
-    background: #000;
+    background: var(--color-surface-subtle);
     border-radius: 12px;
-    position: relative;
-    overflow: hidden;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-}
-
-.wave {
-    width: 100%;
-    height: 60%;
-    background: repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(0, 255, 0, 0.1) 20px, rgba(0, 255, 0, 0.1) 40px);
-    position: relative;
-}
-
-.wave::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: #0f0;
-    box-shadow: 0 0 15px #0f0;
+    text-align: center;
+    border: 1px dashed var(--color-border);
+    padding: 1.5rem;
 }
 
 .chartPlaceholder p {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.8rem;
-    margin-top: 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+    margin: 0;
 }
 
 @media (max-width: 900px) {

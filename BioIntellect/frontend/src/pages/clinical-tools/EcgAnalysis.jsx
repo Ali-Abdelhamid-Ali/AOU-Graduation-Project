@@ -99,18 +99,36 @@ export const EcgAnalysis = ({ onBack }) => {
                 fileId: fileRecord.id,
                 caseId: medicalCase.id,
                 patientId: patientId,
-                userId: currentUser.user_id || currentUser.id,
-                signalInfo: { leads: '12-lead', samplingRate: 500, duration: 10, leadCount: 12, quality: 98 },
-                resultInfo: {}
+                userId: currentUser.user_id || currentUser.id
             })
 
             // Extract result from API response
             const aiResult = analysisData.result
+            const classification =
+                typeof aiResult.rhythm_classification === 'string' &&
+                    aiResult.rhythm_classification.trim()
+                    ? aiResult.rhythm_classification.trim()
+                    : null
+            const confidence =
+                typeof aiResult.rhythm_confidence === 'number'
+                    ? aiResult.rhythm_confidence * 100
+                    : null
+            const features = Array.isArray(aiResult.detected_conditions)
+                ? aiResult.detected_conditions
+                    .map((condition) => condition?.condition)
+                    .filter(Boolean)
+                : []
+
             setResult({
-                classification: aiResult.rhythm_classification || 'Normal Sinus Rhythm',
-                confidence: (aiResult.rhythm_confidence || 0.94) * 100,
-                recommendation: aiResult.ai_interpretation || 'Analysis complete. Please consult with a cardiologist for detailed review.',
-                features: aiResult.detected_conditions?.map(c => c.condition) || ['Analysis Complete']
+                classification,
+                confidence,
+                recommendation:
+                    typeof aiResult.ai_interpretation === 'string' &&
+                        aiResult.ai_interpretation.trim()
+                        ? aiResult.ai_interpretation.trim()
+                        : null,
+                features,
+                isComplete: Boolean(classification) && confidence !== null,
             })
         } catch (err) {
             console.error('ECG Analysis Error:', err)
@@ -122,7 +140,10 @@ export const EcgAnalysis = ({ onBack }) => {
 
     return (
         <div className={styles.pageWrapper}>
-            <TopBar onBack={onBack} userRole="Cardiologist" />
+            <TopBar
+                onBack={onBack}
+                userRole={userRole === 'doctor' ? 'Cardiologist' : userRole === 'patient' ? 'Patient' : 'Clinical Staff'}
+            />
 
             <div className={styles.container}>
                 <header className={styles.header}>
@@ -209,29 +230,45 @@ export const EcgAnalysis = ({ onBack }) => {
                                 animate={{ opacity: 1, scale: 1 }}
                             >
                                 <div className={styles.resultHeader}>
-                                    <span className={styles.label}>Diagnostic Result</span>
-                                    <div className={styles.confidenceBadge}>{result.confidence.toFixed(1)}% Confidence</div>
+                                    <span className={styles.label}>
+                                        {result.isComplete ? 'Diagnostic Result' : 'Analysis Status'}
+                                    </span>
+                                    {result.isComplete ? (
+                                        <div className={styles.confidenceBadge}>
+                                            {result.confidence.toFixed(1)}% Confidence
+                                        </div>
+                                    ) : (
+                                        <div className={styles.pendingBadge}>Awaiting analysis</div>
+                                    )}
                                 </div>
-                                <h2 className={styles.classification}>{result.classification}</h2>
-                                <div className={styles.featuresList}>
-                                    {result.features.map((f, i) => (
-                                        <span key={i} className={styles.featureTag}>{f}</span>
-                                    ))}
-                                </div>
+                                <h2 className={styles.classification}>
+                                    {result.isComplete
+                                        ? result.classification
+                                        : 'Awaiting analysis'}
+                                </h2>
+                                {result.features.length > 0 ? (
+                                    <div className={styles.featuresList}>
+                                        {result.features.map((feature, index) => (
+                                            <span key={index} className={styles.featureTag}>{feature}</span>
+                                        ))}
+                                    </div>
+                                ) : null}
                                 <div className={styles.recommendation}>
-                                    <strong>Clinical Advice:</strong>
-                                    <p>{result.recommendation}</p>
+                                    <strong>{result.isComplete ? 'Clinical Advice:' : 'Status:'}</strong>
+                                    <p>
+                                        {result.isComplete
+                                            ? result.recommendation || 'No clinical interpretation was returned.'
+                                            : 'Analysis pending or incomplete. The ECG data was received, but the diagnostic output is not ready yet.'}
+                                    </p>
                                 </div>
 
                                 <div className={styles.chartPlaceholder}>
-                                    {/* Placeholder for ECG Waveform Visualization */}
-                                    <div className={styles.wave}></div>
-                                    <p>ECG Waveform Visualization Lead II</p>
+                                    <p>Waveform preview is not available in this interface.</p>
                                 </div>
                             </motion.div>
                         ) : (
                             <div className={styles.emptyState}>
-                                <p>No data analyzed yet. Upload an ECG signal to start diagnostic detection.</p>
+                                <p>No ECG study analyzed yet. Upload a signal file to start the clinical workflow.</p>
                             </div>
                         )}
                     </section>

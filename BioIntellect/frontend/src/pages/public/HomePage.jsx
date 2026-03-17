@@ -100,33 +100,23 @@ export const HomePage = ({ onEnter, onAboutClick }) => {
                             <div className={styles.iconBox}>
                                 <img src={insightsIcon} alt="Insights" className={styles.featureIconImg} />
                             </div>
-                            <h3 className={styles.featureTitle}>Real-time Insights</h3>
-                            <p className={styles.featureDesc}>Instant access to critical patient histories and laboratory results with zero latency.</p>
+                            <h3 className={styles.featureTitle}>Clinical Context</h3>
+                            <p className={styles.featureDesc}>Fast access to the patient records, study outputs, and diagnostic context exposed by the connected backend services.</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Stats Section */}
+            {/* Platform Highlights */}
             <section className={styles.statsSection}>
                 <div className={styles.container}>
                     <div className={styles.statsGrid}>
-                        <div className={styles.statItem}>
-                            <h4>{brandingConfig.stats.availability}</h4>
-                            <p>Critical Care</p>
-                        </div>
-                        <div className={styles.statItem}>
-                            <h4>{brandingConfig.stats.patientsServed}</h4>
-                            <p>Patients Served</p>
-                        </div>
-                        <div className={styles.statItem}>
-                            <h4>{brandingConfig.stats.specializedStaff}</h4>
-                            <p>Specialized Staff</p>
-                        </div>
-                        <div className={styles.statItem}>
-                            <h4>{brandingConfig.stats.uptime}</h4>
-                            <p>System Uptime</p>
-                        </div>
+                        {brandingConfig.platformHighlights.map((item) => (
+                            <div key={item.label} className={styles.statItem}>
+                                <h4>{item.value}</h4>
+                                <p>{item.label}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>

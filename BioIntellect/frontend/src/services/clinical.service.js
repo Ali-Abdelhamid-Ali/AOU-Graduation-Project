@@ -1,12 +1,24 @@
 import { buildApiUrl } from './api/baseUrl'
+import {
+  ensureValidAccessToken,
+  refreshAccessToken,
+} from './auth/sessionManager'
+import { getAccessToken } from './auth/sessionStore'
 
-const buildAuthHeaders = () => {
-  const token = localStorage.getItem('biointellect_access_token')
+const buildCorrelationId = () => {
+  try {
+    return globalThis.crypto?.randomUUID?.() || `${Date.now()}`
+  } catch {
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  }
+}
+
+const buildAuthHeaders = async (baseHeaders = {}, tokenOverride = null) => {
+  const token = tokenOverride || (await ensureValidAccessToken())
   const headers = {
+    ...baseHeaders,
     'X-Correlation-ID':
-      typeof globalThis.crypto?.randomUUID === 'function'
-        ? globalThis.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      baseHeaders['X-Correlation-ID'] || buildCorrelationId(),
   }
 
   if (token) {
@@ -16,11 +28,28 @@ const buildAuthHeaders = () => {
   return headers
 }
 
+const fetchWithAuth = async (path, init = {}, retryOnUnauthorized = true) => {
+  const response = await fetch(buildApiUrl(path), {
+    ...init,
+    headers: await buildAuthHeaders(init.headers || {}),
+    credentials: 'include',
+  })
+
+  if (response.status === 401 && retryOnUnauthorized && getAccessToken()) {
+    const refreshedToken = await refreshAccessToken()
+    return fetch(buildApiUrl(path), {
+      ...init,
+      headers: await buildAuthHeaders(init.headers || {}, refreshedToken),
+      credentials: 'include',
+    })
+  }
+
+  return response
+}
+
 export const mriSegmentationService = {
   async getModelInfo() {
-    const response = await fetch(buildApiUrl('/clinical/model/info'), {
-      headers: buildAuthHeaders(),
-    })
+    const response = await fetchWithAuth('/clinical/model/info')
 
     if (!response.ok) {
       throw new Error('Failed to fetch model information')
@@ -59,10 +88,9 @@ export const mriSegmentationService = {
     const timeout = setTimeout(() => controller.abort(), 300000)
 
     try {
-      const response = await fetch(buildApiUrl('/clinical/mri/segment'), {
+      const response = await fetchWithAuth('/clinical/mri/segment', {
         method: 'POST',
         body: formData,
-        headers: buildAuthHeaders(),
         signal: controller.signal,
       })
 
@@ -86,11 +114,8 @@ export const mriSegmentationService = {
   },
 
   async getPatientFriendlyResult(caseId) {
-    const response = await fetch(
-      buildApiUrl(`/clinical/mri/result/${caseId}/patient-view`),
-      {
-        headers: buildAuthHeaders(),
-      }
+    const response = await fetchWithAuth(
+      `/clinical/mri/result/${caseId}/patient-view`
     )
 
     if (!response.ok) {
@@ -106,11 +131,8 @@ export const mriSegmentationService = {
       throw new Error('Unsupported MRI visualization artifact requested.')
     }
 
-    const response = await fetch(
-      buildApiUrl(`/clinical/mri/visualization/${caseId}/${artifactType}`),
-      {
-        headers: buildAuthHeaders(),
-      }
+    const response = await fetchWithAuth(
+      `/clinical/mri/visualization/${caseId}/${artifactType}`
     )
 
     if (!response.ok) {
@@ -124,9 +146,7 @@ export const mriSegmentationService = {
   },
 
   async downloadOutputFile(filename) {
-    const response = await fetch(buildApiUrl(`/files/${filename}/download`), {
-      headers: buildAuthHeaders(),
-    })
+    const response = await fetchWithAuth(`/files/${filename}/download`)
 
     if (!response.ok) {
       throw new Error('Failed to download output file')

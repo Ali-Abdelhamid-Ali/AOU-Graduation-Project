@@ -27,9 +27,27 @@ export const InputField = ({
   required = false,
   icon = null,
   helperText,
+  multiline = false,
   ...rest
 }) => {
   const [isFocused, setIsFocused] = useState(false)
+  const inputProps = {
+    id,
+    placeholder,
+    value,
+    onChange,
+    onFocus: () => setIsFocused(true),
+    onBlur: () => setIsFocused(false),
+    disabled,
+    className: `${styles.input} ${error ? styles.error : ''} ${
+      success ? styles.success : ''
+    } ${isFocused ? styles.focused : ''} ${multiline ? styles.textarea : ''}`,
+    autoComplete: type === 'password' ? 'current-password' : 'on',
+    spellCheck: type === 'text' || multiline ? 'true' : 'false',
+    'aria-invalid': !!error,
+    'aria-describedby': error ? `${id}-error` : helperText ? `${id}-helper` : undefined,
+    ...rest,
+  }
 
   return (
     <div className={styles.container}>
@@ -42,28 +60,16 @@ export const InputField = ({
 
       <div className={styles.inputWrapper}>
         {icon && <span className={styles.icon}>{icon}</span>}
-        <input
-          id={id}
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          disabled={disabled}
-          className={`${styles.input} ${error ? styles.error : ''} ${success ? styles.success : ''
-            } ${isFocused ? styles.focused : ''}`}
-          autoComplete={type === 'password' ? 'current-password' : 'on'}
-          spellCheck={type === 'text' ? 'true' : 'false'}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : helperText ? `${id}-helper` : undefined}
-          {...rest}
-        />
+        {multiline ? (
+          <textarea {...inputProps} rows={rest.rows || 4} />
+        ) : (
+          <input {...inputProps} type={type} />
+        )}
       </div>
 
-      {error && <p className={styles.errorMessage}>{error}</p>}
+      {error && <p id={`${id}-error`} className={styles.errorMessage}>{error}</p>}
       {!error && helperText && (
-        <p className={styles.helperText}>{helperText}</p>
+        <p id={`${id}-helper`} className={styles.helperText}>{helperText}</p>
       )}
     </div>
   )

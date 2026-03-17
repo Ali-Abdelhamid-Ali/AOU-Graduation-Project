@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import anime from 'animejs'
+
 import { useAuth } from '@/store/AuthContext'
 import { TopBar } from '@/components/layout/TopBar'
 import { InputField } from '@/components/ui/InputField'
@@ -8,20 +9,12 @@ import { AnimatedButton } from '@/components/ui/AnimatedButton'
 import { useSlideInAnimation } from '@/hooks/useAnimations'
 import styles from './Login.module.css'
 
-/**
- * Login Page
- *
- * User authentication interface (mocked)
- * Features:
- * - Email and password fields
- * - Form validation
- * - Error handling and animations
- * - Loading state
- * - Forgot password link
- * - Sign up link
- */
-
-export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
+export const Login = ({
+  onLoginSuccess,
+  onSignUpClick,
+  onForgotPasswordClick,
+  onBack,
+}) => {
   const { signIn, isLoading, error, clearError, userRole } = useAuth()
   const formRef = useSlideInAnimation(true, 'up')
   const errorRef = useRef(null)
@@ -32,9 +25,6 @@ export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
   })
   const [validationErrors, setValidationErrors] = useState({})
 
-  /**
-   * Shake animation on error
-   */
   useEffect(() => {
     if (error && errorRef.current) {
       anime({
@@ -43,10 +33,10 @@ export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
           { value: -5, duration: 100 },
           { value: 5, duration: 100 },
           { value: -5, duration: 100 },
-          { value: 0, duration: 100 }
+          { value: 0, duration: 100 },
         ],
         duration: 500,
-        easing: 'linear'
+        easing: 'linear',
       })
     }
   }, [error])
@@ -56,12 +46,14 @@ export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
       ...prev,
       [field]: value,
     }))
+
     if (validationErrors[field]) {
       setValidationErrors((prev) => ({
         ...prev,
         [field]: '',
       }))
     }
+
     clearError()
   }
 
@@ -100,6 +92,8 @@ export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
     }
   }
 
+  const isPatientPortal = userRole === 'patient'
+
   return (
     <div className={styles.pageWrapper}>
       <TopBar userRole={userRole} onBack={onBack} />
@@ -119,24 +113,22 @@ export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
               transition: {
                 duration: 0.5,
                 ease: [0.22, 1, 0.36, 1],
-                staggerChildren: 0.08
-              }
-            }
+                staggerChildren: 0.08,
+              },
+            },
           }}
         >
-          {/* Header */}
           <div className={styles.header}>
             <h1 className={styles.title}>
-              {userRole === 'patient' ? 'Patient Portal' : 'Medical Staff Portal'}
+              {isPatientPortal ? 'Patient Portal' : 'Medical Staff Portal'}
             </h1>
             <p className={styles.subtitle}>
-              {userRole === 'patient'
-                ? 'Secure access to your personal health records'
-                : 'Enter your clinical credentials to access BioIntellect'}
+              {isPatientPortal
+                ? 'Sign in to review your records, appointments, and AI-assisted results.'
+                : 'Enter your clinical credentials to access BioIntellect.'}
             </p>
           </div>
 
-          {/* Error Alert */}
           {error && (
             <motion.div
               ref={errorRef}
@@ -148,9 +140,7 @@ export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
             </motion.div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className={styles.form}>
-            {/* Email Field */}
             <InputField
               id="email"
               label="Email"
@@ -163,12 +153,11 @@ export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
               autoComplete="username"
             />
 
-            {/* Password Field */}
             <InputField
               id="password"
               label="Password"
               type="password"
-              placeholder="••••••••"
+              placeholder="Enter your password"
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
               error={validationErrors.password}
@@ -176,7 +165,6 @@ export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
               autoComplete="current-password"
             />
 
-            {/* Forgot Password Link */}
             <div className={styles.forgotPasswordWrapper}>
               <button
                 type="button"
@@ -187,7 +175,6 @@ export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
               </button>
             </div>
 
-            {/* Submit Button */}
             <AnimatedButton
               type="submit"
               variant="primary"
@@ -199,20 +186,29 @@ export const Login = ({ onLoginSuccess, onForgotPasswordClick, onBack }) => {
             </AnimatedButton>
           </form>
 
-          {/* Divider */}
           <div className={styles.divider}>
             <span>or</span>
           </div>
 
-          {/* Sign Up Link */}
           <div className={styles.footer}>
-            <p className={styles.helperText}>
-              Don&apos;t have an account? Contact your administrator for secure provisioning.
-            </p>
+            {isPatientPortal ? (
+              <p>
+                Need a patient account?{' '}
+                <button
+                  type="button"
+                  className={styles.signUpLink}
+                  onClick={onSignUpClick}
+                >
+                  Create one now
+                </button>
+              </p>
+            ) : (
+              <p>
+                Don&apos;t have an account? Contact your administrator for secure
+                provisioning.
+              </p>
+            )}
           </div>
-
-          {/* Info Box */}
-
         </motion.div>
       </div>
     </div>

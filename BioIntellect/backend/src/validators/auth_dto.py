@@ -132,6 +132,9 @@ class PasswordUpdateDTO(BaseModel):
 
     access_token: str = Field(..., description="Access token")
     new_password: str = Field(..., min_length=8, description="New password")
+    current_password: Optional[str] = Field(
+        None, description="Current password for authenticated password changes"
+    )
     logout_all: Optional[bool] = Field(False, description="Logout all sessions")
 
     @field_validator("new_password")

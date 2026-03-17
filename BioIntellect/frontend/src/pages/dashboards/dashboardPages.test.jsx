@@ -1,9 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
-import { AdminDashboard } from '@/pages/dashboards/AdminDashboard'
-import { DoctorDashboard } from '@/pages/dashboards/DoctorDashboard'
+import { AdminOverview } from '@/pages/dashboards/admin/AdminOverview'
+import { AdminLayout } from '@/pages/dashboards/admin/AdminLayout'
+import { DoctorOverview } from '@/pages/dashboards/doctor/DoctorOverview'
+import { DoctorLayout } from '@/pages/dashboards/doctor/DoctorLayout'
 import { getDashboardHomeRoute } from '@/utils/dashboardRoutes'
 
 const navigateMock = vi.fn()
@@ -23,6 +25,7 @@ vi.mock('@/store/AuthContext', () => ({
       last_name: 'Youssef',
       hospital_name: 'Saudi German Hospital',
       specialty_name: 'Cardiology',
+      user_role: 'administrator',
     },
   }),
 }))
@@ -54,7 +57,7 @@ describe('dashboard route mapping', () => {
   })
 })
 
-describe('dashboard pages', () => {
+describe('split dashboard pages', () => {
   beforeEach(() => {
     navigateMock.mockReset()
     getAdminOverview.mockReset()
@@ -63,7 +66,7 @@ describe('dashboard pages', () => {
     listPatients.mockReset()
   })
 
-  it('renders admin dashboard with unavailable capability panels and user table', async () => {
+  it('renders admin overview section independently with its own data', async () => {
     getAdminOverview.mockResolvedValue({
       data: {
         stats: {
@@ -105,13 +108,14 @@ describe('dashboard pages', () => {
       if (type === 'doctors') return [{ id: 'doctor-1', first_name: 'Khaled', last_name: 'Hassan', specialty: 'Cardiology', hospital_name: 'Saudi German Hospital', is_active: true }]
       return []
     })
-    listPatients.mockResolvedValue({
-      data: [{ id: 'patient-1', first_name: 'Nour', last_name: 'Ali', medical_record_number: 'MRN-1', hospital_name: 'Saudi German Hospital', is_active: true }],
-    })
 
     render(
       <MemoryRouter initialEntries={['/admin-dashboard']}>
-        <AdminDashboard onLogout={vi.fn()} />
+        <Routes>
+          <Route element={<AdminLayout onLogout={vi.fn()} />}>
+            <Route path="/admin-dashboard" element={<AdminOverview />} />
+          </Route>
+        </Routes>
       </MemoryRouter>
     )
 
@@ -119,14 +123,10 @@ describe('dashboard pages', () => {
       expect(screen.getByText('Administrative Operations Dashboard')).toBeTruthy()
     })
 
-    expect(screen.getAllByText('Capability disabled').length).toBeGreaterThan(0)
     expect(screen.getAllByText('6').length).toBeGreaterThan(0)
-    expect(screen.getByText('User Management')).toBeTruthy()
-    expect(screen.getByText('Nour Ali')).toBeTruthy()
-    expect(screen.getByText('Khaled Hassan')).toBeTruthy()
   })
 
-  it('renders doctor dashboard with schedule unavailable state and pending result data', async () => {
+  it('renders doctor overview section independently with pending result data', async () => {
     getDoctorOverview.mockResolvedValue({
       data: {
         today_schedule: {
@@ -186,7 +186,11 @@ describe('dashboard pages', () => {
 
     render(
       <MemoryRouter initialEntries={['/doctor-dashboard']}>
-        <DoctorDashboard onLogout={vi.fn()} />
+        <Routes>
+          <Route element={<DoctorLayout onLogout={vi.fn()} />}>
+            <Route path="/doctor-dashboard" element={<DoctorOverview />} />
+          </Route>
+        </Routes>
       </MemoryRouter>
     )
 
@@ -196,7 +200,6 @@ describe('dashboard pages', () => {
 
     expect(screen.getAllByText('Layla Nabil').length).toBeGreaterThan(0)
     expect(screen.getByText('09:00')).toBeTruthy()
-    expect(screen.getAllByText('Layla Nabil').length).toBeGreaterThan(0)
     expect(screen.getByText('Unread message')).toBeTruthy()
   })
 })

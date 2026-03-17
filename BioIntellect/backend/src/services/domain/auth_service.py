@@ -25,6 +25,30 @@ class AuthService:
     def __init__(self, auth_repo: AuthRepository):
         self.auth_repo = auth_repo
 
+    async def _build_user_payload(self, auth_user: Any) -> Dict[str, Any]:
+        metadata_role = (auth_user.user_metadata or {}).get("role")
+        role = await self.auth_repo.resolve_user_role(str(auth_user.id), metadata_role)
+        table = ROLE_TABLE_MAP.get(role, "patients")
+        profile = await self.auth_repo.get_profile_by_user_id(table, auth_user.id)
+
+        return {
+            "id": auth_user.id,
+            "email": auth_user.email,
+            "role": role,
+            "profile": profile or {},
+        }
+
+    @staticmethod
+    def _build_session_payload(session: Any) -> Dict[str, Any]:
+        if not session or not getattr(session, "access_token", None):
+            raise Exception("Authentication session is missing")
+
+        return {
+            "access_token": session.access_token,
+            "refresh_token": getattr(session, "refresh_token", None),
+            "expires_at": getattr(session, "expires_at", None),
+        }
+
     async def _resolve_profile_id(
         self,
         table: str,
@@ -282,32 +306,32 @@ class AuthService:
                 raise Exception("Invalid credentials")
 
             user = auth_response.user
-            metadata_role = (user.user_metadata or {}).get("role")
-            role = await self.auth_repo.resolve_user_role(str(user.id), metadata_role)
-
-            # Fetch profile
-            table = ROLE_TABLE_MAP.get(role, "patients")
-            profile = await self.auth_repo.get_profile_by_user_id(table, user.id)
+            user_payload = await self._build_user_payload(user)
 
             log_audit(AuditAction.LOGIN, user_id=user.id, email=data.email)
 
             return {
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "role": role,
-                    "profile": profile or {},
-                },
-                "session": {
-                    "access_token": auth_response.session.access_token,
-                    "refresh_token": auth_response.session.refresh_token,
-                    "expires_at": auth_response.session.expires_at,
-                },
+                "user": user_payload,
+                "session": self._build_session_payload(auth_response.session),
             }
         except Exception as e:
             logger.error(f"Signin failed for {data.email}: {str(e)}")
             await self.record_failed_attempt(data.email)
             log_audit(AuditAction.LOGIN, email=data.email, success=False)
+            raise e
+
+    async def refresh_session(self, refresh_token: str) -> Dict[str, Any]:
+        """Refresh an authenticated session."""
+        try:
+            auth_response = await self.auth_repo.refresh_session(refresh_token)
+            auth_user = getattr(auth_response, "user", None)
+
+            return {
+                "user": await self._build_user_payload(auth_user) if auth_user else None,
+                "session": self._build_session_payload(auth_response.session),
+            }
+        except Exception as e:
+            logger.error(f"Session refresh failed: {str(e)}")
             raise e
 
     async def check_login_attempts(self, email: str):
@@ -369,10 +393,27 @@ class AuthService:
         email: str,
         access_token: str,
         new_password: str,
+        current_password: Optional[str] = None,
         logout_all: bool = False,
     ):
         """Update password."""
         try:
+            if current_password:
+                try:
+                    current_auth = await self.auth_repo.sign_in(email, current_password)
+                    if not getattr(current_auth, "user", None):
+                        raise PermissionError("Current password is incorrect")
+                except PermissionError:
+                    raise
+                except Exception as e:
+                    error_msg = str(e)
+                    if (
+                        "Invalid login credentials" in error_msg
+                        or "Invalid credentials" in error_msg
+                    ):
+                        raise PermissionError("Current password is incorrect")
+                    raise
+
             try:
                 check_auth = await self.auth_repo.sign_in(email, new_password)
                 if check_auth.user:

@@ -570,12 +570,11 @@ export const MriSegmentation = ({ onBack }) => {
           fileId: representativeUpload.record.id,
           patientId: workingDraft.patientId,
           caseId: workingDraft.medicalCase.id,
-          sequenceType: 'multi-modal',
           dicomMetadata: {
             source: 'frontend_upload',
-            uploaded_sequence: 'multi-modal',
             ai_case_id: workingDraft.segmentationResult.case_id,
             primary_filename: representativeUpload.file.name,
+            available_modalities: uploadedFiles.map((item) => item.modality),
             modality_file_ids: Object.fromEntries(
               uploadedFiles.map((item) => [item.modality, item.record.id])
             ),
@@ -801,7 +800,7 @@ export const MriSegmentation = ({ onBack }) => {
     if (!doctorConfirmed || !savedResultId) return
 
     try {
-      await medicalService.reviewResult('mri_segmentation_results', savedResultId, {
+      await medicalService.reviewResult('mri_results', savedResultId, {
         is_reviewed: true,
         doctor_agrees_with_ai: true,
       })

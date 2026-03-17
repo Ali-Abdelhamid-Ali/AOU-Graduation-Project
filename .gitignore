@@ -1,7 +1,9 @@
 # Environment
 .env
 .env.*
+.env.local
 !.env.example
+!BioIntellect/frontend/.env.production
 
 # Editors / OS
 .vscode/
@@ -78,6 +80,7 @@ temp/
 *.pptx
 
 # Project-specific AI artifacts and datasets
+BioIntellect\AI\ECG\App\classification\12_lead_ECGFounder.pth
 BioIntellect/AI/ECG/Data/
 BioIntellect/AI/fintune/data QA/
 BioIntellect/AI/fintune/fine-tuning data/

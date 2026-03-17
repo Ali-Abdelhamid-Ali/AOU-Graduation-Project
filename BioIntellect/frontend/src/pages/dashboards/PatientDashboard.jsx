@@ -7,18 +7,25 @@ import { analyticsAPI } from '@/services/api'
 import { medicalService } from '@/services/medical.service'
 import styles from './PatientDashboard.module.css'
 
+const UNAVAILABLE_VALUE = 'Unavailable'
+
 const formatDateLabel = (value) => {
-  if (!value) return 'Pending'
+  if (!value) return UNAVAILABLE_VALUE
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return value
   return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 const formatDateTimeLabel = (date, time) => {
-  if (!date) return 'Not scheduled'
+  if (!date) return UNAVAILABLE_VALUE
   const dateLabel = formatDateLabel(date)
   return time ? `${dateLabel} at ${time}` : dateLabel
 }
+
+const hasText = (value) => typeof value === 'string' && value.trim().length > 0
+
+const pickFirstText = (...values) =>
+  values.find((value) => hasText(value))?.trim() ?? null
 
 const normalizeStatus = (value) => {
   const text = String(value || 'Scheduled')
@@ -42,36 +49,44 @@ const normalizeAppointment = (appointment = {}) => ({
 })
 
 const normalizeResult = (type, record = {}) => {
-  const hasTumorFlag = record.tumor_detected === true || record.tumor_detected === 'true'
+  const analysisCompleted = Boolean(record.analysis_completed_at)
+  const summary =
+    type === 'ecg'
+      ? pickFirstText(
+          record.primary_diagnosis,
+          record.rhythm_classification,
+          record.ai_interpretation
+        ) ||
+        (analysisCompleted
+          ? 'Analysis completed. A clinical summary is not available yet.'
+          : 'Analysis details are not available yet.')
+      : pickFirstText(record.ai_interpretation, record.tumor_type) ||
+        (analysisCompleted
+          ? 'Analysis completed. Detailed findings are not attached yet.'
+          : 'Analysis details are not available yet.')
 
   return {
     id: `${type}-${record.id}`,
     type: type.toUpperCase(),
     date: record.analysis_completed_at || record.created_at,
     status:
-      type === 'ecg'
-        ? (record.confidence_score ?? 0) > 0.8
-          ? 'Normal'
-          : 'Needs review'
-        : hasTumorFlag
-          ? 'Attention'
-          : 'Normal',
-    summary:
-      type === 'ecg'
-        ? record.primary_diagnosis || 'Automated ECG interpretation completed.'
-        : hasTumorFlag
-          ? `Possible finding: ${record.tumor_type || 'Further clinical review needed'}`
-          : 'No abnormal MRI growth pattern detected.',
+      record.is_reviewed
+        ? 'Reviewed'
+        : analysisCompleted
+          ? 'Awaiting review'
+          : 'Awaiting analysis',
+    summary,
   }
 }
 
 const statusClassMap = {
-  Normal: styles.statusSuccess,
+  Reviewed: styles.statusSuccess,
   Scheduled: styles.statusInfo,
   Completed: styles.statusSuccess,
   Cancelled: styles.statusDanger,
-  Attention: styles.statusDanger,
   'Needs review': styles.statusWarning,
+  'Awaiting review': styles.statusInfo,
+  'Awaiting analysis': styles.statusWarning,
 }
 
 const LoadingDashboard = () => (
@@ -92,6 +107,11 @@ export const PatientDashboard = () => {
       stats: null,
       appointments: [],
       results: [],
+      availability: {
+        stats: false,
+        appointments: false,
+        results: false,
+      },
     },
   })
 
@@ -109,6 +129,11 @@ export const PatientDashboard = () => {
           stats: null,
           appointments: [],
           results: [],
+          availability: {
+            stats: false,
+            appointments: false,
+            results: false,
+          },
         },
       })
 
@@ -159,6 +184,15 @@ export const PatientDashboard = () => {
           stats,
           appointments,
           results,
+          availability: {
+            stats:
+              statsResult.status === 'fulfilled' && statsResult.value?.success === true,
+            appointments:
+              appointmentsResult.status === 'fulfilled' &&
+              appointmentsResult.value?.success === true,
+            results:
+              ecgResult.status === 'fulfilled' || mriResult.status === 'fulfilled',
+          },
         },
       })
     }
@@ -166,9 +200,10 @@ export const PatientDashboard = () => {
     fetchDashboardData()
   }, [currentUser?.id])
 
-  const dashboardStats = state.data.stats || {}
+  const dashboardStats = state.data.stats
   const appointments = state.data.appointments
   const results = state.data.results
+  const availability = state.data.availability
 
   const nextAppointment = useMemo(
     () => appointments.find((item) => item.status !== 'Cancelled') || null,
@@ -181,43 +216,56 @@ export const PatientDashboard = () => {
   const statCards = [
     {
       label: 'Health Score',
-      value: dashboardStats.health_score ?? 100,
-      helper: 'Latest consolidated wellness score from your dashboard feed.',
+      value:
+        availability.stats && dashboardStats?.health_score !== null && dashboardStats?.health_score !== undefined
+          ? dashboardStats.health_score
+          : UNAVAILABLE_VALUE,
+      helper:
+        availability.stats && dashboardStats?.health_score !== null && dashboardStats?.health_score !== undefined
+          ? 'Latest consolidated wellness score from your dashboard feed.'
+          : 'Health score is unavailable until the analytics feed returns a value.',
     },
     {
       label: 'Total Reports',
-      value: dashboardStats.total_reports ?? results.length,
-      helper: 'ECG and MRI reports currently available to you.',
+      value:
+        availability.stats && dashboardStats?.total_reports !== null && dashboardStats?.total_reports !== undefined
+          ? dashboardStats.total_reports
+          : availability.results
+            ? results.length
+            : UNAVAILABLE_VALUE,
+      helper:
+        availability.stats && dashboardStats?.total_reports !== null && dashboardStats?.total_reports !== undefined
+          ? 'ECG and MRI reports currently available to you.'
+          : availability.results
+            ? 'Counted from the result records currently available to your portal.'
+            : 'Result totals are temporarily unavailable.',
     },
     {
       label: 'Next Appointment',
-      value: nextAppointment ? formatDateTimeLabel(nextAppointment.date, nextAppointment.time) : dashboardStats.next_appointment || 'Not scheduled',
-      helper: nextAppointment?.type || 'Book when your care team opens scheduling.',
+      value: nextAppointment
+        ? formatDateTimeLabel(nextAppointment.date, nextAppointment.time)
+        : availability.appointments
+          ? 'No appointment scheduled'
+          : UNAVAILABLE_VALUE,
+      helper: nextAppointment?.type || 'Appointment timing will appear here when your care team schedules a visit.',
     },
     {
       label: 'Last Analysis',
-      value: dashboardStats.last_analysis || recentResults[0]?.status || 'No recent analysis',
-      helper: recentResults[0]?.summary || 'Your latest clinical interpretation will appear here.',
+      value:
+        dashboardStats?.last_analysis ||
+        recentResults[0]?.status ||
+        (availability.results ? 'No results available yet' : UNAVAILABLE_VALUE),
+      helper:
+        recentResults[0]?.summary ||
+        'Your latest clinical interpretation will appear here when it is available.',
     },
   ]
 
   const quickActions = [
     {
-      glyph: 'EC',
-      title: 'Upload ECG Study',
-      description: 'You can upload ECG signals directly and review the resulting interpretation.',
-      path: '/ecg-analysis',
-    },
-    {
-      glyph: 'MR',
-      title: 'Upload MRI Study',
-      description: 'You can upload MRI scans directly for segmentation and follow-up review.',
-      path: '/mri-analysis',
-    },
-    {
       glyph: 'RS',
-      title: 'Results Center',
-      description: 'Open your combined ECG and MRI results history.',
+      title: 'View My Results',
+      description: 'Open your doctor-uploaded ECG and MRI results in a read-only view.',
       path: '/patient-results',
     },
     {
@@ -240,7 +288,7 @@ export const PatientDashboard = () => {
     },
   ]
 
-  const trendBars = dashboardStats.trends || []
+  const trendBars = Array.isArray(dashboardStats?.trends) ? dashboardStats.trends : []
 
   if (state.loading) {
     return <LoadingDashboard />
@@ -266,18 +314,15 @@ export const PatientDashboard = () => {
             Welcome back, <span className={styles.highlight}>{currentUser?.first_name || 'Patient'}</span>
           </h1>
           <p className={styles.heroSubtitle}>
-            Track your results, prepare for appointments, and upload ECG or MRI studies directly from your own portal.
+            Track your results and appointments from your patient portal. Your care team will upload study outputs and finalized reports here.
           </p>
 
           <div className={styles.heroActions}>
-            <button type="button" className={styles.primaryAction} onClick={() => navigate('/ecg-analysis')}>
-              Upload ECG
+            <button type="button" className={styles.primaryAction} onClick={() => navigate('/patient-results')}>
+              View My Results
             </button>
-            <button type="button" className={styles.primaryAction} onClick={() => navigate('/mri-analysis')}>
-              Upload MRI
-            </button>
-            <button type="button" className={styles.secondaryAction} onClick={() => navigate('/patient-results')}>
-              View Results
+            <button type="button" className={styles.secondaryAction} onClick={() => navigate('/patient-appointments')}>
+              Appointments
             </button>
           </div>
         </div>
@@ -285,15 +330,17 @@ export const PatientDashboard = () => {
         <div className={styles.heroMeta}>
           <div className={styles.heroMetaCard}>
             <span>MRN</span>
-            <strong>{currentUser?.mrn || 'Pending assignment'}</strong>
+            <strong>{currentUser?.mrn || 'MRN not assigned yet'}</strong>
           </div>
           <div className={styles.heroMetaCard}>
             <span>Hospital</span>
-            <strong>{currentUser?.hospital_name || 'BioIntellect Medical Center'}</strong>
+            <strong>{currentUser?.hospital_name || 'Hospital unavailable'}</strong>
           </div>
           <div className={styles.heroMetaCard}>
             <span>Latest result</span>
-            <strong>{recentResults[0]?.type || 'No recent result'}</strong>
+            <strong>
+              {recentResults[0]?.type || (availability.results ? 'No results yet' : UNAVAILABLE_VALUE)}
+            </strong>
           </div>
         </div>
       </section>
@@ -313,7 +360,7 @@ export const PatientDashboard = () => {
           <div>
             <h2 className={styles.sectionTitle}>Quick Access</h2>
             <p className={styles.sectionSubtitle}>
-              Only routes that already exist in your real patient portal are exposed here.
+              Only live patient routes are exposed here. Staff analysis workspaces are not available in the patient portal.
             </p>
           </div>
         </div>
@@ -398,7 +445,7 @@ export const PatientDashboard = () => {
           ) : (
             <div className={styles.emptyState}>
               <strong>No results yet</strong>
-              <p>Your uploaded studies and processed reports will show up here.</p>
+              <p>Your doctor will upload your study results here once they are finalized.</p>
             </div>
           )}
         </article>
@@ -425,9 +472,9 @@ export const PatientDashboard = () => {
               <p>Password and session controls are available in your security settings page.</p>
             </div>
             <div className={styles.readinessCard}>
-              <span>Diagnostic access</span>
-              <strong>ECG and MRI enabled</strong>
-              <p>You can upload both study types yourself without waiting for a doctor-only entry point.</p>
+              <span>Result delivery</span>
+              <strong>Doctor-managed</strong>
+              <p>Your doctor will upload your study results here. You can review them in the Results Center once they are ready.</p>
             </div>
           </div>
         </article>

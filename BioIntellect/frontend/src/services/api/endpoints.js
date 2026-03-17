@@ -69,18 +69,23 @@ const normalizeUserMutation = (response, normalizer = (value) => value) => {
   }
 }
 
+const normalizeReviewTableName = (tableName) =>
+  tableName === 'mri_segmentation_results' ? 'mri_results' : tableName
+
 export const authAPI = {
   signUp: (data) => apiClient.post('/auth/signup', data),
   signIn: (email, password) =>
     apiClient.post('/auth/signin', { email, password }),
+  refresh: () => apiClient.post('/auth/refresh', null, { skipAuthRefresh: true }),
   signOut: (scope = 'local') => apiClient.post('/auth/sign-out', { scope }),
   resetPassword: (email, redirect_to) =>
     apiClient.post('/auth/reset-password', { email, redirect_to }),
-  updatePassword: (new_password, access_token, logout_all) =>
+  updatePassword: (new_password, access_token, logout_all, current_password) =>
     apiClient.post('/auth/update-password', {
       new_password,
       access_token,
       logout_all,
+      current_password,
     }),
   getMe: () => apiClient.get('/auth/me'),
 }
@@ -98,6 +103,8 @@ export const clinicalAPI = {
     normalizeEnvelope(
       await apiClient.post('/clinical/ecg/analyze', { signal_id: signalId })
     ),
+  getEcgResult: async (resultId) =>
+    normalizeEnvelope(await apiClient.get(`/clinical/ecg/results/${resultId}`)),
   listEcgResults: async (patientId) =>
     normalizeEnvelope(
       await apiClient.get('/clinical/ecg/results', {
@@ -112,6 +119,8 @@ export const clinicalAPI = {
     normalizeEnvelope(
       await apiClient.post('/clinical/mri/analyze', { scan_id: scanId })
     ),
+  getMriResult: async (resultId) =>
+    normalizeEnvelope(await apiClient.get(`/clinical/mri/results/${resultId}`)),
   listMriResults: async (patientId) =>
     normalizeEnvelope(
       await apiClient.get('/clinical/mri/results', {
@@ -120,7 +129,10 @@ export const clinicalAPI = {
     ),
   reviewResult: async (tableName, resultId, data) =>
     normalizeEnvelope(
-      await apiClient.put(`/clinical/results/${tableName}/${resultId}/review`, data)
+      await apiClient.put(
+        `/clinical/results/${normalizeReviewTableName(tableName)}/${resultId}/review`,
+        data
+      )
     ),
 }
 

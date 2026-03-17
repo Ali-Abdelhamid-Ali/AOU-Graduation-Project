@@ -84,6 +84,23 @@ class AuthController:
                     detail="Authentication failed. Please try again.",
                 )
 
+    async def refresh_session(self, refresh_token: str):
+        """Refresh an authenticated session."""
+        try:
+            result = await self.auth_service.refresh_session(refresh_token)
+            return AuthResponse(
+                success=True,
+                user=result.get("user"),
+                session=result.get("session"),
+                message="Session refreshed successfully",
+            )
+        except Exception as e:
+            logger.error(f"Session refresh failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session refresh failed. Please sign in again.",
+            )
+
     async def reset_password(self, email: str, redirect_to: Optional[str] = None):
         """Handle password reset request."""
         # Validate Redirect URL to prevent Open Redirects
@@ -112,12 +129,18 @@ class AuthController:
         email: str,
         access_token: str,
         new_password: str,
+        current_password: Optional[str] = None,
         logout_all: bool = False,
     ):
         """Handle password update."""
         try:
             result = await self.auth_service.update_password(
-                user_id, email, access_token, new_password, logout_all
+                user_id,
+                email,
+                access_token,
+                new_password,
+                current_password,
+                logout_all,
             )
             return SuccessResponse(
                 success=True,
@@ -127,6 +150,11 @@ class AuthController:
             logger.error(f"Password update failed for user {user_id}: {str(e)}")
 
             error_msg = str(e)
+            if "Current password is incorrect" in error_msg:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=error_msg,
+                )
             if "Your new password cannot be the same" in error_msg:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg

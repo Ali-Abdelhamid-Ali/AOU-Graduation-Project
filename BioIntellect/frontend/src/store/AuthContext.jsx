@@ -8,6 +8,15 @@ import {
   useState,
 } from 'react'
 import { authAPI, usersAPI, geographyAPI } from '@/services/api'
+import {
+  clearAccessSession,
+  clearPersistedSensitiveTokens,
+  clearRecoveryToken,
+  getAccessToken,
+  getRecoveryToken,
+  registerAuthFailureHandler,
+  setAccessSession,
+} from '@/services/auth/sessionStore'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { ROLES, CLINICAL_ROLES, ROLE_ALIAS_MAP, normalizeRole } from '@/config/roles'
 import {
@@ -17,10 +26,6 @@ import {
 } from '@/utils/userFormUtils'
 
 const AuthContext = createContext()
-
-const CURRENT_USER_KEY = 'biointellect_current_user'
-const ACCESS_TOKEN_KEY = 'biointellect_access_token'
-const USER_ROLE_KEY = 'biointellect_user_role'
 
 const normalizeApiError = (err, fallback) => getApiErrorMessage(err, fallback)
 
@@ -137,6 +142,17 @@ export const AuthProvider = ({ children }) => {
     setError(null)
   }, [])
 
+  const applySessionPayload = useCallback((session) => {
+    if (!session?.access_token) {
+      throw new Error('Invalid session payload received from the API.')
+    }
+
+    setAccessSession({
+      accessToken: session.access_token,
+      expiresAt: session.expires_at,
+    })
+  }, [])
+
   const handleUserLoad = useCallback(async (apiUser) => {
     const rawRole = String(apiUser?.role || '').trim().toLowerCase()
     const normalizedRole = ROLE_ALIAS_MAP[rawRole] || rawRole || null
@@ -161,20 +177,12 @@ export const AuthProvider = ({ children }) => {
     setUserRole(normalizedRole)
     setIsAuthenticated(true)
     setMustResetPassword(profile?.must_reset_password === true)
-
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(fullUser))
-    if (normalizedRole) {
-      localStorage.setItem(USER_ROLE_KEY, normalizedRole)
-    } else {
-      localStorage.removeItem(USER_ROLE_KEY)
-    }
   }, [])
 
   const handleLogoutCleanup = useCallback(() => {
-    localStorage.removeItem(CURRENT_USER_KEY)
-    localStorage.removeItem(USER_ROLE_KEY)
-    localStorage.removeItem(ACCESS_TOKEN_KEY)
-    localStorage.removeItem('biointellect_recovery_token')
+    clearAccessSession()
+    clearRecoveryToken()
+    clearPersistedSensitiveTokens()
     setIsAuthenticated(false)
     setCurrentUser(null)
     setUserRole(null)
@@ -183,20 +191,41 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   useEffect(() => {
+    const unregisterAuthFailureHandler = registerAuthFailureHandler(async () => {
+      handleLogoutCleanup()
+    })
+
+    return unregisterAuthFailureHandler
+  }, [handleLogoutCleanup])
+
+  useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem(ACCESS_TOKEN_KEY)
-
-      if (!token) {
-        setIsLoading(false)
-        return
-      }
-
       try {
-        const response = await authAPI.getMe()
-        if (response.success && response.data) {
-          await handleUserLoad(response.data)
+        let userPayload = null
+
+        if (!getAccessToken()) {
+          const refreshResponse = await authAPI.refresh()
+
+          if (!refreshResponse?.success || !refreshResponse?.session?.access_token) {
+            throw new Error(refreshResponse?.message || 'Unable to restore the session')
+          }
+
+          applySessionPayload(refreshResponse.session)
+          userPayload = refreshResponse.user || null
+        }
+
+        if (!userPayload) {
+          const response = await authAPI.getMe()
+          if (!response.success || !response.data) {
+            throw new Error('Invalid session data')
+          }
+          userPayload = response.data
+        }
+
+        if (userPayload) {
+          await handleUserLoad(userPayload)
         } else {
-          throw new Error('Invalid session data')
+          throw new Error('Authenticated session did not include a user payload')
         }
       } catch (err) {
         console.error('Auth session initialization failed:', err)
@@ -207,11 +236,10 @@ export const AuthProvider = ({ children }) => {
     }
 
     initAuth()
-  }, [handleLogoutCleanup, handleUserLoad])
+  }, [applySessionPayload, handleLogoutCleanup, handleUserLoad])
 
   const selectRole = useCallback((role) => {
     setUserRole(role)
-    localStorage.setItem(USER_ROLE_KEY, role)
   }, [])
 
   const refreshUser = useCallback(async () => {
@@ -240,7 +268,8 @@ export const AuthProvider = ({ children }) => {
           throw new Error(response.message || 'Login failed')
         }
 
-        localStorage.setItem(ACCESS_TOKEN_KEY, response.session.access_token)
+        clearRecoveryToken()
+        applySessionPayload(response.session)
         await handleUserLoad(response.user)
 
         return {
@@ -258,15 +287,13 @@ export const AuthProvider = ({ children }) => {
         setIsLoading(false)
       }
     },
-    [clearError, handleUserLoad]
+    [applySessionPayload, clearError, handleUserLoad]
   )
 
   const signOut = useCallback(
     async (scope = 'local') => {
       try {
-        if (scope === 'global') {
-          await authAPI.signOut(scope)
-        }
+        await authAPI.signOut(scope)
       } catch (err) {
         console.warn('Global logout notification failed', err)
       } finally {
@@ -401,8 +428,6 @@ export const AuthProvider = ({ children }) => {
               user_id: updatedProfile.user_id ?? prev.user_id,
               auth_user_id: prev.auth_user_id ?? updatedProfile.user_id ?? prev.user_id,
             }
-
-            localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(nextUser))
             return nextUser
           })
         }
@@ -440,20 +465,23 @@ export const AuthProvider = ({ children }) => {
   )
 
   const updatePassword = useCallback(
-    async (newPassword, logoutAll = false) => {
+    async (newPassword, logoutAll = false, currentPassword) => {
       setIsLoading(true)
       clearError()
       try {
-        const token =
-          localStorage.getItem(ACCESS_TOKEN_KEY) ||
-          localStorage.getItem('biointellect_recovery_token')
+        const token = getAccessToken() || getRecoveryToken()
 
         if (!token) {
           throw new Error('No valid session or recovery token found.')
         }
 
-        await authAPI.updatePassword(newPassword, token, logoutAll)
-        localStorage.removeItem('biointellect_recovery_token')
+        await authAPI.updatePassword(
+          newPassword,
+          token,
+          logoutAll,
+          currentPassword
+        )
+        clearRecoveryToken()
         return { success: true }
       } catch (err) {
         const message = normalizeApiError(err, 'Password update failed')
@@ -474,9 +502,7 @@ export const AuthProvider = ({ children }) => {
         setMustResetPassword(false)
         setCurrentUser((prev) => {
           if (!prev) return prev
-          const updatedUser = { ...prev, must_reset_password: false }
-          localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser))
-          return updatedUser
+          return { ...prev, must_reset_password: false }
         })
       }
       return result

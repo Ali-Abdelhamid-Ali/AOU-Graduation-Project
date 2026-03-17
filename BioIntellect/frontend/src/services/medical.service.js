@@ -8,6 +8,46 @@ const unwrapData = (response, fallbackMessage) => {
   return response.data
 }
 
+const hasText = (value) => typeof value === 'string' && value.trim().length > 0
+
+const pickFirstText = (...values) =>
+  values.find((value) => hasText(value))?.trim() ?? null
+
+const isDefined = (value) => value !== null && value !== undefined
+
+const normalizeKnownBoolean = (value) => {
+  if (value === true || value === false) {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (normalized === 'true') return true
+    if (normalized === 'false') return false
+  }
+
+  return null
+}
+
+const normalizeEcgResult = (item = {}) => ({
+  ...item,
+  confidence_score:
+    item.confidence_score ?? item.rhythm_confidence ?? item.risk_score ?? null,
+  primary_diagnosis: pickFirstText(
+    item.primary_diagnosis,
+    item.rhythm_classification,
+    item.ai_interpretation
+  ),
+  analysis_completed_at: item.analysis_completed_at ?? null,
+})
+
+const normalizeMriResult = (item = {}) => ({
+  ...item,
+  analysis_completed_at: item.analysis_completed_at ?? null,
+  tumor_detected: normalizeKnownBoolean(item.tumor_detected),
+  tumor_type: pickFirstText(item.tumor_type),
+})
+
 export const medicalService = {
   async createCase(caseData) {
     const {
@@ -64,26 +104,47 @@ export const medicalService = {
   },
 
   async saveEcgAnalysis(analysisData) {
-    const { fileId, caseId, patientId, signalInfo } = analysisData
+    const { fileId, caseId, patientId, signalInfo = {} } = analysisData
+    const leads = Array.isArray(signalInfo.leads)
+      ? signalInfo.leads.filter(Boolean)
+      : hasText(signalInfo.leads)
+        ? [signalInfo.leads.trim()]
+        : []
+    const signalPayload = {
+      file_id: fileId,
+      patient_id: patientId,
+      case_id: caseId,
+      signal_data: {
+        source: 'frontend_upload',
+      },
+    }
+
+    if (leads.length > 0) {
+      signalPayload.signal_data.lead_layout = leads
+      signalPayload.leads_available = leads
+    }
+
+    if (isDefined(signalInfo.samplingRate)) {
+      signalPayload.sampling_rate = signalInfo.samplingRate
+    }
+
+    if (isDefined(signalInfo.duration)) {
+      signalPayload.duration_seconds = signalInfo.duration
+    }
+
+    if (isDefined(signalInfo.leadCount)) {
+      signalPayload.lead_count = signalInfo.leadCount
+    } else if (leads.length > 0) {
+      signalPayload.lead_count = leads.length
+    }
+
+    if (isDefined(signalInfo.quality)) {
+      signalPayload.signal_data.quality_score = signalInfo.quality
+      signalPayload.quality_score = signalInfo.quality
+    }
 
     const signal = unwrapData(
-      await clinicalAPI.createEcgSignal({
-        file_id: fileId,
-        patient_id: patientId,
-        case_id: caseId,
-        signal_data: {
-          source: 'frontend_upload',
-          lead_layout: signalInfo.leads || ['12-lead'],
-          quality_score: signalInfo.quality || 95.0,
-        },
-        sampling_rate: signalInfo.samplingRate || 500,
-        duration_seconds: signalInfo.duration || 10,
-        lead_count: signalInfo.leadCount || 12,
-        leads_available: Array.isArray(signalInfo.leads)
-          ? signalInfo.leads
-          : [signalInfo.leads || '12-lead'],
-        quality_score: signalInfo.quality || 95.0,
-      }),
+      await clinicalAPI.createEcgSignal(signalPayload),
       'Failed to create ECG signal'
     )
 
@@ -96,22 +157,35 @@ export const medicalService = {
   },
 
   async saveMriAnalysis(analysisData) {
-    const { caseId, patientId, scanInfo, fileId } = analysisData
+    const { caseId, patientId, scanInfo = {}, fileId } = analysisData
+    const scanPayload = {
+      file_id: fileId,
+      patient_id: patientId,
+      case_id: caseId,
+      dicom_metadata: {
+        source: 'frontend_upload',
+      },
+    }
+
+    if (hasText(scanInfo.type)) {
+      scanPayload.scan_type = scanInfo.type.trim()
+    }
+
+    if (hasText(scanInfo.sequence)) {
+      scanPayload.sequence_type = scanInfo.sequence.trim()
+      scanPayload.dicom_metadata.uploaded_sequence = scanInfo.sequence.trim()
+    }
+
+    if (isDefined(scanInfo.fieldStrength)) {
+      scanPayload.field_strength = scanInfo.fieldStrength
+    }
+
+    if (hasText(scanInfo.quality)) {
+      scanPayload.dicom_metadata.quality = scanInfo.quality.trim()
+    }
 
     const scan = unwrapData(
-      await clinicalAPI.createMriScan({
-        file_id: fileId,
-        patient_id: patientId,
-        case_id: caseId,
-        scan_type: scanInfo?.type || 'brain',
-        sequence_type: scanInfo?.sequence || 'multi-modal',
-        field_strength: 1.5,
-        dicom_metadata: {
-          source: 'frontend_upload',
-          quality: scanInfo?.quality || 'good',
-          uploaded_sequence: scanInfo?.sequence || 'multi-modal',
-        },
-      }),
+      await clinicalAPI.createMriScan(scanPayload),
       'Failed to create MRI scan'
     )
 
@@ -124,21 +198,39 @@ export const medicalService = {
   },
 
   async createMriScan(scanData) {
-    const { fileId, patientId, caseId, sequenceType, dicomMetadata } = scanData
+    const {
+      fileId,
+      patientId,
+      caseId,
+      sequenceType,
+      scanType,
+      fieldStrength,
+      dicomMetadata,
+    } = scanData
+    const payload = {
+      file_id: fileId,
+      patient_id: patientId,
+      case_id: caseId,
+      dicom_metadata: {
+        source: 'frontend_upload',
+        ...(dicomMetadata || {}),
+      },
+    }
+
+    if (hasText(scanType)) {
+      payload.scan_type = scanType.trim()
+    }
+
+    if (hasText(sequenceType)) {
+      payload.sequence_type = sequenceType.trim()
+    }
+
+    if (isDefined(fieldStrength)) {
+      payload.field_strength = fieldStrength
+    }
 
     return unwrapData(
-      await clinicalAPI.createMriScan({
-        file_id: fileId,
-        patient_id: patientId,
-        case_id: caseId,
-        scan_type: 'brain',
-        sequence_type: sequenceType || 'multi-modal',
-        field_strength: 1.5,
-        dicom_metadata: {
-          source: 'frontend_upload',
-          ...(dicomMetadata || {}),
-        },
-      }),
+      await clinicalAPI.createMriScan(payload),
       'Failed to create MRI scan'
     )
   },
@@ -196,17 +288,13 @@ export const medicalService = {
       'Failed to load ECG results'
     )
 
-    return data.map((item) => ({
-      ...item,
-      confidence_score:
-        item.confidence_score ?? item.rhythm_confidence ?? item.risk_score ?? 0,
-      primary_diagnosis:
-        item.primary_diagnosis ??
-        item.rhythm_classification ??
-        item.ai_interpretation ??
-        'ECG analysis completed.',
-      analysis_completed_at: item.analysis_completed_at ?? item.created_at,
-    }))
+    return data.map(normalizeEcgResult)
+  },
+
+  async getEcgResultById(resultId) {
+    return normalizeEcgResult(
+      unwrapData(await clinicalAPI.getEcgResult(resultId), 'Failed to load ECG result')
+    )
   },
 
   async getMriResults(patientId) {
@@ -215,22 +303,21 @@ export const medicalService = {
       'Failed to load MRI results'
     )
 
-    return data.map((item) => ({
-      ...item,
-      analysis_completed_at: item.analysis_completed_at ?? item.created_at,
-      tumor_detected:
-        item.tumor_detected ??
-        Boolean(item.detected_abnormalities?.length || item.severity_score > 40),
-      tumor_type:
-        item.tumor_type ??
-        item.detected_abnormalities?.[0]?.name ??
-        item.ai_interpretation,
-    }))
+    return data.map(normalizeMriResult)
+  },
+
+  async getMriResultById(resultId) {
+    return normalizeMriResult(
+      unwrapData(await clinicalAPI.getMriResult(resultId), 'Failed to load MRI result')
+    )
   },
 
   async reviewResult(tableName, resultId, data) {
+    const normalizedTableName =
+      tableName === 'mri_segmentation_results' ? 'mri_results' : tableName
+
     return unwrapData(
-      await clinicalAPI.reviewResult(tableName, resultId, data),
+      await clinicalAPI.reviewResult(normalizedTableName, resultId, data),
       'Failed to review result'
     )
   },

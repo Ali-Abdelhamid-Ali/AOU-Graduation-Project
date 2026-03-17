@@ -18,8 +18,7 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     }
 
     if (!isAuthenticated) {
-        // Redirect to home if not authenticated
-        return <Navigate to="/" state={{ from: location }} replace />;
+        return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
     if (mustResetPassword && location.pathname !== '/force-password-reset') {
@@ -34,8 +33,6 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
         if (location.pathname !== fallbackPath) {
             return <Navigate to={fallbackPath} replace />;
         } else {
-            // If we are already on the fallback path but still unauthorized, 
-            // fallback further to the home page to break the loop.
             return <Navigate to="/" replace />;
         }
     }

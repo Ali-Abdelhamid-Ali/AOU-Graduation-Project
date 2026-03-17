@@ -230,14 +230,14 @@ export const DoctorDashboard = ({ onLogout }) => {
           {
             key: 'ecg',
             label: 'ECG Workspace',
-            description: 'Doctor and patient uploads share this intake path',
+            description: 'Doctor-only intake for ECG uploads and clinical review',
             glyph: 'EC',
             route: '/ecg-analysis',
           },
           {
             key: 'mri',
             label: 'MRI Workspace',
-            description: 'Doctor and patient uploads share this intake path',
+            description: 'Doctor-only intake for MRI uploads and segmentation review',
             glyph: 'MR',
             route: '/mri-analysis',
           },
@@ -285,11 +285,11 @@ export const DoctorDashboard = ({ onLogout }) => {
   const sharedToolSummary = [
     {
       title: 'ECG intake path',
-      helper: 'Patients can upload directly, while doctors can upload or review assigned ECG cases from the same workspace.',
+      helper: 'Clinicians can upload new ECG studies or review assigned ECG cases from the same workspace.',
     },
     {
       title: 'MRI intake path',
-      helper: 'MRI uploads from doctors and patients converge into one trusted imaging workflow for review and segmentation.',
+      helper: 'Clinicians can upload MRI sequences or review existing imaging cases in one trusted workflow.',
     },
     {
       title: 'Scheduling posture',

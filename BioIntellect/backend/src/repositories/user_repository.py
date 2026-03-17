@@ -1,4 +1,4 @@
-﻿"""User Repository - Complete User Management Data Access."""
+"""User Repository - Complete User Management Data Access."""
 
 from typing import Any, Dict, List, Optional
 
@@ -711,6 +711,14 @@ class UserRepository:
                 "hospital_id",
                 "insurance_provider",
                 "insurance_number",
+                "passport_number",
+                "address",
+                "city",
+                "country_id",
+                "region_id",
+                "hospital_id",
+                "insurance_provider",
+                "insurance_number",
                 "emergency_contact_name",
                 "emergency_contact_phone",
                 "emergency_contact_relation",
@@ -746,6 +754,7 @@ class UserRepository:
                 "country_id",
                 "region_id",
                 "hospital_id",
+                "avatar_url",
             ],
             "administrators": [
                 "first_name",
@@ -755,6 +764,7 @@ class UserRepository:
                 "country_id",
                 "region_id",
                 "hospital_id",
+                "avatar_url",
             ],
         }
 

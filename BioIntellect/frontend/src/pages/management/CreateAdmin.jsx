@@ -138,7 +138,7 @@ const CreateAdmin = ({ onBack, userRole }) => {
                                 <strong>{formData.firstName} {formData.lastName}</strong> provisioned as {formData.role === 'admin' ? 'Administrator' : 'Super Admin'}.
                                 <br /><br />
                                 <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>
-                                    ⚠️ Activation email sent. The administrator must confirm their credentials before signing in.
+                                    Account created successfully. Share login credentials manually through your approved administrative onboarding process.
                                 </span>
                             </p>
                             <div className={styles.successActions}>

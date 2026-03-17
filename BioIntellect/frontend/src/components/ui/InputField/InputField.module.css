@@ -50,6 +50,11 @@
   line-height: var(--line-height-normal);
 }
 
+.textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
 .input:focus {
   outline: none;
   border-color: var(--color-primary);

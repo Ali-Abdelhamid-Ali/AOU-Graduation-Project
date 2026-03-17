@@ -1,148 +1,220 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/store/AuthContext'
 import { useNavigate } from 'react-router-dom'
+
+import { useAuth } from '@/store/AuthContext'
 import { medicalService } from '@/services/medical.service'
 import { Skeleton } from '@/components/ui/Skeleton'
 import SkeletonText from '@/components/ui/SkeletonText'
 import styles from './PatientResults.module.css'
 
+const hasText = (value) => typeof value === 'string' && value.trim().length > 0
+
+const formatResultDate = (value) => {
+  if (!value) {
+    return 'Pending'
+  }
+
+  return value.split('T')[0]
+}
+
+const getResultStatus = (result) => {
+  if (result.is_reviewed) {
+    return 'Reviewed'
+  }
+
+  if (result.analysis_completed_at) {
+    return 'Awaiting Review'
+  }
+
+  return 'Awaiting Analysis'
+}
+
+const getEcgSummary = (result) => {
+  if (hasText(result.primary_diagnosis)) {
+    return result.primary_diagnosis.trim()
+  }
+
+  if (hasText(result.rhythm_classification)) {
+    return result.rhythm_classification.trim()
+  }
+
+  if (hasText(result.ai_interpretation)) {
+    return result.ai_interpretation.trim()
+  }
+
+  return result.analysis_completed_at
+    ? 'Analysis completed. A clinical summary is not available yet.'
+    : 'Analysis pending or incomplete.'
+}
+
+const getMriSummary = (result) => {
+  if (hasText(result.ai_interpretation)) {
+    return result.ai_interpretation.trim()
+  }
+
+  if (hasText(result.tumor_type)) {
+    return result.tumor_type.trim()
+  }
+
+  return result.analysis_completed_at
+    ? 'Analysis completed. Detailed findings are not attached yet.'
+    : 'Analysis pending or incomplete.'
+}
+
 export const PatientResults = () => {
-    const { currentUser } = useAuth()
-    const navigate = useNavigate()
-    const [loading, setLoading] = useState(true)
-    const [results, setResults] = useState([])
+  const { currentUser } = useAuth()
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
+  const [results, setResults] = useState([])
+  const [error, setError] = useState('')
 
-    useEffect(() => {
-        const fetchRealResults = async () => {
-            if (!currentUser?.id) {
-                setLoading(false);
-                return;
-            }
+  useEffect(() => {
+    const fetchRealResults = async () => {
+      if (!currentUser?.id) {
+        setLoading(false)
+        return
+      }
 
-            setLoading(true);
-            try {
-                // Fetch ECG and MRI results in parallel via MedicalService (Hardened API)
-                const [ecgResults, mriResults] = await Promise.all([
-                    medicalService.getEcgResults(currentUser.id),
-                    medicalService.getMriResults(currentUser.id)
-                ]);
+      setLoading(true)
+      setError('')
+      try {
+        const [ecgResults, mriResults] = await Promise.all([
+          medicalService.getEcgResults(currentUser.id),
+          medicalService.getMriResults(currentUser.id),
+        ])
 
-                // Map and combine results
-                const ecgMapped = (ecgResults || []).map(r => ({
-                    id: `ecg-${r.id}`,
-                    name: 'ECG Arrhythmia Scan',
-                    date: r.analysis_completed_at ? r.analysis_completed_at.split('T')[0] : 'Pending',
-                    status: r.confidence_score > 0.8 ? 'Normal' : 'Warning',
-                    summary: r.primary_diagnosis || 'Automated classification completed.',
-                    type: 'ecg'
-                }));
+        const ecgMapped = (ecgResults || []).map((result) => ({
+          id: `ecg-${result.id}`,
+          resultId: result.id,
+          name: 'ECG Arrhythmia Scan',
+          date: formatResultDate(result.analysis_completed_at),
+          sortDate: result.analysis_completed_at || result.created_at || null,
+          status: getResultStatus(result),
+          summary: getEcgSummary(result),
+          type: 'ecg',
+        }))
 
-                const mriMapped = (mriResults || []).map(r => ({
-                    id: `mri-${r.id}`,
-                    name: 'Brain MRI Segmentation',
-                    date: r.analysis_completed_at ? r.analysis_completed_at.split('T')[0] : 'Pending',
-                    status: (r.tumor_detected || r.tumor_detected === 'true') ? 'Critical' : 'Normal',
-                    summary: r.tumor_detected ? `Tumor suspected: ${r.tumor_type || 'General'}` : 'No abnormal growths detected.',
-                    type: 'mri'
-                }));
+        const mriMapped = (mriResults || []).map((result) => ({
+          id: `mri-${result.id}`,
+          resultId: result.id,
+          name: 'Brain MRI Segmentation',
+          date: formatResultDate(result.analysis_completed_at),
+          sortDate: result.analysis_completed_at || result.created_at || null,
+          status: getResultStatus(result),
+          summary: getMriSummary(result),
+          type: 'mri',
+        }))
 
-                const combined = [...ecgMapped, ...mriMapped].sort((a, b) => {
-                    const dateA = new Date(a.date).getTime() || 0;
-                    const dateB = new Date(b.date).getTime() || 0;
-                    return dateB - dateA;
-                });
+        const combined = [...ecgMapped, ...mriMapped].sort((a, b) => {
+          const dateA = new Date(a.sortDate).getTime() || 0
+          const dateB = new Date(b.sortDate).getTime() || 0
+          return dateB - dateA
+        })
 
-                setResults(combined);
-            } catch (error) {
-                console.error('Error fetching clinical results:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchRealResults();
-    }, [currentUser])
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'Normal': return '#10b981';
-            case 'Warning': return '#f59e0b';
-            case 'Critical': return '#ef4444';
-            default: return '#64748b';
-        }
+        setResults(combined)
+      } catch (error) {
+        console.error('Error fetching clinical results:', error)
+        setError(error.message || 'Unable to load your clinical results right now.')
+      } finally {
+        setLoading(false)
+      }
     }
 
-    if (loading) {
-        return (
-            <div className={styles.container}>
-                <div className={styles.header}>
-                    <SkeletonText lines={1} width="300px" />
-                    <SkeletonText lines={1} width="500px" />
-                </div>
-                <div className={styles.resultsGrid}>
-                    {[1, 2, 3, 4].map(i => (
-                        <div key={i} className={styles.resultCardSkeleton}>
-                            <div className={styles.cardHeader}>
-                                <Skeleton width="80px" height="20px" borderRadius="10px" />
-                                <Skeleton width="60px" height="24px" borderRadius="20px" />
-                            </div>
-                            <SkeletonText lines={1} width="100%" />
-                            <SkeletonText lines={2} width="100%" />
-                            <Skeleton width="120px" height="36px" borderRadius="12px" />
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )
-    }
+    fetchRealResults()
+  }, [currentUser])
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Reviewed':
+        return '#10b981'
+      case 'Awaiting Review':
+        return '#2563eb'
+      case 'Awaiting Analysis':
+        return '#f59e0b'
+      default:
+        return '#64748b'
+    }
+  }
+
+  if (loading) {
     return (
-        <motion.div
-            className={styles.container}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-        >
-            <div className={styles.header}>
-                <h1 className={styles.title}>Medical Analysis Results</h1>
-                <p className={styles.subtitle}>View and monitor your clinical reports and AI-powered insights.</p>
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <SkeletonText lines={1} width="300px" />
+          <SkeletonText lines={1} width="500px" />
+        </div>
+        <div className={styles.resultsGrid}>
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className={styles.resultCardSkeleton}>
+              <div className={styles.cardHeader}>
+                <Skeleton width="80px" height="20px" borderRadius="10px" />
+                <Skeleton width="60px" height="24px" borderRadius="20px" />
+              </div>
+              <SkeletonText lines={1} width="100%" />
+              <SkeletonText lines={2} width="100%" />
+              <Skeleton width="120px" height="36px" borderRadius="12px" />
             </div>
-
-            <div className={styles.resultsGrid}>
-                {results.map((result) => (
-                    <motion.div
-                        key={result.id}
-                        className={styles.resultCard}
-                        whileHover={{ y: -5, boxShadow: '0 12px 20px -5px rgba(0,0,0,0.1)' }}
-                    >
-                        <div className={styles.cardHeader}>
-                            <span className={styles.date}>{result.date}</span>
-                            <span
-                                className={styles.statusBadge}
-                                style={{ backgroundColor: `${getStatusColor(result.status)}15`, color: getStatusColor(result.status) }}
-                            >
-                                {result.status}
-                            </span>
-                        </div>
-                        <h3 className={styles.resultName}>{result.name}</h3>
-                        <p className={styles.summary}>{result.summary}</p>
-                        <button
-                            className={styles.viewDetails}
-                            onClick={() => navigate(result.type === 'ecg' ? '/ecg-analysis' : '/mri-analysis')}
-                        >
-                            View Full Report →
-                        </button>
-                    </motion.div>
-                ))}
-            </div>
-
-            {results.length === 0 && (
-                <div className={styles.emptyState}>
-                    <span className={styles.emptyIcon}>📂</span>
-                    <h3>No Results Found</h3>
-                    <p>When your medical tests are processed, they will appear here.</p>
-                </div>
-            )}
-        </motion.div>
+          ))}
+        </div>
+      </div>
     )
+  }
+
+  return (
+    <motion.div
+      className={styles.container}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <div className={styles.header}>
+        <h1 className={styles.title}>Medical Analysis Results</h1>
+        <p className={styles.subtitle}>
+          Review your clinical reports and AI-assisted findings in one place.
+        </p>
+        {error ? <p className={styles.subtitle}>{error}</p> : null}
+      </div>
+
+      <div className={styles.resultsGrid}>
+        {results.map((result) => (
+          <motion.div
+            key={result.id}
+            className={styles.resultCard}
+            whileHover={{ y: -5, boxShadow: '0 12px 20px -5px rgba(0,0,0,0.1)' }}
+          >
+            <div className={styles.cardHeader}>
+              <span className={styles.date}>{result.date}</span>
+              <span
+                className={styles.statusBadge}
+                style={{
+                  backgroundColor: `${getStatusColor(result.status)}15`,
+                  color: getStatusColor(result.status),
+                }}
+              >
+                {result.status}
+              </span>
+            </div>
+            <h3 className={styles.resultName}>{result.name}</h3>
+            <p className={styles.summary}>{result.summary}</p>
+            <button
+              className={styles.viewDetails}
+              onClick={() =>
+                navigate(`/patient-results/${result.type}/${result.resultId}`)
+              }
+            >
+              Open result details {'->'}
+            </button>
+          </motion.div>
+        ))}
+      </div>
+
+      {results.length === 0 && (
+        <div className={styles.emptyState}>
+          <span className={styles.emptyIcon}>No data</span>
+          <h3>No Results Found</h3>
+          <p>When your medical tests are processed, they will appear here.</p>
+        </div>
+      )}
+    </motion.div>
+  )
 }

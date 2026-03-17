@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
 
@@ -101,7 +101,7 @@ export const PatientAppointments = () => {
     fetchAppointments()
   }, [fetchAppointments])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (mode === 'new') {
       setFormState(buildInitialFormState())
       return
@@ -390,6 +390,8 @@ export const PatientAppointments = () => {
                     onChange={handleFieldChange('reason')}
                     placeholder="Describe why this follow-up should be scheduled."
                     rows={3}
+                    minLength={5}
+                    maxLength={500}
                     required
                   />
                 </label>

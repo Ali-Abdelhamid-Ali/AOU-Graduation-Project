@@ -11,7 +11,12 @@ class Settings(BaseSettings):
     """Centralized environment settings."""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
+    APP_NAME : str
+    APP_VERSION : str
+    COHERE_API_KEY : str 
+    FILE_MAX_SIZE : int 
+    FILE_ALLOWED_type : list 
+    FILE_DEFAULT_CHUNK_SIZE:int 
     environment: str = Field(default="development", alias="ENVIRONMENT")
     debug: bool = Field(default=False, alias="DEBUG")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")

@@ -30,6 +30,8 @@ from src.api.routes import (
     system_routes,
     user_routes,
     websocket_routes,
+    rag_routes,
+    rag_data
 )
 from src.db.supabase.client import SupabaseProvider
 from src.middleware.error_handler import GlobalExceptionHandlerMiddleware
@@ -51,7 +53,6 @@ from src.services.domain.swagger_ui_fix import swagger_ui_fix_service
 from src.services.domain.user_check_service import user_check_service
 from src.services.infrastructure.memory_cache import global_cache
 from src.validators.response_dto import ApiErrorResponse
-
 setup_logging()
 logger = get_logger(__name__)
 
@@ -184,7 +185,10 @@ def create_app() -> FastAPI:
     app.include_router(statistics_routes.router, prefix=api_prefix)
     app.include_router(notification_routes.router, prefix=api_prefix)
     app.include_router(websocket_routes.router, prefix=api_prefix)
+    app.include_router(rag_routes.router, prefix=api_prefix)
+    app.include_router(rag_data.router, prefix=api_prefix)
 
+    app.openapi_schema = None  
     def custom_openapi():
         if app.openapi_schema:
             return app.openapi_schema

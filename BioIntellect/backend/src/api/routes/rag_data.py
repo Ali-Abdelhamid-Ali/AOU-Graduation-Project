@@ -28,7 +28,7 @@ async def upload_data(project_id: str ,File: UploadFile ,
             }
         )
     project_dir_path=projectController().get_project_path(project_id=project_id)
-    file_path=DataController().generate_unique_filename(orig_file_name=File.filename,project_id=project_id)
+    file_path , file_id=DataController().generate_unique_filepath(orig_file_name=File.filename,project_id=project_id)
     
     try:
         async with aiofiles.open(
@@ -47,5 +47,5 @@ async def upload_data(project_id: str ,File: UploadFile ,
             )
     return JSONResponse(
          status_code=status.HTTP_200_OK,
-         content={"signal": "file uploaded successfully","path": file_path}
+         content={"signal": "file uploaded successfully","path": file_path,"file_id":file_id}
             )

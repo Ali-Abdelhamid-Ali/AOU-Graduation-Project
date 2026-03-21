@@ -7,6 +7,10 @@ from src.api.controllers.ProjectController import projectController
 import os 
 from src.config.settings import get_settings , settings
 from  src.api.controllers.DataController import DataController
+
+from src.validators.data_rag import processRecquest
+from src.api.controllers.ProcessController import ProcessController
+
 router=APIRouter(prefix="/RAG-DATA", tags=["RAG-DATA"])
 
 logger = get_logger("routes.RAG-DATA")
@@ -27,7 +31,6 @@ async def upload_data(project_id: str ,File: UploadFile ,
                 "signal":"the file not valid"
             }
         )
-    project_dir_path=projectController().get_project_path(project_id=project_id)
     file_path , file_id=DataController().generate_unique_filepath(orig_file_name=File.filename,project_id=project_id)
     
     try:
@@ -49,3 +52,39 @@ async def upload_data(project_id: str ,File: UploadFile ,
          status_code=status.HTTP_200_OK,
          content={"signal": "file uploaded successfully","path": file_path,"file_id":file_id}
             )
+
+
+
+@router.post ("/process/{project_id}")
+async def process_endpoint(project_id: str, process_request: processRecquest):
+    file_id=process_request.file_id
+    chunk_size=process_request.chunk_size
+    overlap_size=process_request.overlap_size
+
+
+    process_controller=ProcessController(project_id=project_id)
+    file_content=process_controller.get_file_content(file_id=file_id)
+    file_chunk=process_controller.process_file_content(file_content=file_content,
+                                                        chunk_size=chunk_size, 
+                                                        overlap_size=overlap_size, 
+                                                        file_id=file_id)
+    if file_chunk is None or len (file_chunk)==0:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"signal": "can't process the file content"}
+        )
+
+    serialized_chunks = [
+        {
+            "page_content": chunk.page_content,
+            "metadata": chunk.metadata,
+        }
+        for chunk in file_chunk
+    ]
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK, 
+        content={"signal": "file processed successfully","file_chunk": serialized_chunks}
+    )
+
+

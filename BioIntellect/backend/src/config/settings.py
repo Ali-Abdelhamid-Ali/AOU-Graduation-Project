@@ -1,4 +1,5 @@
 from functools import lru_cache
+import os
 from typing import List, Optional
 
 from pydantic import Field, field_validator, model_validator
@@ -80,6 +81,16 @@ class Settings(BaseSettings):
     def _validate_llm_configuration(self):
         supported_backends = {"cohere", "openai", "medmo", "phi_qa"}
 
+        def _normalize_existing_dir(value: Optional[str], env_name: str) -> str:
+            resolved = os.path.abspath(
+                os.path.expanduser(os.path.expandvars((value or "").strip()))
+            )
+            if not resolved or not os.path.isdir(resolved):
+                raise ValueError(
+                    f"{env_name} must point to an existing directory. Resolved path: '{resolved or value}'."
+                )
+            return resolved
+
         generation_backend = (self.GENERATION_BACKEND or "").strip().lower()
         if generation_backend not in supported_backends:
             raise ValueError(
@@ -87,9 +98,16 @@ class Settings(BaseSettings):
             )
         self.GENERATION_BACKEND = generation_backend
 
-        embedding_backend = (
-            (self.EMBEDDING_BACKEND or self.GENERATION_BACKEND).strip().lower()
-        )
+        if self.EMBEDDING_BACKEND:
+            embedding_backend = (self.EMBEDDING_BACKEND or "").strip().lower()
+        elif self.GENERATION_BACKEND == "medmo":
+            raise ValueError(
+                "EMBEDDING_BACKEND must be set when GENERATION_BACKEND=medmo because medmo does not support embed_text. "
+                "Choose one of: phi_qa, openai, cohere."
+            )
+        else:
+            embedding_backend = self.GENERATION_BACKEND
+
         if embedding_backend not in supported_backends:
             raise ValueError(
                 "EMBEDDING_BACKEND must be one of: cohere, openai, medmo, phi_qa"
@@ -111,12 +129,23 @@ class Settings(BaseSettings):
                 "Add this to your .env:\n"
                 "MEDMO_MODEL_PATH=D:/AOU-Graduation-Project/BioIntellect/AI/fintune/medmo_8B/MedMO-8B-Next"
             )
+        if self.GENERATION_BACKEND == "medmo":
+            self.MEDMO_MODEL_PATH = _normalize_existing_dir(
+                self.MEDMO_MODEL_PATH,
+                "MEDMO_MODEL_PATH",
+            )
+
         if self.GENERATION_BACKEND == "phi_qa" and not self.PHI_QA_MODEL_PATH:
             raise ValueError(
                 "PHI_QA_MODEL_PATH is required when GENERATION_BACKEND=phi_qa.\n"
                 "Add this to your .env:\n"
                 "PHI_QA_MODEL_PATH=D:/AOU-Graduation-Project/BioIntellect/AI/fintune/"
                 "fintuned_QA_model/phi_medical_full_merged_16bit_QA"
+            )
+        if self.GENERATION_BACKEND == "phi_qa":
+            self.PHI_QA_MODEL_PATH = _normalize_existing_dir(
+                self.PHI_QA_MODEL_PATH,
+                "PHI_QA_MODEL_PATH",
             )
 
         if self.EMBEDDING_BACKEND == "cohere":
@@ -145,12 +174,18 @@ class Settings(BaseSettings):
 
         if self.EMBEDDING_BACKEND == "medmo":
             raise ValueError(
-                "EMBEDDING_BACKEND=medmo is not supported because MedMOProvider does not implement embed_text"
+                "EMBEDDING_BACKEND=medmo is not supported because MedMOProvider does not implement embed_text. "
+                "Use EMBEDDING_BACKEND=phi_qa/openai/cohere."
             )
 
         if self.EMBEDDING_BACKEND == "phi_qa" and not self.PHI_QA_MODEL_PATH:
             raise ValueError(
                 "PHI_QA_MODEL_PATH is required when EMBEDDING_BACKEND=phi_qa"
+            )
+        if self.EMBEDDING_BACKEND == "phi_qa":
+            self.PHI_QA_MODEL_PATH = _normalize_existing_dir(
+                self.PHI_QA_MODEL_PATH,
+                "PHI_QA_MODEL_PATH",
             )
 
         return self

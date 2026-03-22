@@ -114,6 +114,7 @@ def create_app() -> FastAPI:
 
     async def on_startup(app: FastAPI) -> None:
         settings = get_settings()
+        embedding_backend = settings.EMBEDDING_BACKEND or settings.GENERATION_BACKEND
 
         llm_provider_factory = LLMProviderFactory(settings)
         generation_client = llm_provider_factory.create(
@@ -129,18 +130,38 @@ def create_app() -> FastAPI:
             )
         app.state.generation_client = generation_client
 
-        embedding_client = llm_provider_factory.create(
-            backend=settings.EMBEDDING_BACKEND
-        )
-        if settings.EMBEDDING_MODEL_ID and settings.EMBEDDING_MODEL_SIZE:
+        if embedding_backend == settings.GENERATION_BACKEND:
+            embedding_client = generation_client
+        else:
+            embedding_client = llm_provider_factory.create(backend=embedding_backend)
+
+        if embedding_backend == "cohere":
+            if not settings.EMBEDDING_MODEL_ID or settings.EMBEDDING_MODEL_SIZE is None:
+                raise RuntimeError(
+                    "Invalid cohere embedding configuration: EMBEDDING_MODEL_ID and EMBEDDING_MODEL_SIZE are required."
+                )
             embedding_client.set_embedding_model(
                 model_id=settings.EMBEDDING_MODEL_ID,
                 embedding_size=settings.EMBEDDING_MODEL_SIZE,
             )
-        else:
-            logger.warning(
-                "EMBEDDING_MODEL_ID or EMBEDDING_MODEL_SIZE is missing; using provider default embedding model"
+        elif embedding_backend == "openai":
+            if not settings.EMBEDDING_MODEL_ID:
+                raise RuntimeError(
+                    "Invalid openai embedding configuration: EMBEDDING_MODEL_ID is required."
+                )
+            embedding_client.set_embedding_model(
+                model_id=settings.EMBEDDING_MODEL_ID,
+                embedding_size=settings.EMBEDDING_MODEL_SIZE or 0,
             )
+        elif embedding_backend == "phi_qa":
+            logger.info(
+                "Embedding backend is phi_qa; using local model path without separate EMBEDDING_MODEL_ID"
+            )
+        else:
+            raise RuntimeError(
+                f"Unsupported embedding backend during startup: {embedding_backend}"
+            )
+
         app.state.embedding_client = embedding_client
 
     @asynccontextmanager

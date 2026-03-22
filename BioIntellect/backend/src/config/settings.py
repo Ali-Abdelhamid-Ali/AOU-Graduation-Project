@@ -30,7 +30,12 @@ class Settings(BaseSettings):
     INPUT_DEFAULT_MAX_TOKENS:     Optional[int]   = None
     INPUT_DEFAULT_TEMPERATURE:    Optional[float] = None
 
+    # ── vecrotDb config  ────────────────────────────────────────────────
+    VECTOR_DB_BACKEND: str
+    VECTOR_DB_PATH: str 
+    VECTOR_DB_DISTANCE_METHOD: str = None
     # ── Local model paths ────────────────────────────────────────────────
+
     MEDMO_MODEL_PATH:     Optional[str] = None
     MEDMO_OFFLOAD_FOLDER: str           = "./offload"
     PHI_QA_MODEL_PATH:    Optional[str] = None

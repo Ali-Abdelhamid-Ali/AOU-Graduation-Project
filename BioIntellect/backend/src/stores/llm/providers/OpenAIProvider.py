@@ -43,6 +43,8 @@ class OpenAIProvider(LLMInterface):
             return None
         if chat_history is None:
             chat_history = []
+        else:
+            chat_history = list(chat_history)
         chat_history.append(self.construct_prompt(query=prompt, role=OpenAIEnums.user.value))
         response = self.client.chat.completions.create(
             model=self.generation_model_id,
@@ -69,8 +71,10 @@ class OpenAIProvider(LLMInterface):
     def embed_text(self, text: str, document_type: str = None) -> list[float]:
         if not self.client:
             self.logger.error("OpenAI client is not initialized.")
+            return None
         if not self.embedding_model_id:
             self.logger.error("Embedding model is not set.")
+            return None
 
 
         response = self.client.embeddings.create(

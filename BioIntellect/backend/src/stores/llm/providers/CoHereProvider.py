@@ -44,6 +44,8 @@ class CoHereProvider(LLMInterface):
             return None
         if chat_history is None:
             chat_history = []
+        else:
+            chat_history = list(chat_history)
         chat_history.append(self.construct_prompt(query=prompt, role=CohereEnums.user.value))
         response = self.client.chat(
             model=self.generation_model_id,

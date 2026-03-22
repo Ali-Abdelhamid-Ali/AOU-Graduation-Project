@@ -157,6 +157,11 @@ def create_app() -> FastAPI:
             logger.info(
                 "Embedding backend is phi_qa; using local model path without separate EMBEDDING_MODEL_ID"
             )
+        elif embedding_backend == "medmo":
+            raise RuntimeError(
+                "medmo embedding is not supported. "
+                "Set EMBEDDING_BACKEND to phi_qa, openai, or cohere."
+            )
         else:
             raise RuntimeError(
                 f"Unsupported embedding backend during startup: {embedding_backend}"

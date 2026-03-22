@@ -1,5 +1,5 @@
 from enum import Enum
-class LLMEnumes(Enum):
+class LLMEnums(Enum):
     # LLM Types
     openai = "openai"
     cohere = "cohere"
@@ -13,7 +13,7 @@ class CohereEnums(Enum):
     system= "system"
     user= "user"
     assistant= "assistant"
-    document="search_Document"
+    document="search_document"
     query="search_query"
 class MedMOEnums(Enum):
     system    = "system"

@@ -48,10 +48,10 @@ class MedMOProvider(LLMInterface):
         return self.generation_model_id
 
     def set_embedding_model(self, model_id: str, embedding_size: int) -> str:
-        self.logger.warning("MedMO does not support embedding models.")
-        self.embedding_model_id = model_id
-        self.embedding_size = embedding_size
-        return self.embedding_model_id
+        raise NotImplementedError(
+            "MedMOProvider does not support a separate embedding model. "
+            "Embeddings are generated from the local model path directly."
+        )
 
     def generate_text(self,prompt: str,chat_history: list = None,max_output_tokens: int = None,
         temp: float = None,image_path: str = None) -> str:

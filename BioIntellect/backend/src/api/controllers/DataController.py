@@ -11,7 +11,7 @@ class DataController(BaseController) :
             self.size_scale=1048576
         def validate_uploaded_file(self,file: UploadFile):
               
-            if file.content_type not in self.app_settings.FILE_ALLOWED_type:
+            if file.content_type not in self.app_settings.FILE_ALLOWED_TYPE:
                     raise HTTPException(
                     status_code=400,
                     detail=f"File type '{file.content_type}' not allowed"

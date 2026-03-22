@@ -5,7 +5,7 @@ import aiofiles
 from src.observability.logger import get_logger
 from src.api.controllers.ProjectController import projectController
 import os 
-from src.config.settings import get_settings , settings
+from src.config.settings import get_settings, Settings
 from  src.api.controllers.DataController import DataController
 
 from src.validators.data_rag import processRecquest
@@ -17,20 +17,11 @@ logger = get_logger("routes.RAG-DATA")
 
 @router.post ("/upload/{project_id}")
 async def upload_data(project_id: str ,File: UploadFile ,
-                      app_settings : settings = Depends(get_settings)):
+                      app_settings : Settings = Depends(get_settings)):
 
 
         # validation the file and the size 
-    is_valid= DataController().validate_uploaded_file(file=File)
-
-
-    if not is_valid:
-        return JSONResponse(
-            status_code= status.HTTP_400_BAD_REQUEST,
-            content={
-                "signal":"the file not valid"
-            }
-        )
+    DataController().validate_uploaded_file(file=File)
     file_path , file_id=DataController().generate_unique_filepath(orig_file_name=File.filename,project_id=project_id)
     
     try:

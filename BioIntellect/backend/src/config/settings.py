@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # ── File handling ────────────────────────────────────────────────────
     FILE_MAX_SIZE:           int
-    FILE_ALLOWED_type:       list
+    FILE_ALLOWED_TYPE:       list
     FILE_DEFAULT_CHUNK_SIZE: int
 
     # ── Runtime ──────────────────────────────────────────────────────────

@@ -1,62 +1,55 @@
-"""Typed application settings."""
-
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Centralized environment settings."""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # ── App ─────────────────────────────────────────────────────────────
+    # ── App ──────────────────────────────────────────────────────────────
     APP_NAME:    str
     APP_VERSION: str
 
     # ── Cloud LLM providers ──────────────────────────────────────────────
-    COHERE_API_KEY:  str
-    OPENAI_API_KEY:  str = None
-    OPENAI_API_URL:  str = None
+    COHERE_API_KEY:  Optional[str] = None
+    OPENAI_API_KEY:  Optional[str] = None
+    OPENAI_API_URL:  Optional[str] = None
 
-    # ── Generation / embedding config ───────────────────────────────────
+    # ── Generation / embedding config ────────────────────────────────────
     GENERATION_BACKEND:   str
-    GENERATION_MODEL_ID:  str = None
-    EMBEDDING_BACKEND:    str
-    EMBEDDING_MODEL_ID:   str = None
-    EMBEDDING_MODEL_SIZE: int = None
+    GENERATION_MODEL_ID:  Optional[str] = None
+    EMBEDDING_BACKEND:    Optional[str] = None
+    EMBEDDING_MODEL_ID:   Optional[str] = None
+    EMBEDDING_MODEL_SIZE: Optional[int] = None
 
-    INPUT_DEFAULT_MAX_CHARACTERS: int   = None
-    INPUT_DEFAULT_MAX_TOKENS:     int   = None
-    INPUT_DEFAULT_TEMPERATURE:    float = None
+    INPUT_DEFAULT_MAX_CHARACTERS: Optional[int]   = None
+    INPUT_DEFAULT_MAX_TOKENS:     Optional[int]   = None
+    INPUT_DEFAULT_TEMPERATURE:    Optional[float] = None
 
     # ── Local model paths ────────────────────────────────────────────────
-    # MedMO-8B-Next  (Qwen3-VL multimodal)
+    MEDMO_MODEL_PATH:     Optional[str] = None
+    MEDMO_OFFLOAD_FOLDER: str           = "./offload"
+    PHI_QA_MODEL_PATH:    Optional[str] = None
 
-    PHI_QA_MODEL_PATH:str="D:/AOU-Graduation-Project/BioIntellect/AI/fintune/fintuned_QA_model/phi_medical_full_merged_16bit_QA"
-    MEDMO_OFFLOAD_FOLDER:str="D:\AOU-Graduation-Project\BioIntellect\AI\fintune\medmo_8B\offload"
-
-    # Fine-tuned Phi medical QA
-
-    PHI_QA_MODEL_PATH:str="D:/AOU-Graduation-Project/BioIntellect/AI/fintune/fintuned_QA_model/phi_medical_full_merged_16bit_QA"
     # ── File handling ────────────────────────────────────────────────────
-    FILE_MAX_SIZE:          int
-    FILE_ALLOWED_type:      list
+    FILE_MAX_SIZE:           int
+    FILE_ALLOWED_type:       list
     FILE_DEFAULT_CHUNK_SIZE: int
 
     # ── Runtime ──────────────────────────────────────────────────────────
     environment: str  = Field(default="development", alias="ENVIRONMENT")
-    debug:        bool = Field(default=False,          alias="DEBUG")
-    log_level:    str  = Field(default="INFO",         alias="LOG_LEVEL")
+    debug:       bool = Field(default=False,          alias="DEBUG")
+    log_level:   str  = Field(default="INFO",         alias="LOG_LEVEL")
 
     # ── Supabase ─────────────────────────────────────────────────────────
     supabase_url:              str = Field(default="", alias="SUPABASE_URL")
     supabase_anon_key:         str = Field(default="", alias="SUPABASE_ANON_KEY")
     supabase_service_role_key: str = Field(default="", alias="SUPABASE_SERVICE_ROLE_KEY")
 
-    # ── MRI segmentation service ─────────────────────────────────────────
+    # ── MRI segmentation service ──────────────────────────────────────────
     mri_segmentation_service_url: str = Field(
         default="http://127.0.0.1:7860", alias="MRI_SEGMENTATION_SERVICE_URL"
     )
@@ -64,11 +57,11 @@ class Settings(BaseSettings):
         default=300, alias="MRI_SEGMENTATION_TIMEOUT_SECONDS"
     )
 
-    # ── CORS / trusted hosts ─────────────────────────────────────────────
+    # ── CORS / trusted hosts ──────────────────────────────────────────────
     cors_origins:  str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
     trusted_hosts: str = Field(default="localhost,127.0.0.1",   alias="TRUSTED_HOSTS")
 
-    # ── Validators ───────────────────────────────────────────────────────
+    # ── Validators ────────────────────────────────────────────────────────
     @field_validator("debug", mode="before")
     @classmethod
     def _normalize_debug(cls, value):
@@ -83,7 +76,86 @@ class Settings(BaseSettings):
             return False
         return False
 
-    # ── Properties ───────────────────────────────────────────────────────
+    @model_validator(mode="after")
+    def _validate_llm_configuration(self):
+        supported_backends = {"cohere", "openai", "medmo", "phi_qa"}
+
+        generation_backend = (self.GENERATION_BACKEND or "").strip().lower()
+        if generation_backend not in supported_backends:
+            raise ValueError(
+                "GENERATION_BACKEND must be one of: cohere, openai, medmo, phi_qa"
+            )
+        self.GENERATION_BACKEND = generation_backend
+
+        embedding_backend = (
+            (self.EMBEDDING_BACKEND or self.GENERATION_BACKEND).strip().lower()
+        )
+        if embedding_backend not in supported_backends:
+            raise ValueError(
+                "EMBEDDING_BACKEND must be one of: cohere, openai, medmo, phi_qa"
+            )
+        self.EMBEDDING_BACKEND = embedding_backend
+
+        if self.GENERATION_BACKEND == "cohere" and not self.COHERE_API_KEY:
+            raise ValueError(
+                "COHERE_API_KEY is required when GENERATION_BACKEND=cohere"
+            )
+        if self.GENERATION_BACKEND == "openai" and not self.OPENAI_API_KEY:
+            raise ValueError(
+                "OPENAI_API_KEY is required when GENERATION_BACKEND=openai"
+            )
+
+        if self.GENERATION_BACKEND == "medmo" and not self.MEDMO_MODEL_PATH:
+            raise ValueError(
+                "MEDMO_MODEL_PATH is required when GENERATION_BACKEND=medmo.\n"
+                "Add this to your .env:\n"
+                "MEDMO_MODEL_PATH=D:/AOU-Graduation-Project/BioIntellect/AI/fintune/medmo_8B/MedMO-8B-Next"
+            )
+        if self.GENERATION_BACKEND == "phi_qa" and not self.PHI_QA_MODEL_PATH:
+            raise ValueError(
+                "PHI_QA_MODEL_PATH is required when GENERATION_BACKEND=phi_qa.\n"
+                "Add this to your .env:\n"
+                "PHI_QA_MODEL_PATH=D:/AOU-Graduation-Project/BioIntellect/AI/fintune/"
+                "fintuned_QA_model/phi_medical_full_merged_16bit_QA"
+            )
+
+        if self.EMBEDDING_BACKEND == "cohere":
+            if not self.COHERE_API_KEY:
+                raise ValueError(
+                    "COHERE_API_KEY is required when EMBEDDING_BACKEND=cohere"
+                )
+            if not self.EMBEDDING_MODEL_ID:
+                raise ValueError(
+                    "EMBEDDING_MODEL_ID is required when EMBEDDING_BACKEND=cohere"
+                )
+            if self.EMBEDDING_MODEL_SIZE is None:
+                raise ValueError(
+                    "EMBEDDING_MODEL_SIZE is required when EMBEDDING_BACKEND=cohere"
+                )
+
+        if self.EMBEDDING_BACKEND == "openai":
+            if not self.OPENAI_API_KEY:
+                raise ValueError(
+                    "OPENAI_API_KEY is required when EMBEDDING_BACKEND=openai"
+                )
+            if not self.EMBEDDING_MODEL_ID:
+                raise ValueError(
+                    "EMBEDDING_MODEL_ID is required when EMBEDDING_BACKEND=openai"
+                )
+
+        if self.EMBEDDING_BACKEND == "medmo":
+            raise ValueError(
+                "EMBEDDING_BACKEND=medmo is not supported because MedMOProvider does not implement embed_text"
+            )
+
+        if self.EMBEDDING_BACKEND == "phi_qa" and not self.PHI_QA_MODEL_PATH:
+            raise ValueError(
+                "PHI_QA_MODEL_PATH is required when EMBEDDING_BACKEND=phi_qa"
+            )
+
+        return self
+
+    # ── Properties ────────────────────────────────────────────────────────
     @property
     def cors_origin_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

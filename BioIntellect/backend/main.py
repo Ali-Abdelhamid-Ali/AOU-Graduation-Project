@@ -116,7 +116,9 @@ def create_app() -> FastAPI:
         settings = get_settings()
 
         llm_provider_factory = LLMProviderFactory(settings)
-        generation_client = llm_provider_factory.create()
+        generation_client = llm_provider_factory.create(
+            backend=settings.GENERATION_BACKEND
+        )
         if settings.GENERATION_MODEL_ID:
             generation_client.set_generation_model(
                 model_id=settings.GENERATION_MODEL_ID
@@ -127,7 +129,9 @@ def create_app() -> FastAPI:
             )
         app.state.generation_client = generation_client
 
-        embedding_client = llm_provider_factory.create()
+        embedding_client = llm_provider_factory.create(
+            backend=settings.EMBEDDING_BACKEND
+        )
         if settings.EMBEDDING_MODEL_ID and settings.EMBEDDING_MODEL_SIZE:
             embedding_client.set_embedding_model(
                 model_id=settings.EMBEDDING_MODEL_ID,

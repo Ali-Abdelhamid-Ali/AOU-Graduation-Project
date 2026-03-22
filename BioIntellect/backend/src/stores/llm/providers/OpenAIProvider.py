@@ -1,5 +1,5 @@
 from ..LLMInterface import LLMInterface
-from .. LLMEnums import OpenAIEnums
+from ..LLMEnums import OpenAIEnums
 from openai import OpenAI
 from src.observability.logger import get_logger
 
@@ -33,14 +33,16 @@ class OpenAIProvider(LLMInterface):
         self.embedding_size = embedding_size
         return self.embedding_model_id
 
-    def generate_text(self, prompt: str,chat_history:list=[],max_output_tokens:str ,
+    def generate_text(self, prompt: str,chat_history:list=None,max_output_tokens:int=None ,
                            temp:float = None) -> str:
         if not self.client:
             self.logger.error("OpenAI client is not initialized.")
-
+            return None
         if not self.generation_model_id:
             self.logger.error("Generation model is not set.")
-
+            return None
+        if chat_history is None:
+            chat_history = []
         chat_history.append(self.construct_prompt(query=prompt, role=OpenAIEnums.user.value))
         response = self.client.chat.completions.create(
             model=self.generation_model_id,
@@ -53,7 +55,7 @@ class OpenAIProvider(LLMInterface):
         if not response or not response.choices or len(response.choices) == 0 or not response.choices[0].message or not response.choices[0].message.content:
             self.logger.error("No choices returned from OpenAI.")
             return None
-        return response.choices[0].message["content"]
+        return response.choices[0].message.content
     def process_text(self, text: str) -> str:
 
         # This method can be implemented to perform any necessary preprocessing on the input text
@@ -77,13 +79,15 @@ class OpenAIProvider(LLMInterface):
         )
 
 
-        if not response or not response.data or len(response.data) == 0:
+        if not response or not response.data or len(response.data) == 0 or not response.data[0].embedding:
             self.logger.error("No embedding data returned from OpenAI.")
             return None
         
         return response.data[0].embedding
 
-    def construct_prompt(self, query: str, role: str) -> str:
+    def construct_prompt(self, query: str, role: str) -> dict:
         # This method can be customized based on specific prompt construction needs
-        return {"system": f"You are a helpful assistant specialized in {role}.",
-                "content": self.process_text(query)}
+        return {
+            "role": role,   # e.g. "user", "assistant", "system"
+            "content": self.process_text(query),
+        }

@@ -1,14 +1,13 @@
 ﻿"""Main API Entry Point - BioIntellect Backend."""
 
-import os
 import time
 from contextlib import asynccontextmanager
 from typing import Any, Dict
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
 from scalar_fastapi import get_scalar_api_reference
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -24,15 +23,16 @@ from src.api.routes import (
     llm_routes,
     logging_routes,
     notification_routes,
+    rag_data,
+    rag_routes,
     real_time_monitoring_routes,
     report_routes,
     statistics_routes,
     system_routes,
     user_routes,
     websocket_routes,
-    rag_routes,
-    rag_data
 )
+from src.config.settings import get_settings
 from src.db.supabase.client import SupabaseProvider
 from src.middleware.error_handler import GlobalExceptionHandlerMiddleware
 from src.middleware.metrics_middleware import MetricsMiddleware
@@ -52,7 +52,9 @@ from src.security.config import security_config
 from src.services.domain.swagger_ui_fix import swagger_ui_fix_service
 from src.services.domain.user_check_service import user_check_service
 from src.services.infrastructure.memory_cache import global_cache
+from src.stores.llm.LLMProviderFactory import LLMProviderFactory
 from src.validators.response_dto import ApiErrorResponse
+
 setup_logging()
 logger = get_logger(__name__)
 
@@ -68,7 +70,6 @@ async def _run_startup() -> None:
         return
 
     logger.info("Starting BioIntellect API initialization")
-    _STARTUP_COMPLETED = True
 
     security_config.validate()
     user_status = await user_check_service.check_all_users_exist()
@@ -81,6 +82,7 @@ async def _run_startup() -> None:
         )
         await swagger_ui_fix_service.apply_swagger_fixes()
 
+    _STARTUP_COMPLETED = True
     logger.info("BioIntellect API initialization complete")
 
 
@@ -99,27 +101,57 @@ async def _run_shutdown() -> None:
     _SHUTDOWN_COMPLETED = True
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    try:
-        await _run_startup()
-    except Exception as exc:
-        logger.error(f"Critical error during startup: {exc}")
-        raise RuntimeError("Startup failed") from exc
 
-    try:
-        yield
-    finally:
-        await _run_shutdown()
 
 
 def create_app() -> FastAPI:
-    default_error_responses = {
+    default_error_responses: Dict[int | str, Dict[str, Any]] = {
         401: {"model": ApiErrorResponse, "description": "Unauthorized"},
         403: {"model": ApiErrorResponse, "description": "Forbidden"},
         429: {"model": ApiErrorResponse, "description": "Too Many Requests"},
         500: {"model": ApiErrorResponse, "description": "Internal Server Error"},
     }
+
+    async def on_startup(app: FastAPI) -> None:
+        settings = get_settings()
+
+        llm_provider_factory = LLMProviderFactory(settings)
+        generation_client = llm_provider_factory.create()
+        if settings.GENERATION_MODEL_ID:
+            generation_client.set_generation_model(
+                model_id=settings.GENERATION_MODEL_ID
+            )
+        else:
+            logger.warning(
+                "GENERATION_MODEL_ID is not set; using provider default generation model"
+            )
+        app.state.generation_client = generation_client
+
+        embedding_client = llm_provider_factory.create()
+        if settings.EMBEDDING_MODEL_ID and settings.EMBEDDING_MODEL_SIZE:
+            embedding_client.set_embedding_model(
+                model_id=settings.EMBEDDING_MODEL_ID,
+                embedding_size=settings.EMBEDDING_MODEL_SIZE,
+            )
+        else:
+            logger.warning(
+                "EMBEDDING_MODEL_ID or EMBEDDING_MODEL_SIZE is missing; using provider default embedding model"
+            )
+        app.state.embedding_client = embedding_client
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        try:
+            await _run_startup()
+            await on_startup(app)
+        except Exception as exc:
+            logger.error(f"Critical error during startup: {exc}")
+            raise RuntimeError("Startup failed") from exc
+
+        try:
+            yield
+        finally:
+            await _run_shutdown()
 
     app = FastAPI(
         title="BioIntellect API",
@@ -128,8 +160,8 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
-        lifespan=lifespan,
         responses=default_error_responses,
+        lifespan=lifespan,
     )
 
     app.state.limiter = limiter
@@ -188,7 +220,8 @@ def create_app() -> FastAPI:
     app.include_router(rag_routes.router, prefix=api_prefix)
     app.include_router(rag_data.router, prefix=api_prefix)
 
-    app.openapi_schema = None  
+    app.openapi_schema = None
+
     def custom_openapi():
         if app.openapi_schema:
             return app.openapi_schema
@@ -217,7 +250,7 @@ def create_app() -> FastAPI:
         app.openapi_schema = schema
         return app.openapi_schema
 
-    app.openapi = custom_openapi
+    app.openapi = custom_openapi  # type: ignore[method-assign]
 
     @app.get("/", include_in_schema=False)
     async def root():
@@ -228,7 +261,7 @@ def create_app() -> FastAPI:
         return {
             "status": "healthy",
             "timestamp": time.time(),
-            "version": "1.0.0",
+            "version": app.version,
         }
 
     @app.get(f"{api_prefix}/health", tags=["system"], include_in_schema=False)
@@ -250,8 +283,12 @@ def create_app() -> FastAPI:
             await global_cache.set("health_check_ping", "pong", ttl_seconds=10)
             if await global_cache.get("health_check_ping") != "pong":
                 health_status["checks"]["cache"] = "degraded"
+                if health_status["status"] == "ready":
+                    health_status["status"] = "degraded"
         except Exception:
             health_status["checks"]["cache"] = "error"
+            if health_status["status"] == "ready":
+                health_status["status"] = "degraded"
 
         try:
             admin_client = await SupabaseProvider.get_admin()
@@ -298,10 +335,14 @@ def create_app() -> FastAPI:
 
     @app.get("/swagger-diagnosis")
     async def swagger_diagnosis():
+        if security_config.ENVIRONMENT == "production":
+            raise HTTPException(status_code=404, detail="Not found")
         return await swagger_ui_fix_service.diagnose_swagger_issues()
 
     @app.get("/swagger-fix")
     async def swagger_fix():
+        if security_config.ENVIRONMENT == "production":
+            raise HTTPException(status_code=404, detail="Not found")
         return await swagger_ui_fix_service.apply_swagger_fixes()
 
     @app.get("/scalar", include_in_schema=False)

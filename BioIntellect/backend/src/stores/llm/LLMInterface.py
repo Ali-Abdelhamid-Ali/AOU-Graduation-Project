@@ -12,7 +12,7 @@ class LLMInterface(ABC):
         pass
 
     @abstractmethod
-    def generate_text(self, prompt: str,chat_history:list=[],max_output_tokens:str ,
+    def generate_text(self, prompt: str,chat_history:list=None,max_output_tokens:int = None,
                            temp:float = None) -> str:
         pass
 
@@ -21,5 +21,5 @@ class LLMInterface(ABC):
         pass
 
     @abstractmethod
-    def construct_prompt(self, query: str, role:str) -> str:
+    def construct_prompt(self, query: str, role:str) -> dict:
         pass

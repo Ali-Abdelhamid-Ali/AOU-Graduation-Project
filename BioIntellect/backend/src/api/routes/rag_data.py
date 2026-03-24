@@ -35,9 +35,11 @@ async def upload_data(project_id: str ,File: UploadFile ,
                 await f.write(chunk)
     except Exception as e:
         logger.error(f"error:{e}")
+        if os.path.exists(file_path):
+            os.remove(file_path)
         return JSONResponse(
          status_code=status.HTTP_400_BAD_REQUEST,
-         content={"signal": "can't uploud the file "}
+         content={"signal": "can't upload the file"}
             )
     return JSONResponse(
          status_code=status.HTTP_200_OK,

@@ -1,4 +1,5 @@
 from src.api.controllers.BaseController import BaseController
+from src.stores.llm.LLMEnums import DocumentTypeEnums
 
 
 class NLPController(BaseController):
@@ -43,3 +44,20 @@ class NLPController(BaseController):
         if not inserted:
             raise ValueError("Failed to insert vectors into vector database")
         return True
+    def search_vector_db_collection(self, project_id: str, text: str, limit: int = 10) -> list:
+        collection_name = self.create_collection_name(project_id=project_id)
+        if not self.vectorDB_client.is_collection_exists(collection_name):
+            raise ValueError(f"Vector database collection for project {project_id} does not exist")
+        if self.embedding_client is None:
+            raise ValueError("Embedding client is not initialized")
+        vector = self.embedding_client.embed_text(
+            text=text,
+            document_type=DocumentTypeEnums.query.value,
+        )
+        if not vector or len(vector) == 0:
+            raise ValueError("Failed to generate embedding for search query")
+        results = self.vectorDB_client.search_py_vector(collection_name=collection_name, vector=vector, limit=limit)
+        if not results:
+            raise ValueError("No results returned from vector database search")
+        return results
+        

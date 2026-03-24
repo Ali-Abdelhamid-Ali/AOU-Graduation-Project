@@ -32,3 +32,19 @@ class PushRequest(BaseModel):
         if self.overlap_size >= self.chunk_size:
             raise ValueError("overlap_size must be less than chunk_size")
         return self
+class SearchRequest(BaseModel):
+    text: str = Field(
+        ...,
+        description="The search text string.",
+    )
+    top_k: int = Field(
+        default=10,
+        gt=0,
+        description="The number of top results to return.",
+
+    )
+    limit: Optional[int] = Field(
+        None,
+        gt=0,
+        description="Optional limit on the number of results to return. If not set, defaults to top_k."
+    )   

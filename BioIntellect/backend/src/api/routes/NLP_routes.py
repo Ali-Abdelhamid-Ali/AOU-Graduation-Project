@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from src.api.controllers.NLPController import NLPController
 from src.api.controllers.ProcessController import ProcessController
 from src.observability.logger import get_logger
+from src.stores.llm.LLMEnums import DocumentTypeEnums
 from src.validators.nlp_dto import PushRequest, SearchRequest
 
 router=APIRouter(prefix="/nlp", tags=["nlp"])
@@ -43,7 +44,10 @@ async def index_project(request: Request, project_id: str, push_request: PushReq
 
 	texts = [chunk.page_content for chunk in chunks]
 	try:
-		vectors = embedding_client.embed_text(text=texts)
+		vectors = embedding_client.embed_text(
+			text=texts,
+			document_type=DocumentTypeEnums.document.value,
+		)
 	except ValueError as exc:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 	except Exception as exc:
@@ -102,7 +106,7 @@ async def search_index(request: Request, project_id: str, search_request: Search
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
 	query = search_request.text
 	top_k = search_request.top_k
-	limit = search_request.limit if search_request.limit is not None else top_k
+	limit = top_k
 	if not query.strip():
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="query is required")
 

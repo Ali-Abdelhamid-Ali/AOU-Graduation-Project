@@ -24,6 +24,7 @@ from src.api.routes import (
     logging_routes,
     notification_routes,
     rag_data,
+    NLP_routes,
     rag_routes,
     real_time_monitoring_routes,
     report_routes,
@@ -54,7 +55,7 @@ from src.services.domain.user_check_service import user_check_service
 from src.services.infrastructure.memory_cache import global_cache
 from src.stores.llm.LLMProviderFactory import LLMProviderFactory
 from src.validators.response_dto import ApiErrorResponse
-
+from src.stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
 setup_logging()
 logger = get_logger(__name__)
 
@@ -96,8 +97,11 @@ async def _run_shutdown() -> None:
     try:
         await SupabaseProvider.close_all()
         logger.info("Supabase connections closed successfully")
+        app.vectordb_client.disconnect()
+        logger.info("VectorDB connections closed successfully")
     except Exception as exc:
         logger.error(f"Error closing Supabase connections: {exc}")
+        logger.error(f"Error disconnecting VectorDB client: {exc}")
     _SHUTDOWN_COMPLETED = True
 
 
@@ -115,19 +119,15 @@ def create_app() -> FastAPI:
     async def on_startup(app: FastAPI) -> None:
         settings = get_settings()
         embedding_backend = settings.EMBEDDING_BACKEND or settings.GENERATION_BACKEND
-
+        #Provider Factories
         llm_provider_factory = LLMProviderFactory(settings)
-        generation_client = llm_provider_factory.create(
-            backend=settings.GENERATION_BACKEND
-        )
+        vectordb_provider_factory = VectorDBProviderFactory(settings)
+        
+        generation_client = llm_provider_factory.create(backend=settings.GENERATION_BACKEND)
         if settings.GENERATION_MODEL_ID:
-            generation_client.set_generation_model(
-                model_id=settings.GENERATION_MODEL_ID
-            )
+            generation_client.set_generation_model(model_id=settings.GENERATION_MODEL_ID)
         else:
-            logger.warning(
-                "GENERATION_MODEL_ID is not set; using provider default generation model"
-            )
+            logger.warning("GENERATION_MODEL_ID is not set; using provider default generation model")
         app.state.generation_client = generation_client
 
         if embedding_backend == settings.GENERATION_BACKEND:
@@ -137,37 +137,23 @@ def create_app() -> FastAPI:
 
         if embedding_backend == "cohere":
             if not settings.EMBEDDING_MODEL_ID or settings.EMBEDDING_MODEL_SIZE is None:
-                raise RuntimeError(
-                    "Invalid cohere embedding configuration: EMBEDDING_MODEL_ID and EMBEDDING_MODEL_SIZE are required."
-                )
-            embedding_client.set_embedding_model(
-                model_id=settings.EMBEDDING_MODEL_ID,
-                embedding_size=settings.EMBEDDING_MODEL_SIZE,
-            )
+                raise RuntimeError("Invalid cohere embedding configuration: EMBEDDING_MODEL_ID and EMBEDDING_MODEL_SIZE are required.")
+            embedding_client.set_embedding_model(model_id=settings.EMBEDDING_MODEL_ID,embedding_size=settings.EMBEDDING_MODEL_SIZE)
         elif embedding_backend == "openai":
             if not settings.EMBEDDING_MODEL_ID:
-                raise RuntimeError(
-                    "Invalid openai embedding configuration: EMBEDDING_MODEL_ID is required."
-                )
-            embedding_client.set_embedding_model(
-                model_id=settings.EMBEDDING_MODEL_ID,
-                embedding_size=settings.EMBEDDING_MODEL_SIZE or 0,
-            )
+                raise RuntimeError("Invalid openai embedding configuration: EMBEDDING_MODEL_ID is required.")
+            embedding_client.set_embedding_model(model_id=settings.EMBEDDING_MODEL_ID,embedding_size=settings.EMBEDDING_MODEL_SIZE or 0)
         elif embedding_backend == "phi_qa":
-            logger.info(
-                "Embedding backend is phi_qa; using local model path without separate EMBEDDING_MODEL_ID"
-            )
+            logger.info("Embedding backend is phi_qa; using local model path without separate EMBEDDING_MODEL_ID")
         elif embedding_backend == "medmo":
-            raise RuntimeError(
-                "medmo embedding is not supported. "
-                "Set EMBEDDING_BACKEND to phi_qa, openai, or cohere."
-            )
+            raise RuntimeError("medmo embedding is not supported. ""Set EMBEDDING_BACKEND to phi_qa, openai, or cohere.")
         else:
-            raise RuntimeError(
-                f"Unsupported embedding backend during startup: {embedding_backend}"
-            )
+            raise RuntimeError(f"Unsupported embedding backend during startup: {embedding_backend}")
 
         app.state.embedding_client = embedding_client
+        app.state.vectordb_client = vectordb_provider_factory.create(Provider=settings.VECTOR_DB_BACKEND)
+        app.state.vectordb_client.connect()
+        logger.info(f"Connected to vector database using {settings.VECTOR_DB_BACKEND} provider")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -249,6 +235,7 @@ def create_app() -> FastAPI:
     app.include_router(websocket_routes.router, prefix=api_prefix)
     app.include_router(rag_routes.router, prefix=api_prefix)
     app.include_router(rag_data.router, prefix=api_prefix)
+    app.include_router(NLP_routes.router, prefix=api_prefix)
 
     app.openapi_schema = None
 

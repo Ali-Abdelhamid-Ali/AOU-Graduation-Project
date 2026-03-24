@@ -1,7 +1,11 @@
+from uuid import uuid4
+
 from qdrant_client import QdrantClient, models
-from ..VectorDBInterface import VectorDBInterface
 from src.observability.logger import get_logger
-from ..VectorDBEnums import DistanceMethodEnums 
+
+from ..VectorDBEnums import DistanceMethodEnums
+from ..VectorDBInterface import VectorDBInterface
+
 
 class QdrantDBProvider(VectorDBInterface):
     def __init__(self, db_path: str, distance_method: str):
@@ -47,10 +51,18 @@ class QdrantDBProvider(VectorDBInterface):
             self.logger.error(f"Collection {collection_name} does not exist.")
             return False
         try:
-            _=self.client.upsert(
+            rid = record_id if record_id is not None else uuid4().hex
+            _ = self.client.upsert(
                 collection_name=collection_name,
-                record =[models.Record(
-                    id=record_id,vector=vectors, payload={"text": text, "metadata": metadatas})])
+                points=[
+                    models.PointStruct(
+                        id=rid,
+                        vector=vectors,
+                        payload={"text": text, "metadata": metadatas},
+                    )
+                ],
+                wait=True,
+            )
         except Exception as e:
             self.logger.error(f"Error inserting record: {e}")
             return False
@@ -60,17 +72,19 @@ class QdrantDBProvider(VectorDBInterface):
         if metadatas is None:
             metadatas = [None] * len(text)
         if record_id is None:
-            record_id = [None] * len(text)
+            record_id = [uuid4().hex for _ in text]
+        else:
+            record_id = [rid if rid is not None else uuid4().hex for rid in record_id]
         for i in range (0, len(text), batch_size):
 
             batch_text = text[i:i + batch_size]
             batch_vectors = vectors[i:i + batch_size]
             batch_metadatas = metadatas[i:i + batch_size]
             batch_record_id = record_id[i:i + batch_size]
-            batch_records = [models.Record(id=rid, vector=vec, payload={"text": t, "metadata": m})
-                       for rid, vec, t, m in zip(batch_record_id, batch_vectors, batch_text, batch_metadatas)]
+            batch_records = [models.PointStruct(id=rid, vector=vec, payload={"text": t, "metadata": m})
+                       for rid, vec, t, m in zip(batch_record_id, batch_vectors, batch_text, batch_metadatas, strict=False)]
             try:
-                self.client.upsert(collection_name=collection_name, record=batch_records)
+                self.client.upsert(collection_name, batch_records, wait=True)
             except Exception as e:
                 self.logger.error(f"Error inserting batch: {e}")
                 return False

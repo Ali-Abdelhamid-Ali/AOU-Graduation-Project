@@ -91,6 +91,7 @@ async def get_index_info(request: Request, project_id: str):
 		vectorDB_client=vectordb_client,
 		generation_client=None,
 		embedding_client=None,
+		template_parser=getattr(request.app.state, "template_parser", None),
 	)
 
 	try:
@@ -106,8 +107,6 @@ async def search_index(request: Request, project_id: str, search_request: Search
 	if not project_id.strip():
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
 	query = search_request.text
-	top_k = search_request.top_k
-	limit = top_k
 	if not query.strip():
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="query is required")
 
@@ -120,13 +119,14 @@ async def search_index(request: Request, project_id: str, search_request: Search
 		vectorDB_client=vectordb_client,
 		generation_client=None,
 		embedding_client=embedding_client,
+		template_parser=getattr(request.app.state, "template_parser", None),
 	)
 
 	try:
 		search_results = nlp_controller.search_vector_db_collection(
 			project_id=project_id,
 			text=query,
-			limit=limit,
+			limit=search_request.top_k,
 		)
 	except ValueError as exc:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -155,11 +155,12 @@ async def answer_rag(request: Request, project_id: str, search_request: SearchRe
 		template_parser=template_parser,
 	)
 	try:
-		answer,full_prompt, chat_history = nlp_controller.answer_rag_question(
+		answer, full_prompt, chat_history = nlp_controller.answer_rag_question(
 			project_id=project_id,
 			question=search_request.text,
 			limit=search_request.top_k,
 			chat_history=search_request.chat_history,
+			language=search_request.language,
 		)
 	except ValueError as exc:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

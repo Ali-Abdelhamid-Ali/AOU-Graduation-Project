@@ -1,7 +1,11 @@
-from ..LLMInterface import LLMInterface
-from ..LLMEnums import CohereEnums,DocumentTypeEnums
-from src.observability.logger import get_logger
 import cohere
+
+from src.observability.logger import get_logger
+
+from ..LLMEnums import CohereEnums, DocumentTypeEnums
+from ..LLMInterface import LLMInterface
+
+
 class CoHereProvider(LLMInterface):
     def __init__(self, api_key: str
                 ,default_input_max_characters:int = 1000,
@@ -54,15 +58,13 @@ class CoHereProvider(LLMInterface):
             if role_str == "Assistant":
                 role_str = "Chatbot"
 
-            if role_str == "System":          # ← System يتحول لـ preamble
+            if role_str == "System":          
                 preamble = msg.get("message", "")
             else:
                 sanitized_history.append({
                     "role": role_str,
                     "message": msg.get("message", "")
                 })
-
-        self.logger.error(f"FINAL sanitized_history before Cohere call: {sanitized_history}")
 
         response = self.client.chat(
             model=self.generation_model_id,
@@ -106,5 +108,5 @@ class CoHereProvider(LLMInterface):
     def construct_prompt(self, query: str, role: str) -> dict:
         return {
                 "role": role,
-                "message": self.process_text(query),
+                "message": query,
             }

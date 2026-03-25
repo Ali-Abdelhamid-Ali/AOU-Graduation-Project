@@ -1,4 +1,4 @@
-from src.config.settings import get_settings , settings 
+from src.config.settings import get_settings
 import os 
 import random
 import string 

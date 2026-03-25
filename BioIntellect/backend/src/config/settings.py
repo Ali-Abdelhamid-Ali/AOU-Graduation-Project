@@ -67,7 +67,14 @@ class Settings(BaseSettings):
     cors_origins:  str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
     trusted_hosts: str = Field(default="localhost,127.0.0.1",   alias="TRUSTED_HOSTS")
 
+
+
+    PRIMARY_LANG:str ="en"
+    DEFAULT_LANG:str ="en"
+
     # ── Validators ────────────────────────────────────────────────────────
+
+
     @field_validator("debug", mode="before")
     @classmethod
     def _normalize_debug(cls, value):

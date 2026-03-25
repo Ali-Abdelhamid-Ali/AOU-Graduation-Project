@@ -43,8 +43,7 @@ class SearchRequest(BaseModel):
         description="The number of top results to return.",
 
     )
-    limit: Optional[int] = Field(
-        None,
-        gt=0,
-        description="Optional limit on the number of results to return. If not set, defaults to top_k."
+    chat_history: Optional[list[dict[str, Any]]] = Field(
+        default_factory=list,
+        description="Optional prior chat history."
     )   

@@ -12,7 +12,7 @@ class PhiQAProvider(LLMInterface):
         self.default_input_max_characters = default_input_max_characters
         self.default_output_max_tokens = default_output_max_tokens
         self.default_temp = default_temp
-
+        self.Enums = PhiQAEnums
         self.generation_model_id = model_path
         self.embedding_model_id = None
         self.embedding_size = None

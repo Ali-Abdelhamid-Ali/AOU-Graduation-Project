@@ -11,7 +11,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
 from scalar_fastapi import get_scalar_api_reference
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-
+from src.stores.llm.templates.template_parser import template_parser
 from src.api.routes import (
     analytics_routes,
     audit_routes,
@@ -87,7 +87,7 @@ async def _run_startup() -> None:
     logger.info("BioIntellect API initialization complete")
 
 
-async def _run_shutdown() -> None:
+async def _run_shutdown(app: FastAPI) -> None:
     """Shutdown logic with idempotency."""
     global _SHUTDOWN_COMPLETED
     if _SHUTDOWN_COMPLETED:
@@ -97,11 +97,16 @@ async def _run_shutdown() -> None:
     try:
         await SupabaseProvider.close_all()
         logger.info("Supabase connections closed successfully")
-        app.vectordb_client.disconnect()
-        logger.info("VectorDB connections closed successfully")
     except Exception as exc:
         logger.error(f"Error closing Supabase connections: {exc}")
+
+    try:
+        if hasattr(app.state, "vectordb_client") and app.state.vectordb_client:
+            app.state.vectordb_client.disconnect()
+            logger.info("VectorDB connections closed successfully")
+    except Exception as exc:
         logger.error(f"Error disconnecting VectorDB client: {exc}")
+
     _SHUTDOWN_COMPLETED = True
 
 
@@ -124,6 +129,7 @@ def create_app() -> FastAPI:
         vectordb_provider_factory = VectorDBProviderFactory(settings)
         
         generation_client = llm_provider_factory.create(backend=settings.GENERATION_BACKEND)
+
         if settings.GENERATION_MODEL_ID:
             generation_client.set_generation_model(model_id=settings.GENERATION_MODEL_ID)
         else:
@@ -153,6 +159,7 @@ def create_app() -> FastAPI:
         app.state.embedding_client = embedding_client
         app.state.vectordb_client = vectordb_provider_factory.create(Provider=settings.VECTOR_DB_BACKEND)
         app.state.vectordb_client.connect()
+        app.state.template_parser = template_parser(language=settings.PRIMARY_LANG, default_language=settings.DEFAULT_LANG)
         logger.info(f"Connected to vector database using {settings.VECTOR_DB_BACKEND} provider")
 
     @asynccontextmanager
@@ -167,7 +174,7 @@ def create_app() -> FastAPI:
         try:
             yield
         finally:
-            await _run_shutdown()
+            await _run_shutdown(app)
 
     app = FastAPI(
         title="BioIntellect API",
@@ -175,6 +182,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        
         openapi_url="/openapi.json",
         responses=default_error_responses,
         lifespan=lifespan,

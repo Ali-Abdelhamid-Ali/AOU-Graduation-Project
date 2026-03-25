@@ -6,12 +6,12 @@ from src.observability.logger import get_logger
 
 class OpenAIProvider(LLMInterface):
 
-    def __init__(self, api_key: str,api_url:str = None
+    def __init__(self, api_key: str,base_url:str = None
                 ,default_input_max_characters:int = 1000, 
                 default_output_max_tokens:int = 1000,
                 default_temp:float = 0.1):
         self.api_key = api_key
-        self.api_url = api_url
+        self.base_url = base_url
         self.default_input_max_characters = default_input_max_characters
         self.default_output_max_tokens = default_output_max_tokens
         self.default_temp = default_temp
@@ -19,9 +19,9 @@ class OpenAIProvider(LLMInterface):
         self.embedding_model_id = None
         self.embedding_size = None
         self.logger = get_logger("provider.OpenAIProvider")
-
+        self.Enums = OpenAIEnums
         self.client = OpenAI(api_key=self.api_key, 
-                             base_url=self.api_url)
+                             base_url=self.base_url)
 
     def set_generation_model(self, model_id: str ) -> str:
         self.generation_model_id = model_id

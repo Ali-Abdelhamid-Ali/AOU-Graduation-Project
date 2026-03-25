@@ -60,6 +60,7 @@ async def index_project(request: Request, project_id: str, push_request: PushReq
 		vectorDB_client=vectordb_client,
 		generation_client=generation_client,
 		embedding_client=embedding_client,
+		template_parser=getattr(request.app.state, "template_parser", None),
 	)
 
 	if push_request.do_reset:
@@ -133,3 +134,38 @@ async def search_index(request: Request, project_id: str, search_request: Search
 		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Vector database search failed: {str(exc)}") from exc
 
 	return {"results": search_results}
+@router.post ("/index/answer/{project_id}")
+async def answer_rag(request: Request, project_id: str, search_request: SearchRequest):
+	if not project_id.strip():
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
+	if not search_request.text or not search_request.text.strip():
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="query is required")
+
+	vectordb_client = getattr(request.app.state, "vectordb_client", None)
+	generation_client = getattr(request.app.state, "generation_client", None)
+	embedding_client = getattr(request.app.state, "embedding_client", None)
+	template_parser = getattr(request.app.state, "template_parser", None)
+	if vectordb_client is None or generation_client is None or embedding_client is None or template_parser is None:
+		raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Required NLP clients are not initialized")
+
+	nlp_controller = NLPController(
+		vectorDB_client=vectordb_client,
+		generation_client=generation_client,
+		embedding_client=embedding_client,
+		template_parser=template_parser,
+	)
+	try:
+		answer,full_prompt, chat_history = nlp_controller.answer_rag_question(
+			project_id=project_id,
+			question=search_request.text,
+			limit=search_request.top_k,
+			chat_history=search_request.chat_history,
+		)
+	except ValueError as exc:
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+	except Exception as exc:
+		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Failed to answer RAG question: {str(exc)}") from exc
+
+	if not answer :
+		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to generate answer for the question")
+	return {"answer": answer, "full_prompt": full_prompt, "chat_history": chat_history}

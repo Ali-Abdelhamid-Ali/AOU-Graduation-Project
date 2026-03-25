@@ -2,10 +2,9 @@ from uuid import uuid4
 
 from qdrant_client import QdrantClient, models
 from src.observability.logger import get_logger
-
 from ..VectorDBEnums import DistanceMethodEnums
 from ..VectorDBInterface import VectorDBInterface
-
+from src.validators.Retrieved_dto import RetrievedItem
 
 class QdrantDBProvider(VectorDBInterface):
     def __init__(self, db_path: str, distance_method: str):
@@ -90,6 +89,16 @@ class QdrantDBProvider(VectorDBInterface):
                 return False
         return True
     
-    def search_py_vector(self, collection_name: str, vector: list, limit: int = 3) -> list:
-        return self.client.search(collection_name=collection_name, query_vector=vector, limit=limit)
-    
+    def search_py_vector(self, collection_name: str, vector: list, limit: int = 3) -> list[dict] | None:
+        results =self.client.search(collection_name=collection_name, query_vector=vector, limit=limit)
+
+        if not results or len(results) == 0:
+            return None
+        
+        return [
+            RetrievedItem(**{
+                "text": (result.payload or {}).get("text", ""),
+                "score": result.score,
+            })
+            for result in results
+        ]

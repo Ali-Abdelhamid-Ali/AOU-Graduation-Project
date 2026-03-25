@@ -3,12 +3,12 @@ from src.stores.llm.LLMEnums import DocumentTypeEnums
 
 
 class NLPController(BaseController):
-    def __init__(self,vectorDB_client, generation_client, embedding_client):
+    def __init__(self,vectorDB_client, generation_client, embedding_client,template_parser=None):
         super().__init__()
         self.vectorDB_client = vectorDB_client
         self.generation_client = generation_client
         self.embedding_client = embedding_client
-
+        self.template_parser = template_parser
 
     def create_collection_name(self, project_id: str) -> str:
         return f"project_{project_id}".strip()
@@ -60,4 +60,56 @@ class NLPController(BaseController):
         if not results:
             raise ValueError("No results returned from vector database search")
         return results
-        
+    def answer_rag_question(self, project_id: str, question: str, limit: int, chat_history: list = None) -> tuple:
+        retrved_document = self.search_vector_db_collection(project_id=project_id, text=question, limit=limit)
+        if not retrved_document or len(retrved_document) == 0:
+            raise ValueError("No relevant documents found in vector database for the given question")
+        if self.generation_client is None:
+            raise ValueError("Generation client is not initialized")
+
+        if chat_history is None:
+            chat_history = []
+
+        system_prompt = self.template_parser.get("rag", "system_prompt", vars={})
+
+        document_prompts = "\n".join([
+            self.template_parser.get("rag", "document_prompt", vars={
+                "doc_no": idx + 1,
+                "doc_content": doc.text
+            })
+            for idx, doc in enumerate(retrved_document)
+        ])
+
+        footer_prompt = self.template_parser.get("rag", "footer_prompt", vars={})
+
+        full_prompt = f"{system_prompt}\n\n{document_prompts}\n{footer_prompt}\nQuestion: {question}\nAnswer:"
+
+        clean_history = [
+            msg for msg in chat_history
+            if isinstance(msg, dict) and str(msg.get("role", "")).capitalize() != "System"
+        ]
+
+        answer = self.generation_client.generate_text(
+            prompt=full_prompt,
+            chat_history=clean_history,
+            max_output_tokens=500
+        )
+        if not answer:
+            raise ValueError("Failed to generate answer from generation client")
+
+        chat_history.append(
+            self.generation_client.construct_prompt(
+                query=question,
+                role=self.generation_client.Enums.user.value,
+            )
+        )
+        chat_history.append(
+            self.generation_client.construct_prompt(
+                query=answer.strip(),
+
+                role=self.generation_client.Enums.assistant.value,
+            )
+        )
+
+        return answer.strip(), full_prompt.strip(), chat_history
+    

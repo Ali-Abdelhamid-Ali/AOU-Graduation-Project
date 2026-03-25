@@ -19,7 +19,7 @@ class MedMOProvider(LLMInterface):
         self.default_output_max_tokens = default_output_max_tokens
         self.default_temp = default_temp
         self.offload_folder = offload_folder
-
+        self.Enums = MedMOEnums
         # These are kept to satisfy the interface but are unused for local models
         self.generation_model_id = model_path
         self.embedding_model_id = None

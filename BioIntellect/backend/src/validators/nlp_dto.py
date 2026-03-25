@@ -32,18 +32,10 @@ class PushRequest(BaseModel):
         if self.overlap_size >= self.chunk_size:
             raise ValueError("overlap_size must be less than chunk_size")
         return self
-class SearchRequest(BaseModel):
-    text: str = Field(
-        ...,
-        description="The search text string.",
-    )
-    top_k: int = Field(
-        default=10,
-        gt=0,
-        description="The number of top results to return.",
 
-    )
-    chat_history: Optional[list[dict[str, Any]]] = Field(
-        default_factory=list,
-        description="Optional prior chat history."
-    )   
+
+class SearchRequest(BaseModel):
+    text: str = Field(..., description="The search text string.")
+    top_k: int = Field(default=3, gt=0, le=5)
+    chat_history: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
+    language: Optional[str] = Field(default="en", description="Response language: 'en' or 'ar'")

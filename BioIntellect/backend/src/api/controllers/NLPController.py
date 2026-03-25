@@ -60,15 +60,17 @@ class NLPController(BaseController):
         if not results:
             raise ValueError("No results returned from vector database search")
         return results
-    def answer_rag_question(self, project_id: str, question: str, limit: int, chat_history: list = None) -> tuple:
-        retrved_document = self.search_vector_db_collection(project_id=project_id, text=question, limit=limit)
-        if not retrved_document or len(retrved_document) == 0:
+    def answer_rag_question(self, project_id: str, question: str, limit: int, chat_history: list = None, language: str = "en") -> tuple:
+        retrieved_documents = self.search_vector_db_collection(project_id=project_id, text=question, limit=limit)
+        if not retrieved_documents or len(retrieved_documents) == 0:
             raise ValueError("No relevant documents found in vector database for the given question")
         if self.generation_client is None:
             raise ValueError("Generation client is not initialized")
 
         if chat_history is None:
             chat_history = []
+
+        self.template_parser.set_language(language)
 
         system_prompt = self.template_parser.get("rag", "system_prompt", vars={})
 
@@ -77,21 +79,24 @@ class NLPController(BaseController):
                 "doc_no": idx + 1,
                 "doc_content": doc.text
             })
-            for idx, doc in enumerate(retrved_document)
+            for idx, doc in enumerate(retrieved_documents)
         ])
 
         footer_prompt = self.template_parser.get("rag", "footer_prompt", vars={})
-
-        full_prompt = f"{system_prompt}\n\n{document_prompts}\n{footer_prompt}\nQuestion: {question}\nAnswer:"
+        question_label = "Question" if language != "ar" else "السؤال"
+        answer_label = "Answer" if language != "ar" else "الإجابة"
+        full_prompt = f"{document_prompts}\n{footer_prompt}\n{question_label}: {question}\n{answer_label}:"
 
         clean_history = [
             msg for msg in chat_history
             if isinstance(msg, dict) and str(msg.get("role", "")).capitalize() != "System"
-        ]
+        ][-10:]
+
+        model_history = [{"role": "System", "message": system_prompt}, *clean_history]
 
         answer = self.generation_client.generate_text(
             prompt=full_prompt,
-            chat_history=clean_history,
+            chat_history=model_history,
             max_output_tokens=500
         )
         if not answer:

@@ -1,4 +1,4 @@
-import { clinicalAPI, filesAPI, llmAPI } from './api'
+import { clinicalAPI, filesAPI, nlpChatAPI } from './api'
 
 const unwrapData = (response, fallbackMessage) => {
   if (!response?.success) {
@@ -250,11 +250,14 @@ export const medicalService = {
   },
 
   async startConversation(convoData) {
-    const { patientId, doctorId, title } = convoData
+    const { patientId, projectId, title } = convoData
+    if (!projectId) {
+      throw new Error('projectId is required')
+    }
+
     return unwrapData(
-      await llmAPI.createConversation({
+      await nlpChatAPI.createConversation(projectId, {
         patient_id: patientId,
-        doctor_id: doctorId,
         title: title || 'Medical Consultation',
       }),
       'Failed to start conversation'
@@ -262,22 +265,40 @@ export const medicalService = {
   },
 
   async sendLlmMessage(messageData) {
-    const { conversationId, content } = messageData
-    const result = await llmAPI.sendMessage({
-      conversation_id: conversationId,
-      message_content: content,
-    })
-
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to send message')
+    const { projectId, conversationId, content, patientId } = messageData
+    if (!projectId) {
+      throw new Error('projectId is required')
     }
 
-    return result.llm_response
+    let latestAssistantMessage = null
+    await nlpChatAPI.streamAnswer(
+      projectId,
+      {
+        text: content,
+        conversation_id: conversationId,
+        patient_id: patientId,
+        top_k: 3,
+      },
+      {
+        onDone: (payload) => {
+          latestAssistantMessage = payload?.assistant_message || null
+        },
+        onError: (payload) => {
+          throw new Error(payload?.message || 'Failed to send message')
+        },
+      }
+    )
+
+    return latestAssistantMessage
   },
 
-  async getMessages(conversationId) {
+  async getMessages(projectId, conversationId) {
+    if (!projectId) {
+      throw new Error('projectId is required')
+    }
+
     return unwrapData(
-      await llmAPI.getMessages(conversationId),
+      await nlpChatAPI.getMessages(projectId, conversationId),
       'Failed to get messages'
     )
   },

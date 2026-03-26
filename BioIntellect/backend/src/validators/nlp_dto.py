@@ -39,3 +39,16 @@ class SearchRequest(BaseModel):
     top_k: int = Field(default=3, gt=0, le=5)
     chat_history: list[dict[str, Any]] = Field(default_factory=list, max_length=100, description="Optional chat history for context")
     language: Optional[str] = Field(default="en", description="Response language: 'en' or 'ar'")
+    conversation_id: Optional[str] = Field(
+        default=None,
+        description="Optional conversation identifier for persisted chat history",
+    )
+    patient_id: Optional[str] = Field(
+        default=None,
+        description="Patient profile ID, required when a non-patient starts a new conversation",
+    )
+    title: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Optional conversation title for newly created persisted conversations",
+    )

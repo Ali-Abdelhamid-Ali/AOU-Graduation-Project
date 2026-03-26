@@ -1,4 +1,6 @@
 import apiClient from './axios.config'
+import { API_BASE_URL } from './baseUrl'
+import { getAccessToken } from '@/services/auth/sessionStore'
 
 const normalizeEnvelope = (response, transform = (value) => value) => {
   if (response?.success !== undefined) {
@@ -55,6 +57,48 @@ const normalizeMessage = (message = {}) => ({
   message_content: message.message_content ?? message.content ?? '',
   sender_type: message.sender_type ?? message.role ?? 'llm',
 })
+
+const parseSseChunk = (chunk, handlers) => {
+  const blocks = chunk.split('\n\n')
+
+  blocks.forEach((block) => {
+    if (!block.trim()) {
+      return
+    }
+
+    const lines = block.split('\n')
+    let eventName = 'message'
+    const dataLines = []
+
+    lines.forEach((line) => {
+      if (line.startsWith('event:')) {
+        eventName = line.slice(6).trim()
+      }
+
+      if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).trim())
+      }
+    })
+
+    const dataText = dataLines.join('\n')
+    let payload = null
+    try {
+      payload = dataText ? JSON.parse(dataText) : null
+    } catch {
+      payload = { raw: dataText }
+    }
+
+    if (eventName === 'start') {
+      handlers?.onStart?.(payload)
+    } else if (eventName === 'token') {
+      handlers?.onToken?.(payload)
+    } else if (eventName === 'done') {
+      handlers?.onDone?.(payload)
+    } else if (eventName === 'error') {
+      handlers?.onError?.(payload)
+    }
+  })
+}
 
 const normalizeList = (normalizer) => (items) =>
   Array.isArray(items) ? items.map(normalizer) : []
@@ -230,45 +274,68 @@ export const patientsAPI = {
     ),
 }
 
-export const llmAPI = {
-  createConversation: async (data) =>
+export const nlpChatAPI = {
+  createConversation: async (projectId, data) =>
     normalizeEnvelope(
-      await apiClient.post('/llm/conversations', data),
-      normalizeConversation
+      await apiClient.post(`/nlp/chats/${projectId}/conversations`, data),
+      (payload) => payload?.conversation || payload
     ),
-  sendMessage: async (data) => {
-    const response = await apiClient.post(
-      `/llm/conversations/${data.conversation_id}/messages`,
-      {
-        conversation_id: data.conversation_id,
-        sender_type: 'user',
-        message_content: data.message_content ?? data.messageContent ?? data.message,
-        message_type: data.message_type ?? 'text',
-      }
-    )
+  listConversations: async (projectId, params) =>
+    normalizeEnvelope(
+      await apiClient.get(`/nlp/chats/${projectId}/conversations`, { params }),
+      (payload) => normalizeList(normalizeConversation)(payload?.conversations || payload)
+    ),
+  getMessages: async (projectId, conversationId, params) =>
+    normalizeEnvelope(
+      await apiClient.get(`/nlp/chats/${projectId}/conversations/${conversationId}/messages`, { params }),
+      (payload) => normalizeList(normalizeMessage)(payload?.messages || payload)
+    ),
+  streamAnswer: async (projectId, data, handlers = {}) => {
+    const token = getAccessToken()
+    const response = await fetch(`${API_BASE_URL}/nlp/index/answer-stream/${projectId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: 'include',
+      body: JSON.stringify(data),
+    })
 
-    if (response?.success && response?.llm_response) {
-      return {
-        ...response,
-        llm_response: normalizeMessage(response.llm_response),
+    if (!response.ok) {
+      let message = 'Failed to start streaming response'
+      try {
+        const payload = await response.json()
+        message = payload?.detail || message
+      } catch {
+        // ignore parse failures and keep fallback message
       }
+      throw new Error(message)
     }
 
-    return {
-      success: true,
-      llm_response: normalizeMessage(response),
+    if (!response.body) {
+      throw new Error('Streaming is not available in this browser')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) {
+        if (buffer.trim()) {
+          parseSseChunk(buffer, handlers)
+        }
+        break
+      }
+
+      buffer += decoder.decode(value, { stream: true })
+      const chunks = buffer.split('\n\n')
+      buffer = chunks.pop() || ''
+      chunks.forEach((chunk) => parseSseChunk(`${chunk}\n\n`, handlers))
     }
   },
-  getMessages: async (conversationId) =>
-    normalizeEnvelope(
-      await apiClient.get(`/llm/conversations/${conversationId}/history`),
-      normalizeList(normalizeMessage)
-    ),
-  listConversations: async (params) =>
-    normalizeEnvelope(
-      await apiClient.get('/llm/conversations', { params }),
-      normalizeList(normalizeConversation)
-    ),
 }
 
 export default {
@@ -280,6 +347,6 @@ export default {
   reports: reportsAPI,
   geography: geographyAPI,
   users: usersAPI,
-  llm: llmAPI,
+  nlpChat: nlpChatAPI,
   patients: patientsAPI,
 }

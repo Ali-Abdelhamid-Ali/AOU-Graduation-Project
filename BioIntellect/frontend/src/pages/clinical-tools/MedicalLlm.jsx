@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/store/AuthContext'
-import { llmAPI, patientsAPI } from '@/services/api'
+import { nlpChatAPI, patientsAPI } from '@/services/api'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { TopBar } from '@/components/layout/TopBar'
 import { SelectField } from '@/components/ui/SelectField'
@@ -22,6 +22,7 @@ export const MedicalLlm = ({ onBack }) => {
     const [patientLoadError, setPatientLoadError] = useState('')
     const messagesEndRef = useRef(null)
     const isPatient = userRole === 'patient'
+    const projectId = currentUser?.hospital_id || ''
 
     // Load patients for doctors
     useEffect(() => {
@@ -61,7 +62,7 @@ export const MedicalLlm = ({ onBack }) => {
                 } else if (currentUser?.id) {
                     params.doctor_id = currentUser.id
                 }
-                const response = await llmAPI.listConversations(params)
+                const response = await nlpChatAPI.listConversations(projectId, params)
                 if (response.success) {
                     setConversations(response.data)
                 }
@@ -69,10 +70,10 @@ export const MedicalLlm = ({ onBack }) => {
                 console.error('Failed to load conversations:', err)
             }
         }
-        if (currentUser?.id) {
+        if (currentUser?.id && projectId) {
             loadConversations()
         }
-    }, [currentUser, isPatient])
+    }, [currentUser, isPatient, projectId])
 
     // Auto-scroll to bottom
     useEffect(() => {
@@ -82,13 +83,18 @@ export const MedicalLlm = ({ onBack }) => {
     const startNewConversation = async () => {
         setError(null)
         try {
+            if (!projectId) {
+                setError('Hospital project is not available for this account')
+                return
+            }
+
             const patientId = isPatient ? currentUser.id : selectedPatientId
             if (!patientId) {
                 setError('Please select a patient first')
                 return
             }
 
-            const response = await llmAPI.createConversation({
+            const response = await nlpChatAPI.createConversation(projectId, {
                 conversation_type: isPatient ? 'patient_llm' : 'doctor_llm',
                 patient_id: patientId,
                 doctor_id: isPatient ? null : currentUser.id,
@@ -110,7 +116,7 @@ export const MedicalLlm = ({ onBack }) => {
         setError(null)
         setCurrentConversation(conversation)
         try {
-            const response = await llmAPI.getMessages(conversation.id)
+            const response = await nlpChatAPI.getMessages(projectId, conversation.id)
             if (response.success) {
                 setMessages(response.data.map(msg => ({
                     id: msg.id,
@@ -141,36 +147,81 @@ export const MedicalLlm = ({ onBack }) => {
             setError('Please start a new conversation first')
             return
         }
+        if (!projectId) {
+            setError('Hospital project is not available for this account')
+            return
+        }
+
+        const outgoingMessage = inputValue
 
         const userMessage = {
             id: Date.now(),
             role: 'user',
-            content: inputValue,
+            content: outgoingMessage,
             timestamp: new Date()
         }
 
-        setMessages(prev => [...prev, userMessage])
+        const streamMessageId = `stream-${Date.now()}`
+        const chatHistoryPayload = messages
+            .filter((message) => message.content)
+            .map((message) => ({
+                role: message.role === 'assistant' ? 'assistant' : 'user',
+                content: message.content,
+            }))
+        const assistantStreamingMessage = {
+            id: streamMessageId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+        }
+
+        setMessages(prev => [...prev, userMessage, assistantStreamingMessage])
         setInputValue('')
         setIsLoading(true)
         setError(null)
 
         try {
-            const response = await llmAPI.sendMessage({
+            await nlpChatAPI.streamAnswer(projectId, {
+                text: outgoingMessage,
+                top_k: 3,
                 conversation_id: currentConversation.id,
-                message_content: inputValue,
-                message_type: 'text'
+                patient_id: isPatient ? undefined : selectedPatientId,
+                language: 'en',
+                chat_history: chatHistoryPayload,
+            }, {
+                onStart: (payload) => {
+                    if (payload?.conversation_id && !currentConversation?.id) {
+                        setCurrentConversation((prev) => prev || { id: payload.conversation_id, title: 'Medical Consultation' })
+                    }
+                },
+                onToken: (payload) => {
+                    const token = payload?.text || ''
+                    setMessages((prev) => prev.map((message) => (
+                        message.id === streamMessageId
+                            ? { ...message, content: `${message.content}${token}` }
+                            : message
+                    )))
+                },
+                onDone: (payload) => {
+                    setMessages((prev) => prev.map((message) => (
+                        message.id === streamMessageId
+                            ? {
+                                ...message,
+                                id: payload?.assistant_message?.id || message.id,
+                                content: payload?.answer || message.content,
+                                timestamp: new Date(),
+                            }
+                            : message
+                    )))
+                },
+                onError: (payload) => {
+                    const msg = payload?.message || 'Failed to stream message'
+                    setMessages((prev) => prev.filter((message) => message.id !== streamMessageId))
+                    setError(msg)
+                },
             })
-
-            if (response.success && response.llm_response) {
-                const aiMessage = {
-                    id: response.llm_response.id,
-                    role: 'assistant',
-                    content: response.llm_response.message_content,
-                    timestamp: new Date(response.llm_response.created_at)
-                }
-                setMessages(prev => [...prev, aiMessage])
-            }
         } catch (err) {
+            setMessages((prev) => prev.filter((message) => message.id !== streamMessageId))
             setError(err.message || 'Failed to send message')
         } finally {
             setIsLoading(false)

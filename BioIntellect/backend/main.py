@@ -20,7 +20,6 @@ from src.api.routes import (
     dashboard_routes,
     file_routes,
     geography_routes,
-    llm_routes,
     logging_routes,
     notification_routes,
     rag_data,
@@ -233,7 +232,6 @@ def create_app() -> FastAPI:
     app.include_router(report_routes.router, prefix=api_prefix)
     app.include_router(geography_routes.router, prefix=api_prefix)
     app.include_router(user_routes.router, prefix=api_prefix)
-    app.include_router(llm_routes.router, prefix=api_prefix)
     app.include_router(logging_routes.router, prefix=api_prefix)
     app.include_router(real_time_monitoring_routes.router, prefix=api_prefix)
     app.include_router(audit_routes.router, prefix=api_prefix)

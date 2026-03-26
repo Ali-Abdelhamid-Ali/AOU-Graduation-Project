@@ -90,7 +90,7 @@ class NLPController(BaseController):
         clean_history = [
             msg for msg in chat_history
             if isinstance(msg, dict) and str(msg.get("role", "")).capitalize() != "System"
-        ][-10:]
+        ][-100:]
 
         model_history = [{"role": "System", "message": system_prompt}, *clean_history]
 

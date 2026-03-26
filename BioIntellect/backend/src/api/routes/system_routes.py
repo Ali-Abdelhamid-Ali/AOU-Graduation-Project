@@ -19,7 +19,7 @@ from src.security.auth_middleware import (
 )
 from src.observability.logger import get_logger
 
-from datetime import datetime
+from datetime import datetime, timezone
 import psutil
 import os
 import time
@@ -79,7 +79,7 @@ async def get_system_metrics():
                     "used_gb": round(disk.used / (1024**3), 2),
                     "usage_percent": disk.percent,
                 },
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         }
     except Exception as e:
@@ -233,7 +233,7 @@ async def health_check(repo: SystemRepository = Depends(SystemRepository)):
             {
                 "status": "healthy" if all_healthy else "degraded",
                 "checks": checks,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         ),
         status_code=status_code,
@@ -346,7 +346,7 @@ async def create_system_setting(
 ):
     """Create a new system setting."""
     try:
-        setting = await repo.create_system_setting(setting_data.dict())
+        setting = await repo.create_system_setting(setting_data.model_dump())
         logger.info(f"System setting created by user {user['id']}: {setting['id']}")
         return setting
     except Exception as e:
@@ -368,7 +368,7 @@ async def update_system_setting(
     """Update a system setting."""
     try:
         setting = await repo.update_system_setting(
-            setting_id, setting_data.dict(exclude_unset=True)
+            setting_id, setting_data.model_dump(exclude_unset=True)
         )
         if not setting:
             raise HTTPException(status_code=404, detail="System setting not found")
@@ -498,7 +498,7 @@ async def create_model_version(
 ):
     """Create a new model version."""
     try:
-        model = await repo.create_model_version(model_data.dict())
+        model = await repo.create_model_version(model_data.model_dump())
         logger.info(f"Model version created by user {user['id']}: {model['id']}")
         return model
     except Exception as e:
@@ -520,7 +520,7 @@ async def update_model_version(
     """Update a model version."""
     try:
         model = await repo.update_model_version(
-            model_id, model_data.dict(exclude_unset=True)
+            model_id, model_data.model_dump(exclude_unset=True)
         )
         if not model:
             raise HTTPException(status_code=404, detail="Model version not found")

@@ -62,6 +62,17 @@ def test_normalize_upload_content_type_rewrites_nifti_gzip_to_octet_stream() -> 
         == "application/octet-stream"
     )
     assert get_preserved_extension("study_flair.nii.gz") == ".nii.gz"
+    assert normalize_upload_content_type("doc.pdf", "application/pdf") == "application/pdf"
+    assert normalize_upload_content_type("photo.jpg", "image/jpeg") == "image/jpeg"
+    assert normalize_upload_content_type("photo.png", "image/png") == "image/png"
+    assert (
+        normalize_upload_content_type("archive.bin", "application/gzip")
+        == "application/octet-stream"
+    )
+    assert (
+        normalize_upload_content_type("unknown.bin", "")
+        == "application/octet-stream"
+    )
 
 
 @pytest.mark.unit

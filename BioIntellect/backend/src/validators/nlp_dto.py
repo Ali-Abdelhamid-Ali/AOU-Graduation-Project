@@ -37,5 +37,5 @@ class PushRequest(BaseModel):
 class SearchRequest(BaseModel):
     text: str = Field(..., description="The search text string.")
     top_k: int = Field(default=3, gt=0, le=5)
-    chat_history: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
+    chat_history: list[dict[str, Any]] = Field(default_factory=list, max_length=100, description="Optional chat history for context")
     language: Optional[str] = Field(default="en", description="Response language: 'en' or 'ar'")

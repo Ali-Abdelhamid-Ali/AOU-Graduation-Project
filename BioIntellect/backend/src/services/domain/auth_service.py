@@ -122,10 +122,6 @@ class AuthService:
                 profile_data["mrn"] = self._generate_mrn(
                     str(data.hospital_id) if data.hospital_id else None
                 )
-            elif role in ["admin", "super_admin"]:
-                profile_data["role"] = role
-                profile_data["department"] = data.department or "General"
-                profile_data["employee_id"] = data.employee_id
 
             # Execute Profile Insertion
             await self.auth_repo.create_profile(table, profile_data)

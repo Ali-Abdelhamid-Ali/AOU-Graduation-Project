@@ -1,8 +1,13 @@
-from fastapi import APIRouter, HTTPException, Request, status
+import asyncio
+import json
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 
 from src.api.controllers.NLPController import NLPController
 from src.api.controllers.ProcessController import ProcessController
 from src.observability.logger import get_logger
+from src.security.auth_middleware import Permission, require_permission
 from src.stores.llm.LLMEnums import DocumentTypeEnums
 from src.validators.nlp_dto import PushRequest, SearchRequest
 
@@ -134,8 +139,15 @@ async def search_index(request: Request, project_id: str, search_request: Search
 		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Vector database search failed: {str(exc)}") from exc
 
 	return {"results": search_results}
-@router.post ("/index/answer/{project_id}")
-async def answer_rag(request: Request, project_id: str, search_request: SearchRequest):
+@router.post (
+	"/index/answer/{project_id}",
+	dependencies=[Depends(require_permission(Permission.CHAT_LLM))],
+)
+async def answer_rag(
+	request: Request,
+	project_id: str,
+	search_request: SearchRequest,
+):
 	if not project_id.strip():
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
 	if not search_request.text or not search_request.text.strip():
@@ -170,3 +182,74 @@ async def answer_rag(request: Request, project_id: str, search_request: SearchRe
 	if not answer :
 		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to generate answer for the question")
 	return {"answer": answer, "full_prompt": full_prompt, "chat_history": chat_history}
+
+
+def _format_sse(event_name: str, payload: dict) -> str:
+	return f"event: {event_name}\\ndata: {json.dumps(payload, ensure_ascii=False)}\\n\\n"
+
+
+def _chunk_text(text: str, chunk_size: int = 24):
+	for index in range(0, len(text), chunk_size):
+		yield text[index : index + chunk_size]
+
+
+@router.post(
+	"/index/answer-stream/{project_id}",
+	dependencies=[Depends(require_permission(Permission.CHAT_LLM))],
+)
+async def answer_rag_stream(
+	request: Request,
+	project_id: str,
+	search_request: SearchRequest,
+):
+	if not project_id.strip():
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
+	if not search_request.text or not search_request.text.strip():
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="query is required")
+
+	vectordb_client = getattr(request.app.state, "vectordb_client", None)
+	generation_client = getattr(request.app.state, "generation_client", None)
+	embedding_client = getattr(request.app.state, "embedding_client", None)
+	template_parser = getattr(request.app.state, "template_parser", None)
+	if vectordb_client is None or generation_client is None or embedding_client is None or template_parser is None:
+		raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Required NLP clients are not initialized")
+
+	nlp_controller = NLPController(
+		vectorDB_client=vectordb_client,
+		generation_client=generation_client,
+		embedding_client=embedding_client,
+		template_parser=template_parser,
+	)
+
+	async def event_generator():
+		yield _format_sse("start", {"project_id": project_id})
+		try:
+			answer, _, _ = nlp_controller.answer_rag_question(
+				project_id=project_id,
+				question=search_request.text,
+				limit=search_request.top_k,
+				chat_history=search_request.chat_history,
+				language=search_request.language,
+			)
+		except ValueError as exc:
+			yield _format_sse("error", {"message": str(exc)})
+			return
+		except Exception as exc:
+			yield _format_sse("error", {"message": f"Failed to answer RAG question: {str(exc)}"})
+			return
+
+		for chunk in _chunk_text(answer):
+			yield _format_sse("token", {"text": chunk})
+			await asyncio.sleep(0)
+
+		yield _format_sse("done", {"answer": answer})
+
+	return StreamingResponse(
+		event_generator(),
+		media_type="text/event-stream",
+		headers={
+			"Cache-Control": "no-cache",
+			"Connection": "keep-alive",
+			"X-Accel-Buffering": "no",
+		},
+	)

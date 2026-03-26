@@ -130,8 +130,6 @@ def async_retry(
                     await asyncio.sleep(delay)
                     delay *= backoff_factor
 
-            raise last_exception
-
         return wrapper
 
     return decorator

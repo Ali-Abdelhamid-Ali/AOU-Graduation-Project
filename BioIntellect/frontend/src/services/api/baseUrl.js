@@ -7,12 +7,22 @@ const ensureVersionSuffix = (value) => {
 
 const hasText = (value) => typeof value === 'string' && value.trim().length > 0
 
-export const resolveApiBaseInput = () =>
-  [
+const isAbsoluteUrl = (value) => /^https?:\/\//i.test(String(value || '').trim())
+
+export const resolveApiBaseInput = () => {
+  const explicitApiInput = [
     import.meta.env.VITE_API_URL,
     import.meta.env.VITE_API_ROOT_URL,
-    '/api',
-  ].find(hasText)?.trim() || '/api'
+  ].find(hasText)?.trim()
+
+  if (import.meta.env.DEV) {
+    return isAbsoluteUrl(explicitApiInput)
+      ? explicitApiInput
+      : explicitApiInput || '/api'
+  }
+
+  return explicitApiInput || '/api'
+}
 
 const rawApiUrl = resolveApiBaseInput()
 

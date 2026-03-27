@@ -785,6 +785,7 @@ class ClinicalRepository:
             result = await (
                 client.table("ecg_results")
                 .update(payload)
+                .select("*")
                 .eq("id", result_id)
                 .execute()
             )
@@ -948,6 +949,7 @@ class ClinicalRepository:
             result = await (
                 client.table("mri_segmentation_results")
                 .update(payload)
+                .select("*")
                 .eq("id", result_id)
                 .execute()
             )

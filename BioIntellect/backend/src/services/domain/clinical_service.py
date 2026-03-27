@@ -87,13 +87,20 @@ class ClinicalService:
         return saved_result
 
     async def review_result(
-        self, user_id: str, table_name: str, result_id: str, data: dict
+        self,
+        user_id: str,
+        table_name: str,
+        result_id: str,
+        data: dict,
+        reviewer_profile_id: str | None = None,
     ):
         """Allow doctors to review and confirm AI results."""
         try:
             # Table name validation for security
             if table_name not in ["ecg_results", "mri_segmentation_results"]:
                 raise Exception("Invalid result table")
+
+            reviewer_id = reviewer_profile_id
 
             # Use specific update methods based on table
             if table_name == "ecg_results":
@@ -102,7 +109,7 @@ class ClinicalService:
                     {
                         "is_reviewed": True,
                         "reviewed_at": datetime.now(timezone.utc).isoformat(),
-                        "reviewed_by_doctor_id": user_id,
+                        "reviewed_by_doctor_id": reviewer_id,
                         **data,
                     },
                 )
@@ -112,19 +119,22 @@ class ClinicalService:
                     {
                         "is_reviewed": True,
                         "reviewed_at": datetime.now(timezone.utc).isoformat(),
-                        "reviewed_by_doctor_id": user_id,
+                        "reviewed_by_doctor_id": reviewer_id,
                         **data,
                     },
                 )
             else:
                 raise Exception("Unsupported table for review")
 
+            if not updated:
+                raise Exception("Review update did not return a persisted record")
+
             log_audit(
                 AuditAction.REPORT_SIGN,
                 user_id=user_id,
                 details={"result_id": result_id, "table": table_name},
             )
-            return {"success": True, "data": updated}
+            return updated
         except Exception as e:
             logger.error(f"Review failed for {result_id}: {str(e)}")
             raise e

@@ -32,13 +32,17 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin, onBack }) => {
       searchParams.get('access_token') || hashParams.get('access_token')
     const type = searchParams.get('type') || hashParams.get('type')
 
-    if (type === 'recovery' || accessToken) {
-      if (accessToken) {
-        clearPersistedSensitiveTokens()
-        setRecoveryToken(accessToken)
-        window.history.replaceState(null, '', window.location.pathname)
-      }
+    if (accessToken) {
+      clearPersistedSensitiveTokens()
+      setRecoveryToken(accessToken)
+      window.history.replaceState(null, '', window.location.pathname)
       setView('update')
+      return
+    }
+
+    if (type === 'recovery') {
+      setValidationError('Invalid or expired recovery link. Please request a new reset email.')
+      window.history.replaceState(null, '', window.location.pathname)
     }
   }, [])
 

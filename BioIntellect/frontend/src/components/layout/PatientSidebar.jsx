@@ -34,7 +34,7 @@ export const PatientSidebar = ({ isCollapsed, setIsCollapsed }) => {
     <motion.aside
       className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ''}`}
       initial={false}
-      animate={{ width: isCollapsed ? '88px' : '292px' }}
+      animate={{ inlineSize: isCollapsed ? '88px' : '292px' }}
     >
       <div className={styles.topSection}>
         <div className={styles.logoContainer}>

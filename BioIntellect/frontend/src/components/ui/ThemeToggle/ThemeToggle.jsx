@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 
 export default function ThemeToggle() {
   const [isDark, setIsDark] = useState(() => {
+    if (typeof window === 'undefined') return false
     const stored = localStorage.getItem('biointellect_theme')
     return stored === 'dark'
   })
@@ -21,8 +22,8 @@ export default function ThemeToggle() {
       type="button"
       onClick={toggle}
       style={{
-        width: 100,
-        height: 50,
+        inlineSize: 100,
+        blockSize: 50,
         backgroundColor: 'var(--color-gray-200)',
         borderRadius: 50,
         cursor: 'pointer',
@@ -46,8 +47,8 @@ export default function ThemeToggle() {
         style={{
           fontSize: 22,
           position: 'absolute',
-          left: isDark ? 'auto' : '8px',
-          right: isDark ? '8px' : 'auto',
+          insetInlineStart: isDark ? 'auto' : '8px',
+          insetInlineEnd: isDark ? '8px' : 'auto',
           display: 'flex',
           alignItems: 'center',
         }}
@@ -63,18 +64,18 @@ export default function ThemeToggle() {
       {/* Handle/Dot - عكس اتجاه الايموجي */}
       <motion.div
         style={{
-          width: 38,
-          height: 38,
+          inlineSize: 38,
+          blockSize: 38,
           backgroundColor: isDark ? 'var(--color-primary)' : '#fbbf24',
           borderRadius: '50%',
           boxShadow: isDark ? '0 2px 8px rgba(77, 148, 255, 0.4)' : '0 2px 8px rgba(251, 191, 36, 0.4)',
           position: 'absolute',
-          left: isDark ? '8px' : 'auto',
-          right: isDark ? 'auto' : '8px',
+          insetInlineStart: isDark ? '8px' : 'auto',
+          insetInlineEnd: isDark ? 'auto' : '8px',
         }}
         animate={{
-          left: isDark ? '8px' : 'auto',
-          right: isDark ? 'auto' : '8px',
+          insetInlineStart: isDark ? '8px' : 'auto',
+          insetInlineEnd: isDark ? 'auto' : '8px',
           backgroundColor: isDark ? 'var(--color-primary)' : '#fbbf24',
           boxShadow: isDark ? '0 2px 8px rgba(77, 148, 255, 0.4)' : '0 2px 8px rgba(251, 191, 36, 0.4)',
         }}

@@ -6,7 +6,7 @@ import { mriSegmentationService } from '@/services/clinical.service'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { MriPatientView } from '../../components/clinical/MriPatientView'
 import { MriDoctorView } from '../../components/clinical/MriDoctorView'
-import { patientsAPI } from '@/services/api'
+import { patientsAPI, usersAPI } from '@/services/api'
 import { TopBar } from '@/components/layout/TopBar'
 import { SelectField } from '@/components/ui/SelectField'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
@@ -230,6 +230,15 @@ const getFeedbackTone = (status) => {
   return 'info'
 }
 
+const extractPatientRows = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.data?.data)) return payload.data.data
+  if (Array.isArray(payload?.patients)) return payload.patients
+  if (Array.isArray(payload?.data?.patients)) return payload.data.patients
+  return []
+}
+
 export const MriSegmentation = ({ onBack }) => {
   const { currentUser, userRole } = useAuth()
   const [files, setFiles] = useState({
@@ -245,8 +254,6 @@ export const MriSegmentation = ({ onBack }) => {
   const [selectedPatientId, setSelectedPatientId] = useState('')
   const [patientLoadError, setPatientLoadError] = useState('')
   const [modelInfo, setModelInfo] = useState(null)
-  const [showConfirmation, setShowConfirmation] = useState(false)
-  const [doctorConfirmed, setDoctorConfirmed] = useState(false)
   const [savedResultId, setSavedResultId] = useState(null)
   const [workflowStatus, setWorkflowStatus] = useState(EMPTY_WORKFLOW_STATUS)
   const [workflowMessage, setWorkflowMessage] = useState(
@@ -266,30 +273,68 @@ export const MriSegmentation = ({ onBack }) => {
   useEffect(() => {
     if (userRole !== 'patient') {
       const loadPatients = async () => {
+        const scopedParams = {
+          limit: 100,
+          offset: 0,
+          is_active: true,
+          ...(currentUser?.hospital_id ? { hospital_id: currentUser.hospital_id } : {}),
+        }
+
+        const fallbackParams = {
+          limit: 100,
+          offset: 0,
+        }
+
+        let loadedPatients = []
+        let lastError = null
+
         try {
-          const response = await patientsAPI.list()
-          if (response.success) {
-            const loadedPatients = response.data || []
-            setPatients(loadedPatients)
-            setSelectedPatientId((current) => current || loadedPatients[0]?.id || '')
-            setPatientLoadError(
-              loadedPatients.length
-                ? ''
-                : 'No patient records are available for this doctor account yet.'
-            )
-          }
+          const response = await patientsAPI.list(scopedParams)
+          loadedPatients = extractPatientRows(response)
         } catch (loadError) {
-          console.error('Failed to load patients:', loadError)
-          setPatients([])
+          lastError = loadError
+        }
+
+        if (!loadedPatients.length) {
+          try {
+            const response = await patientsAPI.list(fallbackParams)
+            loadedPatients = extractPatientRows(response)
+          } catch (loadError) {
+            lastError = loadError
+          }
+        }
+
+        if (!loadedPatients.length) {
+          try {
+            const response = await usersAPI.list('patients', scopedParams)
+            loadedPatients = extractPatientRows(response)
+          } catch (loadError) {
+            lastError = loadError
+          }
+        }
+
+        if (loadedPatients.length) {
+          setPatients(loadedPatients)
+          setSelectedPatientId((current) => current || loadedPatients[0]?.id || '')
+          setPatientLoadError('')
+          return
+        }
+
+        setPatients([])
+        setSelectedPatientId('')
+        if (lastError) {
+          console.error('Failed to load patients:', lastError)
           setPatientLoadError(
-            getApiErrorMessage(loadError, 'Failed to load the patient list.')
+            getApiErrorMessage(lastError, 'Failed to load the patient list.')
           )
+        } else {
+          setPatientLoadError('No patient records are available for this doctor account yet.')
         }
       }
 
       loadPatients()
     }
-  }, [userRole])
+  }, [currentUser?.hospital_id, userRole])
 
   useEffect(() => {
     const loadModelInfo = async () => {
@@ -434,8 +479,6 @@ export const MriSegmentation = ({ onBack }) => {
     setResult(null)
     setAnalysisError(null)
     setSavedResultId(null)
-    setShowConfirmation(false)
-    setDoctorConfirmed(false)
     setWorkflowStatus(EMPTY_WORKFLOW_STATUS)
     setWorkflowMessage(
       'Upload the four MRI sequences to prepare the 3D segmentation workflow.'
@@ -653,10 +696,6 @@ export const MriSegmentation = ({ onBack }) => {
         uploadedFiles: { ...workingDraft.uploadedFiles },
       })
 
-      if (userRole !== 'patient') {
-        setShowConfirmation(true)
-      }
-
       return savedResult
     } catch (syncError) {
       console.error('MRI record sync error:', syncError)
@@ -693,8 +732,6 @@ export const MriSegmentation = ({ onBack }) => {
     setAnalysisError(null)
     setResult(null)
     setSavedResultId(null)
-    setShowConfirmation(false)
-    setDoctorConfirmed(false)
     setPersistenceDraft(null)
     setRecordSyncState({ status: 'idle', message: '', technicalDetails: '' })
     setSourceFileStatus(
@@ -796,31 +833,6 @@ export const MriSegmentation = ({ onBack }) => {
     setAnalyzing(false)
   }
 
-  const handleDoctorConfirmation = async () => {
-    if (!doctorConfirmed || !savedResultId) return
-
-    try {
-      await medicalService.reviewResult('mri_results', savedResultId, {
-        is_reviewed: true,
-        doctor_agrees_with_ai: true,
-      })
-      setShowConfirmation(false)
-      setRecordSyncState({
-        status: 'saved',
-        message:
-          'Result saved and physician confirmation recorded. The AI output is now marked as reviewed.',
-        technicalDetails: '',
-      })
-    } catch (reviewError) {
-      console.error('Failed to save confirmation:', reviewError)
-      setRecordSyncState({
-        status: 'failed',
-        message: 'The result was saved, but physician confirmation could not be stored.',
-        technicalDetails: extractErrorDetails(reviewError, ''),
-      })
-    }
-  }
-
   return (
     <div className={styles.pageWrapper}>
       <TopBar
@@ -859,7 +871,7 @@ export const MriSegmentation = ({ onBack }) => {
               </div>
 
               <div className={styles.progressBar}>
-                <span style={{ width: `${workflowProgress}%` }} />
+                <span style={{ inlineSize: `${workflowProgress}%` }} />
               </div>
 
               <p className={styles.workflowMessage}>{workflowMessage}</p>
@@ -1209,7 +1221,7 @@ export const MriSegmentation = ({ onBack }) => {
                           <div className={styles.regionBar}>
                             <span
                               style={{
-                                width: `${Math.min(Number(region.percentage || 0), 100)}%`,
+                                inlineSize: `${Math.min(Number(region.percentage || 0), 100)}%`,
                                 backgroundColor: `rgb(${(region.color || [255, 255, 255]).join(',')})`,
                               }}
                             />
@@ -1301,45 +1313,6 @@ export const MriSegmentation = ({ onBack }) => {
         </div>
       </div>
 
-      {showConfirmation && (
-        <div className={styles.modalOverlay}>
-          <motion.div
-            className={styles.confirmationModal}
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-          >
-            <h3>Physician Review Confirmation</h3>
-            <p>
-              The AI result is saved. Confirm physician review once you have validated the
-              segmentation output.
-            </p>
-            <label className={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={doctorConfirmed}
-                onChange={(event) => setDoctorConfirmed(event.target.checked)}
-              />
-              I reviewed the segmentation output and understand it is a clinical support
-              tool rather than a final diagnosis.
-            </label>
-            <div className={styles.modalActions}>
-              <button
-                className={styles.cancelBtn}
-                onClick={() => setShowConfirmation(false)}
-              >
-                Close
-              </button>
-              <button
-                className={styles.confirmBtn}
-                onClick={handleDoctorConfirmation}
-                disabled={!doctorConfirmed}
-              >
-                Mark as Reviewed
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   )
 }

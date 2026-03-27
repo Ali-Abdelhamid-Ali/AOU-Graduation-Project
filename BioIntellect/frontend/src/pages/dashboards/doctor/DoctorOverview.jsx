@@ -7,6 +7,24 @@ import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { MetricCard, EmptyPanel, SectionLoading, ErrorBanner, HeroSection, toneClassMap } from './SharedPanels'
 import styles from '../DoctorDashboard.module.css'
 
+const renderSummaryText = (value) => {
+  if (typeof value === 'string') {
+    const cleaned = value.trim()
+    return cleaned || 'Awaiting radiology review'
+  }
+
+  if (value && typeof value === 'object') {
+    const name = value.name || value.class_name || 'MRI finding'
+    const severity = value.severity ? `severity ${value.severity}` : null
+    const percentage = value.percentage != null ? `${Number(value.percentage).toFixed(1)}% of study` : null
+    const volume = value.volume_cm3 != null ? `${Number(value.volume_cm3).toFixed(2)} cm3` : null
+
+    return [name, severity, percentage, volume].filter(Boolean).join(' • ')
+  }
+
+  return 'Awaiting radiology review'
+}
+
 export const DoctorOverview = () => {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
@@ -166,7 +184,7 @@ export const DoctorOverview = () => {
                       <strong>{item.patient_name}</strong>
                       <span className={`${styles.badge} ${styles.toneInfo}`}>{item.type}</span>
                     </div>
-                    <p>{item.summary}</p>
+                    <p>{renderSummaryText(item.summary)}</p>
                   </div>
                   <div className={styles.resultMeta}>
                     <span>{item.case_number || 'No case number'}</span>

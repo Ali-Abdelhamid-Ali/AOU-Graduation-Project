@@ -212,25 +212,138 @@ class AIService:
                     files=request_files,
                 )
         except httpx.TimeoutException as exc:
-            raise RuntimeError("MRI segmentation service timed out.") from exc
+            self.logger.warning(
+                "MRI segmentation service timed out; using offline fallback."
+            )
+            return await self._build_offline_segmentation_response(
+                files=files,
+                patient_id=patient_id,
+                reason="MRI segmentation service timed out.",
+            )
         except httpx.HTTPError as exc:
-            raise RuntimeError("MRI segmentation service is unavailable.") from exc
+            self.logger.warning(
+                "MRI segmentation service is unavailable; using offline fallback."
+            )
+            return await self._build_offline_segmentation_response(
+                files=files,
+                patient_id=patient_id,
+                reason="MRI segmentation service is unavailable.",
+            )
 
         try:
             payload = response.json()
         except ValueError as exc:
-            raise RuntimeError("MRI segmentation service returned invalid JSON.") from exc
+            self.logger.warning(
+                "MRI segmentation service returned invalid JSON; using offline fallback."
+            )
+            return await self._build_offline_segmentation_response(
+                files=files,
+                patient_id=patient_id,
+                reason="MRI segmentation service returned invalid JSON.",
+            )
 
         if response.status_code == 400:
             raise ValueError(payload.get("error") or payload.get("detail") or "Invalid MRI input.")
         if response.status_code >= 500:
-            raise RuntimeError(
-                payload.get("error") or payload.get("detail") or "MRI segmentation failed."
+            self.logger.warning(
+                "MRI segmentation service returned an error response; using offline fallback."
+            )
+            return await self._build_offline_segmentation_response(
+                files=files,
+                patient_id=patient_id,
+                reason=payload.get("error") or payload.get("detail") or "MRI segmentation failed.",
             )
         if not payload.get("ok", True):
-            raise ValueError(payload.get("error") or "MRI segmentation failed.")
+            self.logger.warning(
+                "MRI segmentation service returned a non-ok payload; using offline fallback."
+            )
+            return await self._build_offline_segmentation_response(
+                files=files,
+                patient_id=patient_id,
+                reason=payload.get("error") or "MRI segmentation failed.",
+            )
 
         return self._normalize_segmentation_response(payload, patient_id=patient_id)
+
+    async def _build_offline_segmentation_response(
+        self,
+        files: Dict[str, UploadFile],
+        patient_id: Optional[str] = None,
+        reason: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        first_file = next(iter(files.values()), None)
+        filename = getattr(first_file, "filename", None) or "unknown_mri.nii.gz"
+        scan_stub = {"file_name": filename}
+        analysis = await self.analyze_mri(scan_stub)
+
+        case_id = f"offline-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+        regions = []
+        for idx, region in enumerate(analysis.get("segmented_regions") or [], start=1):
+            volume_cm3 = float(region.get("volume_ml") or 0.0)
+            regions.append(
+                {
+                    "class_id": idx,
+                    "class_name": region.get("region", f"Region {idx}"),
+                    "present": volume_cm3 > 0,
+                    "volume_voxels": int(volume_cm3 * 1000),
+                    "voxel_count": int(volume_cm3 * 1000),
+                    "volume_mm3": volume_cm3 * 1000.0,
+                    "volume_cm3": volume_cm3,
+                    "percentage": 0.0,
+                    "color": MRI_CLASS_COLORS.get(idx, [255, 255, 255]),
+                }
+            )
+
+        total_volume = float(analysis.get("total_volume_cm3") or 0.0)
+        if not regions and total_volume <= 0:
+            regions = [
+                {
+                    "class_id": 0,
+                    "class_name": "No abnormality detected",
+                    "present": False,
+                    "volume_voxels": 0,
+                    "voxel_count": 0,
+                    "volume_mm3": 0.0,
+                    "volume_cm3": 0.0,
+                    "percentage": 0.0,
+                    "color": [255, 255, 255],
+                }
+            ]
+
+        return {
+            "case_id": case_id,
+            "patient_id": patient_id,
+            "inference_timestamp": datetime.now(timezone.utc).isoformat(),
+            "model_info": analysis.get("model_info") or self.get_model_info("mri"),
+            "tumor_detected": bool(analysis.get("tumor_detected")),
+            "prediction_confidence": {
+                "overall": float(analysis.get("confidence") or 0.0),
+                "tumor_presence": float(analysis.get("confidence") or 0.0),
+                "segmentation_quality": 0.0,
+            },
+            "regions": regions,
+            "total_volume_cm3": total_volume,
+            "measurements": analysis.get("measurements") or {},
+            "processing_metadata": {
+                "offline_fallback": True,
+                "reason": reason or "MRI segmentation service unavailable.",
+                "source_file": filename,
+            },
+            "shape": [1, 1, 1, 1],
+            "image_filename": None,
+            "labels_filename": None,
+            "requires_review": bool(analysis.get("tumor_detected")),
+            "disclaimer": (
+                "MRI segmentation service is unavailable locally; showing offline fallback analysis."
+            ),
+            "ai_interpretation": analysis.get("ai_notes"),
+            "ai_recommendations": analysis.get("recommendations") or [],
+            "metrics": {"offline_fallback": True},
+            "raw_response": {
+                "offline_fallback": True,
+                "reason": reason or "MRI segmentation service unavailable.",
+            },
+        }
 
     async def fetch_mri_visualization_artifact(
         self, case_id: str, artifact_kind: str

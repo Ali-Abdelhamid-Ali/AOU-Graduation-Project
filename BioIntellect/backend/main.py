@@ -1,5 +1,6 @@
 ﻿"""Main API Entry Point - BioIntellect Backend."""
 
+import os
 import time
 from contextlib import asynccontextmanager
 from typing import Any, Dict
@@ -11,7 +12,6 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
 from scalar_fastapi import get_scalar_api_reference
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from src.stores.llm.templates.template_parser import template_parser
 from src.api.routes import (
     analytics_routes,
     audit_routes,
@@ -52,6 +52,7 @@ from src.security.config import security_config
 from src.services.domain.swagger_ui_fix import swagger_ui_fix_service
 from src.services.domain.user_check_service import user_check_service
 from src.services.infrastructure.memory_cache import global_cache
+from src.stores.llm.templates.template_parser import template_parser
 from src.stores.llm.LLMProviderFactory import LLMProviderFactory
 from src.validators.response_dto import ApiErrorResponse
 from src.stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
@@ -157,9 +158,16 @@ def create_app() -> FastAPI:
 
         app.state.embedding_client = embedding_client
         app.state.vectordb_client = vectordb_provider_factory.create(Provider=settings.VECTOR_DB_BACKEND)
-        app.state.vectordb_client.connect()
+        try:
+            app.state.vectordb_client.connect()
+            logger.info(f"Connected to vector database using {settings.VECTOR_DB_BACKEND} provider")
+        except Exception as exc:
+            logger.warning(
+                f"Vector database initialization skipped; continuing without vectordb client: {exc}"
+            )
+            app.state.vectordb_client = None
         app.state.template_parser = template_parser(language=settings.PRIMARY_LANG, default_language=settings.DEFAULT_LANG)
-        logger.info(f"Connected to vector database using {settings.VECTOR_DB_BACKEND} provider")
+        
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -382,4 +390,4 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=int(os.getenv("PORT", "8001")))

@@ -87,7 +87,7 @@ export const Login = ({
 
     if (result.success) {
       setTimeout(() => {
-        onLoginSuccess(result.role || userRole)
+        onLoginSuccess(result.role)
       }, 500)
     }
   }

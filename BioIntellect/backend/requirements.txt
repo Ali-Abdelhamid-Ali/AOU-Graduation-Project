@@ -35,6 +35,7 @@ passlib[bcrypt]>=1.7.4
 
 # Database (Supabase)
 supabase>=2.0.0
+qdrant-client>=1.12.0
 
 # Logging & Monitoring
 structlog>=23.2.0
@@ -42,6 +43,9 @@ psutil>=5.9.0
 
 # HTTP Client
 httpx>=0.25.0
+
+# Async file I/O
+aiofiles>=23.2.1
 
 # Testing
 pytest>=7.4.0

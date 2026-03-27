@@ -36,6 +36,7 @@ export const ForcePasswordReset = () => {
     const result = await completeForcedReset(formData.newPassword)
 
     if (result.success) {
+      setLoading(false)
       setSuccess(true)
       return
     }
@@ -106,8 +107,8 @@ export const ForcePasswordReset = () => {
             {error && (
               <motion.div
                 className={styles.error}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
               >
                 {error}
               </motion.div>

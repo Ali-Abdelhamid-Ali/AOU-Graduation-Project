@@ -1,10 +1,9 @@
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, lazy } from 'react'
 import { motion } from 'framer-motion'
 import {
   BrowserRouter as Router,
   Routes,
   Route,
-  useLocation,
   useNavigate,
 } from 'react-router-dom'
 
@@ -211,8 +210,8 @@ const LoadingScreen = () => (
   <div
     className="loading-screen"
     style={{
-      height: '100vh',
-      width: '100vw',
+      blockSize: '100vh',
+      inlineSize: '100vw',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -225,13 +224,13 @@ const LoadingScreen = () => (
     <div
       className="loader-pulse"
       style={{
-        width: '80px',
-        height: '80px',
+        inlineSize: '80px',
+        blockSize: '80px',
         borderRadius: '50%',
         border: '4px solid var(--color-primary-bg)',
-        borderTop: '4px solid var(--color-primary)',
+        borderBlockStart: '4px solid var(--color-primary)',
         animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite',
-        marginBottom: '2rem',
+        marginBlockEnd: '2rem',
         boxShadow: '0 0 20px rgba(0, 102, 204, 0.1)',
       }}
     />
@@ -253,18 +252,10 @@ const LoadingScreen = () => (
 )
 
 export function AppRoutes() {
-  const { userRole, signOut, mustResetPassword, isAuthenticated } = useAuth()
+  const { userRole, signOut } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
 
   const handleBack = () => navigate(-1)
-
-  useEffect(() => {
-    if (isAuthenticated && mustResetPassword && location.pathname !== '/force-password-reset') {
-      console.warn('[SECURITY] Mandatory password reset required. Redirecting...')
-      navigate('/force-password-reset', { replace: true })
-    }
-  }, [isAuthenticated, mustResetPassword, location.pathname, navigate])
 
   return (
     <Suspense fallback={<LoadingScreen />}>

@@ -54,6 +54,48 @@ _PATIENT_SELECT_COLUMNS = select_columns_for_table(
     ),
 )
 
+_PATIENT_LIST_FIELDS = (
+    "allergies",
+    "chronic_conditions",
+    "current_medications",
+)
+
+_PATIENT_DICT_FIELDS = ("settings",)
+
+
+def _normalize_patient_record(record: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if not record:
+        return {}
+
+    normalized = dict(record)
+
+    for field in _PATIENT_LIST_FIELDS:
+        value = normalized.get(field)
+        if value is None:
+            normalized[field] = []
+        elif isinstance(value, tuple):
+            normalized[field] = list(value)
+
+    for field in _PATIENT_DICT_FIELDS:
+        value = normalized.get(field)
+        if value is None:
+            normalized[field] = {}
+
+    if normalized.get("is_active") is None:
+        normalized["is_active"] = False
+
+    return normalized
+
+
+def _normalize_patient_records(
+    records: Optional[List[Optional[Dict[str, Any]]]]
+) -> List[Dict[str, Any]]:
+    return [
+        normalized
+        for normalized in (_normalize_patient_record(patient) for patient in (records or []))
+        if normalized
+    ]
+
 
 class UserRepository:
     def __init__(self):
@@ -548,7 +590,9 @@ class UserRepository:
         """List all patients with optional filtering."""
         client = await self._get_client()
         try:
-            query = client.table("patients").select(_PATIENT_SELECT_COLUMNS)
+            # Use a broad projection for listing to remain resilient when
+            # environments differ on optional column names (e.g., mrn vs medical_record_number).
+            query = client.table("patients").select("*")
 
             if filters:
                 for key, val in filters.items():
@@ -560,7 +604,7 @@ class UserRepository:
                                 search_term = search_term.replace(unsafe, "")
                             query = query.or_(
                                 "first_name.ilike.%{0}%,last_name.ilike.%{0}%,"
-                                "mrn.ilike.%{0}%,phone.ilike.%{0}%".format(search_term)
+                                "phone.ilike.%{0}%".format(search_term)
                             )
                         else:
                             query = query.eq(key, val)
@@ -568,7 +612,7 @@ class UserRepository:
             result = await (
                 query.order("first_name").range(offset, offset + limit - 1).execute()
             )
-            return result.data or []
+            return _normalize_patient_records(result.data)
         except Exception as e:
             logger.error(f"Failed to list patients: {str(e)}")
             raise
@@ -585,7 +629,7 @@ class UserRepository:
                 .execute()
             )
             if result_by_id.data:
-                return result_by_id.data[0]
+                return _normalize_patient_record(result_by_id.data[0])
 
             result_by_user = (
                 await client.table("patients")
@@ -594,7 +638,11 @@ class UserRepository:
                 .limit(1)
                 .execute()
             )
-            return result_by_user.data[0] if result_by_user.data else None
+            return (
+                _normalize_patient_record(result_by_user.data[0])
+                if result_by_user.data
+                else None
+            )
         except Exception as e:
             logger.error(f"Failed to get patient {patient_id}: {str(e)}")
             raise
@@ -606,7 +654,7 @@ class UserRepository:
         try:
             payload = sanitize_for_table("patients", patient_data)
             result = await client.table("patients").insert(payload).execute()
-            return result.data[0] if result.data else {}
+            return _normalize_patient_record(result.data[0]) if result.data else {}
         except Exception as e:
             logger.error(f"Failed to create patient: {str(e)}")
             raise
@@ -626,7 +674,7 @@ class UserRepository:
                 .execute()
             )
             if result.data:
-                return result.data[0]
+                return _normalize_patient_record(result.data[0])
 
             result = (
                 await client.table("patients")
@@ -634,7 +682,7 @@ class UserRepository:
                 .eq("user_id", patient_id)
                 .execute()
             )
-            return result.data[0] if result.data else None
+            return _normalize_patient_record(result.data[0]) if result.data else None
         except Exception as e:
             logger.error(f"Failed to update patient {patient_id}: {str(e)}")
             raise

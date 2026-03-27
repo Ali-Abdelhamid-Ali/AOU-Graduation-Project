@@ -113,9 +113,6 @@ const normalizeUserMutation = (response, normalizer = (value) => value) => {
   }
 }
 
-const normalizeReviewTableName = (tableName) =>
-  tableName === 'mri_segmentation_results' ? 'mri_results' : tableName
-
 export const authAPI = {
   signUp: (data) => apiClient.post('/auth/signup', data),
   signIn: (email, password) =>
@@ -170,13 +167,6 @@ export const clinicalAPI = {
       await apiClient.get('/clinical/mri/results', {
         params: { patient_id: patientId },
       })
-    ),
-  reviewResult: async (tableName, resultId, data) =>
-    normalizeEnvelope(
-      await apiClient.put(
-        `/clinical/results/${normalizeReviewTableName(tableName)}/${resultId}/review`,
-        data
-      )
     ),
 }
 

@@ -6,6 +6,24 @@ import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { EmptyPanel, SectionLoading, ErrorBanner, HeroSection } from './SharedPanels'
 import styles from '../DoctorDashboard.module.css'
 
+const renderSummaryText = (value) => {
+  if (typeof value === 'string') {
+    const cleaned = value.trim()
+    return cleaned || 'Awaiting radiology review'
+  }
+
+  if (value && typeof value === 'object') {
+    const name = value.name || value.class_name || 'MRI finding'
+    const severity = value.severity ? `severity ${value.severity}` : null
+    const percentage = value.percentage != null ? `${Number(value.percentage).toFixed(1)}% of study` : null
+    const volume = value.volume_cm3 != null ? `${Number(value.volume_cm3).toFixed(2)} cm3` : null
+
+    return [name, severity, percentage, volume].filter(Boolean).join(' • ')
+  }
+
+  return 'Awaiting radiology review'
+}
+
 export const DoctorResults = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
@@ -32,7 +50,7 @@ export const DoctorResults = () => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return results
     return results.filter((item) =>
-      [item.patient_name, item.case_number, item.summary, item.type]
+      [item.patient_name, item.case_number, renderSummaryText(item.summary), item.type]
         .filter(Boolean).some((v) => v.toLowerCase().includes(q))
     )
   }, [results, searchQuery])
@@ -57,7 +75,7 @@ export const DoctorResults = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Filter by patient, type, or case..."
-            style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--color-border, #333)', background: 'var(--color-surface, #1a1a2e)', color: 'inherit', fontSize: '0.875rem' }}
+            style={{ inlineSize: '100%', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--color-border, #333)', background: 'var(--color-surface, #1a1a2e)', color: 'inherit', fontSize: '0.875rem' }}
           />
         </div>
         {filtered.length ? (
@@ -69,7 +87,7 @@ export const DoctorResults = () => {
                     <strong>{item.patient_name}</strong>
                     <span className={`${styles.badge} ${styles.toneInfo}`}>{item.type}</span>
                   </div>
-                  <p>{item.summary}</p>
+                  <p>{renderSummaryText(item.summary)}</p>
                 </div>
                 <div className={styles.resultMeta}>
                   <span>{item.case_number || 'No case number'}</span>

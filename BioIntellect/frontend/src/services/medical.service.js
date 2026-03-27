@@ -332,16 +332,6 @@ export const medicalService = {
       unwrapData(await clinicalAPI.getMriResult(resultId), 'Failed to load MRI result')
     )
   },
-
-  async reviewResult(tableName, resultId, data) {
-    const normalizedTableName =
-      tableName === 'mri_segmentation_results' ? 'mri_results' : tableName
-
-    return unwrapData(
-      await clinicalAPI.reviewResult(normalizedTableName, resultId, data),
-      'Failed to review result'
-    )
-  },
 }
 
 export default medicalService

@@ -126,7 +126,7 @@ const SearchableSelect = ({
                         <div className={styles.optionsList}>
                             {options.length === 0 ? (
                                 <div className={styles.noResults}>
-                                    <div style={{ marginBottom: '0.4rem', fontWeight: 600 }}>Loading global geography...</div>
+                                    <div style={{ marginBlockEnd: '0.4rem', fontWeight: 600 }}>Loading global geography...</div>
                                     <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>We are connecting to the clinical geography network.</div>
                                 </div>
                             ) : filteredOptions.length > 0 ? (

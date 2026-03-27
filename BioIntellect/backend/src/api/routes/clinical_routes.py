@@ -704,7 +704,11 @@ async def review_ecg_result(
     """Review an ECG result (Doctor only)."""
     try:
         result = await service.review_result(
-            user["id"], "ecg_results", result_id, review_data
+            user["id"],
+            "ecg_results",
+            result_id,
+            review_data,
+            user.get("profile_id") if user.get("role") == "doctor" else None,
         )
         logger.info(f"ECG result reviewed by user {user['id']}: {result_id}")
         return result
@@ -1041,7 +1045,11 @@ async def review_mri_result(
     """Review an MRI result (Doctor only)."""
     try:
         result = await service.review_result(
-            user["id"], "mri_segmentation_results", result_id, review_data
+            user["id"],
+            "mri_segmentation_results",
+            result_id,
+            review_data,
+            user.get("profile_id") if user.get("role") == "doctor" else None,
         )
         logger.info(f"MRI result reviewed by user {user['id']}: {result_id}")
         return result
@@ -1527,7 +1535,11 @@ async def review_result_alias(
 
     try:
         return await service.review_result(
-            user["id"], table_name, result_id, review_data.model_dump(exclude_unset=True)
+            user["id"],
+            table_name,
+            result_id,
+            review_data.model_dump(exclude_unset=True),
+            user.get("profile_id") if user.get("role") == "doctor" else None,
         )
     except HTTPException:
         raise

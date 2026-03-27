@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'admin' | 'doctor' | 'nurse' | 'patient'
+export type UserRole = 'super_admin' | 'admin' | 'doctor' | 'patient'
 
 export interface SignupFormData {
     email: string

@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const signupSchema = z.object({
     email: z.string().email('Invalid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
-    role: z.enum(['super_admin', 'admin', 'doctor', 'nurse', 'patient']),
+    role: z.enum(['super_admin', 'admin', 'doctor', 'patient']),
     first_name: z.string().min(2, 'First name is required'),
     last_name: z.string().min(2, 'Last name is required'),
     gender: z.enum(['male', 'female']).optional(),
@@ -16,8 +16,8 @@ export const signupSchema = z.object({
     // Super Admin doesn't need hospital_id
     if (data.role === 'super_admin') return true
 
-    // Admin, Doctor, Nurse MUST have hospital_id
-    if (['admin', 'doctor', 'nurse'].includes(data.role)) {
+    // Admin and Doctor MUST have hospital_id
+    if (['admin', 'doctor'].includes(data.role)) {
         return !!data.hospital_id
     }
 

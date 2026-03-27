@@ -1,19 +1,20 @@
 ﻿"""Security Middleware - Authentication, Authorization, and Tracing."""
 
-from fastapi import Request, HTTPException, Security
-from typing import Any
+import uuid
+from typing import Annotated, Any
+
+from fastapi import HTTPException, Request, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
-import uuid
 
 from src.db.supabase.client import SupabaseProvider
 from src.observability.logger import (
+    get_correlation_id,
     get_logger,
     set_correlation_id,
-    get_correlation_id,
 )
 from src.repositories.auth_repository import AuthRepository
-from src.security.permission_map import get_role_permissions, Permission
+from src.security.permission_map import Permission, get_role_permissions
 
 logger = get_logger("security.middleware")
 security = HTTPBearer(auto_error=False)
@@ -156,6 +157,7 @@ async def _build_user_context(token: str, user: Any) -> dict[str, Any]:
         "profile_id": profile_id,
         "email": user_email,
         "role": role,
+        "avatar_url": user_metadata.get("avatar_url"),
         "hospital_id": hospital_id,
         "permissions": get_role_permissions(role),
         "access_token": token,
@@ -163,7 +165,7 @@ async def _build_user_context(token: str, user: Any) -> dict[str, Any]:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Security(security),
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Security(security)],
 ) -> dict[str, Any]:
     """
     Dependency to verify token and extract user context.
@@ -198,7 +200,7 @@ async def get_current_user(
         )
         raise HTTPException(
             status_code=401, detail="Authentication failed. Please try again."
-        )
+        ) from e
 
 
 async def get_current_user_ws(token: str | None) -> dict[str, Any] | None:
@@ -240,7 +242,9 @@ def require_permission(permission: Permission):
     Implements DEFAULT-DENY with enhanced security logging.
     """
 
-    async def permission_checker(user: dict = Security(get_current_user)):
+    async def permission_checker(
+        user: Annotated[dict, Security(get_current_user)]
+    ):
         if permission not in user["permissions"]:
             logger.warning(
                 "Unauthorized access attempt",

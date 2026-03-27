@@ -24,16 +24,6 @@ const doctorViewConfig = {
     title: 'Doctor Dashboard',
     subtitle: `Clinical focus board for ${brandingConfig.hospitalName}`,
   },
-  schedule: {
-    key: 'schedule',
-    title: 'Schedule Board',
-    subtitle: 'Timeline and slot planning from trusted appointment data.',
-  },
-  queue: {
-    key: 'queue',
-    title: 'Patient Queue',
-    subtitle: 'Open, pending, and high-priority cases requiring immediate review.',
-  },
   patients: {
     key: 'patients',
     title: 'My Patients',
@@ -44,11 +34,6 @@ const doctorViewConfig = {
     title: 'Results Inbox',
     subtitle: 'Unread ECG and MRI analyses linked to your current cases.',
   },
-  reports: {
-    key: 'reports',
-    title: 'Report Composer',
-    subtitle: 'Narrative drafting and review handoff without leaving the doctor workspace.',
-  },
   messages: {
     key: 'messages',
     title: 'Messages Center',
@@ -57,11 +42,8 @@ const doctorViewConfig = {
 }
 
 const getDoctorView = (pathname = '') => {
-  if (pathname.startsWith('/doctor-dashboard/schedule')) return doctorViewConfig.schedule
-  if (pathname.startsWith('/doctor-dashboard/queue')) return doctorViewConfig.queue
   if (pathname.startsWith('/doctor-dashboard/patients')) return doctorViewConfig.patients
   if (pathname.startsWith('/doctor-dashboard/results')) return doctorViewConfig.results
-  if (pathname.startsWith('/doctor-dashboard/reports')) return doctorViewConfig.reports
   if (pathname.startsWith('/doctor-dashboard/messages')) return doctorViewConfig.messages
   return doctorViewConfig.overview
 }
@@ -99,7 +81,6 @@ export const DoctorDashboard = ({ onLogout }) => {
   const location = useLocation()
   const { currentUser } = useAuth()
 
-  const [searchQuery, setSearchQuery] = useState('')
   const [state, setState] = useState({
     loading: true,
     error: '',
@@ -126,47 +107,26 @@ export const DoctorDashboard = ({ onLogout }) => {
 
   const currentView = useMemo(() => getDoctorView(location.pathname), [location.pathname])
   const overview = state.data
-  const normalizedQuery = searchQuery.trim().toLowerCase()
 
   const filteredQueue = useMemo(() => {
     const items = overview?.patient_queue || []
-    if (!normalizedQuery) return items
-    return items.filter((item) =>
-      [item.patient_name, item.case_number, item.mrn, item.status]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(normalizedQuery))
-    )
-  }, [normalizedQuery, overview?.patient_queue])
+    return items
+  }, [overview?.patient_queue])
 
   const filteredPatients = useMemo(() => {
     const items = overview?.recent_patients || []
-    if (!normalizedQuery) return items
-    return items.filter((item) =>
-      [item.name, item.mrn]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(normalizedQuery))
-    )
-  }, [normalizedQuery, overview?.recent_patients])
+    return items
+  }, [overview?.recent_patients])
 
   const filteredResults = useMemo(() => {
     const items = overview?.pending_results || []
-    if (!normalizedQuery) return items
-    return items.filter((item) =>
-      [item.patient_name, item.case_number, item.summary, item.type]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(normalizedQuery))
-    )
-  }, [normalizedQuery, overview?.pending_results])
+    return items
+  }, [overview?.pending_results])
 
   const filteredNotifications = useMemo(() => {
     const items = overview?.notifications || []
-    if (!normalizedQuery) return items
-    return items.filter((item) =>
-      [item.title, item.message, item.priority]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(normalizedQuery))
-    )
-  }, [normalizedQuery, overview?.notifications])
+    return items
+  }, [overview?.notifications])
 
   const navSections = useMemo(
     () => [
@@ -181,25 +141,11 @@ export const DoctorDashboard = ({ onLogout }) => {
             route: '/doctor-dashboard',
           },
           {
-            key: 'queue',
-            label: 'Patient Queue',
-            description: 'Open, pending, and high-priority cases',
-            glyph: 'PQ',
-            route: '/doctor-dashboard/queue',
-          },
-          {
             key: 'patients',
             label: 'My Patients',
             description: 'Assigned patients and directory access',
             glyph: 'PT',
             route: '/doctor-dashboard/patients',
-          },
-          {
-            key: 'schedule',
-            label: 'Schedule',
-            description: 'Timeline, slots, and clinic rhythm',
-            glyph: 'SC',
-            route: '/doctor-dashboard/schedule',
           },
         ],
       },
@@ -212,13 +158,6 @@ export const DoctorDashboard = ({ onLogout }) => {
             description: 'Pending ECG and MRI reviews',
             glyph: 'RS',
             route: '/doctor-dashboard/results',
-          },
-          {
-            key: 'reports',
-            label: 'Report Composer',
-            description: 'Narrative drafting and sign-off prep',
-            glyph: 'RP',
-            route: '/doctor-dashboard/reports',
           },
           {
             key: 'messages',
@@ -269,11 +208,6 @@ export const DoctorDashboard = ({ onLogout }) => {
       title: 'Open MRI Workspace',
       description: 'Shared intake for doctor-initiated and patient-uploaded MRI studies.',
       action: () => navigate('/mri-analysis'),
-    },
-    {
-      title: 'Write Report',
-      description: 'Move into the dedicated report composer and then launch the assistant when needed.',
-      action: () => navigate('/doctor-dashboard/reports'),
     },
     {
       title: 'Messages Center',
@@ -590,36 +524,6 @@ export const DoctorDashboard = ({ onLogout }) => {
     </>
   )
 
-  const renderScheduleView = () => (
-    <>
-      {renderWorkspaceHero(
-        'Schedule board',
-        'See clinic rhythm without mixing in fake appointments',
-        'This page isolates the real appointment timeline. If the scheduling source is not configured, the page stays explicit about that gap instead of fabricating visits.'
-      )}
-      {renderSchedulePanel()}
-      <section className={styles.splitGrid}>
-        {renderQueuePanel()}
-        {renderQuickAccessPanel('Schedule actions', 'Move from the schedule into queue review, result interpretation, or shared imaging workflows.')}
-      </section>
-    </>
-  )
-
-  const renderQueueView = () => (
-    <>
-      {renderWorkspaceHero(
-        'Queue pressure',
-        'Sort urgent cases, open reviews, and waiting patients faster',
-        'The queue page gives the waiting list its own surface, so the doctor does not need to scan the full dashboard to find which case should move next.'
-      )}
-      {renderQueuePanel()}
-      <section className={styles.splitGrid}>
-        {renderPatientsPanel()}
-        {renderNotificationsPanel()}
-      </section>
-    </>
-  )
-
   const renderPatientsView = () => (
     <>
       {renderWorkspaceHero(
@@ -637,10 +541,6 @@ export const DoctorDashboard = ({ onLogout }) => {
             </div>
           </div>
           <div className={styles.actionGrid}>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/patient-directory')}>
-              <strong>Open Live Patient Directory</strong>
-              <p>Search the complete registry by name, MRN, or phone number.</p>
-            </button>
             <button type="button" className={styles.actionCard} onClick={() => navigate('/doctor-dashboard/results')}>
               <strong>Open Results Inbox</strong>
               <p>Review unread ECG and MRI outputs related to your active patients.</p>
@@ -684,53 +584,9 @@ export const DoctorDashboard = ({ onLogout }) => {
               <strong>Open MRI Review</strong>
               <p>Run segmentation and inspect imaging artifacts from the shared MRI workspace.</p>
             </button>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/doctor-dashboard/reports')}>
-              <strong>Compose Report</strong>
-              <p>Move into narrative drafting after reviewing the structured output.</p>
-            </button>
           </div>
         </article>
         {renderNotificationsPanel()}
-      </section>
-    </>
-  )
-
-  const renderReportsView = () => (
-    <>
-      {renderWorkspaceHero(
-        'Report composer',
-        'Draft narrative outputs only after reviewing the source result',
-        'This page keeps report drafting grounded in the live pending-results list. MRI and ECG remain shared upload paths, but the narrative step stays in a doctor-controlled review surface.'
-      )}
-      <section className={styles.metricGrid}>
-        {overview?.quick_stats?.pending_reports ? <MetricCard item={overview.quick_stats.pending_reports} /> : null}
-        {overview?.quick_stats?.unread_messages ? <MetricCard item={overview.quick_stats.unread_messages} /> : null}
-        {overview?.quick_stats?.total_patients ? <MetricCard item={overview.quick_stats.total_patients} /> : null}
-      </section>
-      <section className={styles.splitGrid}>
-        <article className={styles.panel}>
-          <div className={styles.panelHeading}>
-            <div>
-              <h3>Drafting Actions</h3>
-              <p>Open the clinical assistant only from a dedicated report-focused page.</p>
-            </div>
-          </div>
-          <div className={styles.actionGrid}>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/medical-llm')}>
-              <strong>Launch Clinical Assistant</strong>
-              <p>Open the narrative drafting assistant in its production route.</p>
-            </button>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/doctor-dashboard/results')}>
-              <strong>Review Source Results</strong>
-              <p>Go back to structured ECG and MRI outputs before finalizing the report.</p>
-            </button>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/patient-directory')}>
-              <strong>Open Patient Registry</strong>
-              <p>Cross-check patient details without leaving the doctor workflow tree.</p>
-            </button>
-          </div>
-        </article>
-        {renderResultsPanel()}
       </section>
     </>
   )
@@ -769,16 +625,10 @@ export const DoctorDashboard = ({ onLogout }) => {
 
   const renderCurrentView = () => {
     switch (currentView.key) {
-      case 'schedule':
-        return renderScheduleView()
-      case 'queue':
-        return renderQueueView()
       case 'patients':
         return renderPatientsView()
       case 'results':
         return renderResultsView()
-      case 'reports':
-        return renderReportsView()
       case 'messages':
         return renderMessagesView()
       default:
@@ -794,9 +644,6 @@ export const DoctorDashboard = ({ onLogout }) => {
         navSections={navSections}
         activeKey={currentView.key}
         onNavigate={handleNav}
-        searchValue={searchQuery}
-        onSearchChange={setSearchQuery}
-        searchPlaceholder="Search patient, MRN, case, ECG, or MRI"
         notificationCount={0}
         notificationItems={[]}
         notificationActionLabel="Open messages center"
@@ -817,9 +664,6 @@ export const DoctorDashboard = ({ onLogout }) => {
       navSections={navSections}
       activeKey={currentView.key}
       onNavigate={handleNav}
-      searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
-      searchPlaceholder="Search patient, MRN, case, ECG, or MRI"
       notificationCount={notificationCount}
       notificationItems={notificationItems}
       notificationActionLabel="Open messages center"

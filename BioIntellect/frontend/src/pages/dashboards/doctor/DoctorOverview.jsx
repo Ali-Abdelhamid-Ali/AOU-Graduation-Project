@@ -51,7 +51,6 @@ export const DoctorOverview = () => {
   const quickActions = [
     { title: 'Open ECG Workspace', description: 'Shared intake for ECG studies.', action: () => navigate('/ecg-analysis') },
     { title: 'Open MRI Workspace', description: 'Shared intake for MRI studies.', action: () => navigate('/mri-analysis') },
-    { title: 'Write Report', description: 'Move into the report composer.', action: () => navigate('/doctor-dashboard/reports') },
     { title: 'Messages Center', description: 'Review unread notifications.', action: () => navigate('/doctor-dashboard/messages') },
   ]
 
@@ -75,37 +74,6 @@ export const DoctorOverview = () => {
       </section>
 
       <section className={styles.splitGrid}>
-        {/* Schedule */}
-        <article className={styles.panel}>
-          <div className={styles.panelHeading}>
-            <div>
-              <h3>Today's Schedule</h3>
-              <p>Timeline fed only from real appointment data sources.</p>
-            </div>
-            <span className={`${styles.badge} ${overview?.today_schedule?.available ? styles.toneSuccess : styles.toneWarning}`}>
-              {overview?.today_schedule?.available ? 'configured' : 'not configured'}
-            </span>
-          </div>
-          {overview?.today_schedule?.available && overview?.today_schedule?.data?.length ? (
-            <div className={styles.timelineList}>
-              {overview.today_schedule.data.map((item, index) => (
-                <div key={item.id || index} className={styles.timelineItem}>
-                  <span className={styles.timelineTime}>{item.time || item.start_time || 'Scheduled'}</span>
-                  <div>
-                    <strong>{item.patient_name || item.title || 'Appointment'}</strong>
-                    <p>{item.reason || item.status || 'Clinical appointment'}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyPanel
-              title={overview?.today_schedule?.available ? 'No appointments scheduled' : 'Scheduling module not configured'}
-              message={overview?.today_schedule?.message || 'No trusted appointments source is available.'}
-            />
-          )}
-        </article>
-
         {/* Quick Access */}
         <article className={styles.panel}>
           <div className={styles.panelHeading}>
@@ -123,31 +91,6 @@ export const DoctorOverview = () => {
       </section>
 
       <section className={styles.splitGrid}>
-        {/* Patient Queue Preview */}
-        <article className={styles.panel}>
-          <div className={styles.panelHeading}>
-            <div><h3>Patient Queue</h3><p>Cases in open, in-progress, or pending-review states.</p></div>
-          </div>
-          {overview?.patient_queue?.length ? (
-            <div className={styles.queueList}>
-              {overview.patient_queue.slice(0, 5).map((item) => (
-                <div key={item.id} className={styles.queueItem}>
-                  <div>
-                    <strong>{item.patient_name}</strong>
-                    <p>{item.case_number || 'Case number unavailable'}</p>
-                  </div>
-                  <div className={styles.queueMeta}>
-                    <span className={`${styles.badge} ${toneClassMap[item.priority] || styles.toneInfo}`}>{item.priority}</span>
-                    <span>{item.wait_time_label}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyPanel title="Queue is clear" message="No cases currently match the active queue statuses." />
-          )}
-        </article>
-
         {/* Recent Patients Preview */}
         <article className={styles.panel}>
           <div className={styles.panelHeading}>

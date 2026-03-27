@@ -8,7 +8,6 @@ export const ROLES = {
     SUPER_ADMIN: 'super_admin',
     ADMIN: 'administrator', // Database standard
     DOCTOR: 'doctor',
-    NURSE: 'nurse',
     PATIENT: 'patient'
 };
 
@@ -18,7 +17,6 @@ export const ROLE_ALIAS_MAP = {
     'administrator': ROLES.ADMIN,
     'super_admin': ROLES.SUPER_ADMIN,
     'doctor': ROLES.DOCTOR,
-    'nurse': ROLES.NURSE,
     'patient': ROLES.PATIENT
 };
 
@@ -105,16 +103,6 @@ export const ROLE_DB_CONFIG = {
             };
         }
     },
-    [ROLES.NURSE]: {
-        table: 'nurses',
-        select: 'id, first_name, last_name, user_id, hospital_id, hospitals(hospital_name_en)',
-        transform: (data) => ({
-            id: data.id,
-            full_name: `${data.first_name} ${data.last_name}`,
-            user_role: ROLES.NURSE,
-            hospital_name: data.hospitals?.hospital_name_en
-        })
-    },
     [ROLES.ADMIN]: {
         table: 'administrators',
         select: 'id, first_name, last_name, user_id, hospital_id, hospitals(hospital_name_en)',
@@ -178,7 +166,7 @@ export const createAuthPayload = (input) => {
 
     // Role-Specific Fields & Hospital Logic
     const hId = input.hospitalId || input.hospital_id;
-    if ([ROLES.DOCTOR, ROLES.NURSE, ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(role)) {
+    if ([ROLES.DOCTOR, ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(role)) {
         if (hId && hId.length > 20) {
             metadata.hospital_id = hId;
             metadata.hospital_name = input.hospitalName || input.hospital_name || null;

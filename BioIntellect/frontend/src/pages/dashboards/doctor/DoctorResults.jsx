@@ -110,9 +110,6 @@ export const DoctorResults = () => {
             <button type="button" className={styles.actionCard} onClick={() => navigate('/mri-analysis')}>
               <strong>Open MRI Review</strong><p>Run segmentation and inspect imaging artifacts.</p>
             </button>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/doctor-dashboard/reports')}>
-              <strong>Compose Report</strong><p>Move into narrative drafting after reviewing.</p>
-            </button>
           </div>
         </article>
       </section>

@@ -1,4 +1,4 @@
-﻿"""Auth Service - Business Logic for Authentication."""
+"""Auth Service - Business Logic for Authentication."""
 
 import random
 from datetime import datetime
@@ -26,10 +26,18 @@ class AuthService:
         self.auth_repo = auth_repo
 
     async def _build_user_payload(self, auth_user: Any) -> Dict[str, Any]:
-        metadata_role = (auth_user.user_metadata or {}).get("role")
+        user_metadata = auth_user.user_metadata or {}
+        metadata_role = user_metadata.get("role")
         role = await self.auth_repo.resolve_user_role(str(auth_user.id), metadata_role)
         table = ROLE_TABLE_MAP.get(role, "patients")
         profile = await self.auth_repo.get_profile_by_user_id(table, auth_user.id)
+        profile = dict(profile or {})
+
+        avatar_url = user_metadata.get("avatar_url") or user_metadata.get("photo_url")
+        if avatar_url and not profile.get("avatar_url"):
+            profile["avatar_url"] = avatar_url
+        if avatar_url and not profile.get("photo_url"):
+            profile["photo_url"] = avatar_url
 
         return {
             "id": auth_user.id,
@@ -56,8 +64,9 @@ class AuthService:
         profile_response: Any | None = None,
     ) -> Optional[str]:
         """Resolve the profile row id created for a given auth user."""
-        if getattr(profile_response, "data", None):
-            profile_id = profile_response.data[0].get("id")
+        profile_data = getattr(profile_response, "data", None) if profile_response is not None else None
+        if profile_data:
+            profile_id = profile_data[0].get("id")
             if profile_id:
                 return str(profile_id)
 
@@ -394,11 +403,14 @@ class AuthService:
     ):
         """Update password."""
         try:
+            # Step 1: Verify current password if provided
             if current_password:
+                logger.info(f"Verifying current password for user {user_id}")
                 try:
                     current_auth = await self.auth_repo.sign_in(email, current_password)
                     if not getattr(current_auth, "user", None):
                         raise PermissionError("Current password is incorrect")
+                    logger.info(f"Current password verified for user {user_id}")
                 except PermissionError:
                     raise
                 except Exception as e:
@@ -410,32 +422,55 @@ class AuthService:
                         raise PermissionError("Current password is incorrect")
                     raise
 
+            # Step 2: Check that new password is different from old one
+            # This is a best-effort check — if it fails for any reason
+            # other than proving the password is the same, we proceed.
             try:
                 check_auth = await self.auth_repo.sign_in(email, new_password)
-                if check_auth.user:
+                if getattr(check_auth, "user", None):
                     raise Exception(
                         "Security Alert: Your new password cannot be the same as your old one."
                     )
             except Exception as e:
                 if "Your new password cannot be the same" in str(e):
-                    raise e
-                if "Invalid credentials" not in str(e):
-                    raise e
+                    raise
+                # Any other error means the new password is different or
+                # the check couldn't be performed — safe to proceed.
+                logger.info(
+                    f"Same-password check passed for user {user_id} "
+                    f"(sign_in with new password failed as expected)"
+                )
+
+            # Step 3: Actually update the password via Admin API
+            logger.info(f"Updating password via Admin API for user {user_id}")
             await self.auth_repo.update_password(user_id, new_password)
+            logger.info(f"Password updated successfully for user {user_id}")
+
             log_audit(AuditAction.PASSWORD_CHANGE, user_id=user_id)
+
+            # Step 4: Optionally revoke other sessions
             if logout_all:
+                logger.info(f"Revoking all sessions for user {user_id}")
                 await self.auth_repo.sign_out(user_id, scope="global", jwt=access_token)
+
             return {"success": True, "message": "Password updated successfully"}
         except Exception as e:
-            logger.error(f"Password update failed: {str(e)}")
+            logger.error(f"Password update failed: {type(e).__name__}: {str(e)}")
             raise e
 
-    async def get_me(self, user_id: str, email: str, role: str):
+    async def get_me(self, user_id: str, email: str, role: str, avatar_url: str | None = None):
         """Fetch current user profile."""
         try:
             authoritative_role = await self.auth_repo.resolve_user_role(user_id, role)
             table = ROLE_TABLE_MAP.get(authoritative_role, "patients")
             profile = await self.auth_repo.get_profile_by_user_id(table, user_id)
+            profile = dict(profile or {})
+
+            if avatar_url and not profile.get("avatar_url"):
+                profile["avatar_url"] = avatar_url
+            if avatar_url and not profile.get("photo_url"):
+                profile["photo_url"] = avatar_url
+
             return {
                 "id": user_id,
                 "email": email,

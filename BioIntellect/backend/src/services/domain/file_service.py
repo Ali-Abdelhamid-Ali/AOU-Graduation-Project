@@ -358,7 +358,9 @@ class FileService:
             ext = file_name.split(".")[-1] if "." in file_name else "png"
             path = f"avatars/{user_id}/{uuid.uuid4().hex}.{ext}"
 
-            await self.storage_repo.upload_file(path, content, content_type)
+            await self.storage_repo.upload_file(
+                path, content, content_type, bucket_name="avatars"
+            )
 
             log_audit(
                 AuditAction.ANALYZE_IMAGE,

@@ -10,14 +10,6 @@ const viewMeta = {
     title: 'Doctor Dashboard',
     subtitle: `Clinical focus board for ${brandingConfig.hospitalName}`,
   },
-  '/doctor-dashboard/schedule': {
-    title: 'Schedule Board',
-    subtitle: 'Timeline and slot planning from trusted appointment data.',
-  },
-  '/doctor-dashboard/queue': {
-    title: 'Patient Queue',
-    subtitle: 'Open, pending, and high-priority cases requiring immediate review.',
-  },
   '/doctor-dashboard/patients': {
     title: 'My Patients',
     subtitle: 'Assigned patients, recent touchpoints, and directory access.',
@@ -25,10 +17,6 @@ const viewMeta = {
   '/doctor-dashboard/results': {
     title: 'Results Inbox',
     subtitle: 'Unread ECG and MRI analyses linked to your current cases.',
-  },
-  '/doctor-dashboard/reports': {
-    title: 'Report Composer',
-    subtitle: 'Narrative drafting and review handoff without leaving the doctor workspace.',
   },
   '/doctor-dashboard/messages': {
     title: 'Messages Center',
@@ -58,16 +46,13 @@ export const DoctorLayout = ({ onLogout }) => {
         title: 'Clinical workflow',
         items: [
           { key: 'overview', label: 'Dashboard', description: 'Today, queue, and results', glyph: 'DB', route: '/doctor-dashboard' },
-          { key: 'queue', label: 'Patient Queue', description: 'Open, pending, and high-priority cases', glyph: 'PQ', route: '/doctor-dashboard/queue' },
           { key: 'patients', label: 'My Patients', description: 'Assigned patients and directory access', glyph: 'PT', route: '/doctor-dashboard/patients' },
-          { key: 'schedule', label: 'Schedule', description: 'Timeline, slots, and clinic rhythm', glyph: 'SC', route: '/doctor-dashboard/schedule' },
         ],
       },
       {
         title: 'Clinical tools',
         items: [
           { key: 'results', label: 'Results Inbox', description: 'Pending ECG and MRI reviews', glyph: 'RS', route: '/doctor-dashboard/results' },
-          { key: 'reports', label: 'Report Composer', description: 'Narrative drafting and sign-off prep', glyph: 'RP', route: '/doctor-dashboard/reports' },
           { key: 'messages', label: 'Messages', description: 'Patient and care-team notifications', glyph: 'MS', route: '/doctor-dashboard/messages' },
           { key: 'ecg', label: 'ECG Workspace', description: 'Doctor-only intake for ECG uploads', glyph: 'EC', route: '/ecg-analysis' },
           { key: 'mri', label: 'MRI Workspace', description: 'Doctor-only intake for MRI uploads', glyph: 'MR', route: '/mri-analysis' },
@@ -85,7 +70,6 @@ export const DoctorLayout = ({ onLogout }) => {
       onLogout={onLogout}
       headerTitle={currentMeta.title}
       headerSubtitle={currentMeta.subtitle}
-      searchPlaceholder="Search patient, MRN, case, ECG, or MRI"
       notificationCount={0}
       notificationItems={[]}
       notificationActionLabel="Open messages center"

@@ -67,7 +67,6 @@ const normalizeUserRecord = (type, item = {}) => {
   const roleMap = {
     administrators: 'Administrator',
     doctors: 'Doctor',
-    nurses: 'Nurse',
     patients: 'Patient',
   }
 
@@ -259,14 +258,11 @@ export const AdminOperationsDashboard = ({ onLogout }) => {
 
   const normalizedRole = currentUser?.user_role
   const isSuperAdmin = normalizedRole === ROLES.SUPER_ADMIN
-  const isNurse = normalizedRole === ROLES.NURSE
   const currentView = useMemo(() => getAdminView(location.pathname), [location.pathname])
 
   const roleLabel = isSuperAdmin
     ? 'Super Admin Console'
-    : isNurse
-      ? 'Operations Desk'
-      : 'Admin Workspace'
+    : 'Admin Workspace'
 
   useEffect(() => {
     const loadOverview = async () => {
@@ -293,17 +289,15 @@ export const AdminOperationsDashboard = ({ onLogout }) => {
     const loadUsers = async () => {
       setUsersState((previous) => ({ ...previous, loading: true, error: '' }))
       try {
-        const [patients, doctors, administrators, nurses] = await Promise.all([
+        const [patients, doctors, administrators] = await Promise.all([
           usersAPI.list('patients', { limit: 25, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }),
           usersAPI.list('doctors', { limit: 25, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }),
           usersAPI.list('administrators', { limit: 25, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }),
-          usersAPI.list('nurses', { limit: 25, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }),
         ])
 
         const rows = [
           ...unwrapList(administrators).map((item) => normalizeUserRecord('administrators', item)),
           ...unwrapList(doctors).map((item) => normalizeUserRecord('doctors', item)),
-          ...unwrapList(nurses).map((item) => normalizeUserRecord('nurses', item)),
           ...unwrapList(patients).map((item) => normalizeUserRecord('patients', item)),
         ]
 
@@ -457,39 +451,27 @@ export const AdminOperationsDashboard = ({ onLogout }) => {
       ]
     }
 
-    if (isNurse) {
-      return [
-        { title: 'Add Patient', description: 'Register a patient record that requires immediate intake.', action: () => navigate('/create-patient') },
-        { title: 'Open Registry', description: 'Review the patient registry snapshot and then open the live directory.', action: () => navigate('/admin-dashboard/patients') },
-        { title: 'Open Analytics', description: 'Review appointment load and trend panels for the current operational scope.', action: () => navigate('/admin-dashboard/analytics') },
-      ]
-    }
-
     return [
       { title: 'Add Doctor', description: 'Create a new clinician profile and assign role metadata.', action: () => navigate('/create-doctor') },
       { title: 'Add Patient', description: 'Register a new patient identity and baseline demographics.', action: () => navigate('/create-patient') },
       { title: 'Open Registry', description: 'Review the patient registry snapshot and then move into the full live directory.', action: () => navigate('/admin-dashboard/patients') },
       { title: 'Open Analytics', description: 'Inspect appointment load, trend panels, and operational charts.', action: () => navigate('/admin-dashboard/analytics') },
     ]
-  }, [isNurse, isSuperAdmin, navigate])
+  }, [isSuperAdmin, navigate])
 
   const scopeCards = [
     {
       label: 'Access Scope',
       value: isSuperAdmin
         ? 'System-wide governance'
-        : isNurse
-          ? 'Clinical operations coordination'
-          : 'Facility administration',
+        : 'Facility administration',
       tone: 'info',
     },
     {
       label: 'Provisioning',
       value: isSuperAdmin
         ? 'Admins, doctors, patients'
-        : isNurse
-          ? 'Patients and directory only'
-          : 'Doctors and patients',
+        : 'Doctors and patients',
       tone: 'success',
     },
     {
@@ -676,7 +658,7 @@ export const AdminOperationsDashboard = ({ onLogout }) => {
       <div className={styles.panelHeading}>
         <div>
           <h3>User Management</h3>
-          <p>Unified view across administrators, doctors, nurses, and patients.</p>
+            <p>Unified view across administrators, doctors, and patients.</p>
         </div>
       </div>
 
@@ -687,7 +669,6 @@ export const AdminOperationsDashboard = ({ onLogout }) => {
             <option value="all">All roles</option>
             <option value="administrator">Administrators</option>
             <option value="doctor">Doctors</option>
-            <option value="nurse">Nurses</option>
             <option value="patient">Patients</option>
           </select>
         </label>
@@ -1014,10 +995,6 @@ export const AdminOperationsDashboard = ({ onLogout }) => {
             </div>
           </div>
           <div className={styles.actionGrid}>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/patient-directory')}>
-              <strong>Open Full Directory</strong>
-              <p>Launch the deeper patient management view for search and profile editing.</p>
-            </button>
             <button type="button" className={styles.actionCard} onClick={() => navigate('/create-patient')}>
               <strong>Add Patient</strong>
               <p>Open the existing patient enrollment flow from within the admin workflow tree.</p>

@@ -757,14 +757,7 @@ class UserRepository:
                 "country_id",
                 "region_id",
                 "hospital_id",
-                "insurance_provider",
-                "insurance_number",
-                "passport_number",
-                "address",
-                "city",
-                "country_id",
-                "region_id",
-                "hospital_id",
+                "avatar_url",
                 "insurance_provider",
                 "insurance_number",
                 "emergency_contact_name",
@@ -832,17 +825,39 @@ class UserRepository:
                     target_table,
                     {k: v for k, v in profile_data.items() if k in allowed_fields},
                 )
+                logger.info(
+                    f"update_my_profile: user={user_id}, role={role}, "
+                    f"table={target_table}, "
+                    f"input_keys={list(profile_data.keys())}, "
+                    f"filtered_keys={list(filtered_data.keys())}"
+                )
                 if filtered_data:
                     lookup_key = await self._resolve_profile_lookup_key(
                         client, target_table, user_id
                     )
                     if not lookup_key:
+                        logger.warning(
+                            f"update_my_profile: no lookup key found for "
+                            f"user={user_id} in table={target_table}"
+                        )
                         return None
-                    await (
+                    logger.info(
+                        f"update_my_profile: updating {target_table} "
+                        f"where {lookup_key}={user_id}"
+                    )
+                    result = await (
                         client.table(target_table)
                         .update(filtered_data)
                         .eq(lookup_key, user_id)
                         .execute()
+                    )
+                    logger.info(
+                        f"update_my_profile: update result rows={len(result.data) if result.data else 0}"
+                    )
+                else:
+                    logger.warning(
+                        f"update_my_profile: no fields survived filtering for "
+                        f"table={target_table}"
                     )
                 return await self._get_profile_from_table(client, target_table, user_id)
 
@@ -856,11 +871,16 @@ class UserRepository:
                 lookup_key = await self._resolve_profile_lookup_key(client, table, user_id)
                 if not lookup_key:
                     continue
-                await (
+                result = await (
                     client.table(table)
                     .update(filtered_data)
                     .eq(lookup_key, user_id)
                     .execute()
+                )
+                logger.info(
+                    f"update_my_profile fallback: updated {table} "
+                    f"where {lookup_key}={user_id}, "
+                    f"rows={len(result.data) if result.data else 0}"
                 )
                 return await self._get_profile_from_table(client, table, user_id)
 

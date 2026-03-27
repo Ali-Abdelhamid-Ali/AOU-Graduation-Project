@@ -1,6 +1,6 @@
 """Medical DTOs for request validation."""
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime, date
 
@@ -1362,6 +1362,14 @@ class UserProfileUpdateDTO(BaseModel):
     license_number: Optional[str] = None
     specialty: Optional[str] = None
     department: Optional[str] = None
+
+    @field_validator("date_of_birth", mode="before")
+    @classmethod
+    def coerce_empty_date(cls, v):
+        """Convert empty strings to None so Pydantic doesn't reject them."""
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
 
 class UserProfileResponseDTO(BaseModel):

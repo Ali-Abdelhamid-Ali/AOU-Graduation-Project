@@ -34,7 +34,8 @@ const viewMeta = {
 }
 
 const getViewMeta = (pathname) => {
-  for (const [route, meta] of Object.entries(viewMeta)) {
+  const routes = Object.entries(viewMeta).sort(([a], [b]) => b.length - a.length)
+  for (const [route, meta] of routes) {
     if (pathname === route || pathname.startsWith(route + '/')) {
       return meta
     }
@@ -49,13 +50,10 @@ export const AdminLayout = ({ onLogout }) => {
 
   const normalizedRole = currentUser?.user_role
   const isSuperAdmin = normalizedRole === ROLES.SUPER_ADMIN
-  const isNurse = normalizedRole === ROLES.NURSE
 
   const roleLabel = isSuperAdmin
     ? 'Super Admin Console'
-    : isNurse
-      ? 'Operations Desk'
-      : 'Admin Workspace'
+    : 'Admin Workspace'
 
   const currentMeta = useMemo(() => getViewMeta(location.pathname), [location.pathname])
 

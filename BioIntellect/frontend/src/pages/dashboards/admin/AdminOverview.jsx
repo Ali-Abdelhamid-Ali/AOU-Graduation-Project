@@ -29,7 +29,6 @@ const normalizeUserRecord = (type, item = {}) => {
   const roleMap = {
     administrators: 'Administrator',
     doctors: 'Doctor',
-    nurses: 'Nurse',
     patients: 'Patient',
   }
   const name =
@@ -58,7 +57,6 @@ export const AdminOverview = () => {
 
   const normalizedRole = currentUser?.user_role
   const isSuperAdmin = normalizedRole === ROLES.SUPER_ADMIN
-  const isNurse = normalizedRole === ROLES.NURSE
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -94,17 +92,15 @@ export const AdminOverview = () => {
     const load = async () => {
       setUsersData(prev => ({ ...prev, loading: true, error: '' }))
       try {
-        const [patients, doctors, administrators, nurses] = await Promise.all([
+        const [patients, doctors, administrators] = await Promise.all([
           usersAPI.list('patients', { limit: 10 }),
           usersAPI.list('doctors', { limit: 10 }),
           usersAPI.list('administrators', { limit: 10 }),
-          usersAPI.list('nurses', { limit: 10 }),
         ])
         if (!cancelled) {
           const rows = [
             ...unwrapList(administrators).map((i) => normalizeUserRecord('administrators', i)),
             ...unwrapList(doctors).map((i) => normalizeUserRecord('doctors', i)),
-            ...unwrapList(nurses).map((i) => normalizeUserRecord('nurses', i)),
             ...unwrapList(patients).map((i) => normalizeUserRecord('patients', i)),
           ]
           setUsersData({ loading: false, error: '', data: rows })
@@ -128,30 +124,23 @@ export const AdminOverview = () => {
         { title: 'Open Registry', description: 'Move into the patient registry page inside the admin workspace tree.', action: () => navigate('/admin-dashboard/patients') },
       ]
     }
-    if (isNurse) {
-      return [
-        { title: 'Add Patient', description: 'Register a patient record that requires immediate intake.', action: () => navigate('/create-patient') },
-        { title: 'Open Registry', description: 'Review the patient registry snapshot and then open the live directory.', action: () => navigate('/admin-dashboard/patients') },
-        { title: 'Open Analytics', description: 'Review appointment load and trend panels for the current operational scope.', action: () => navigate('/admin-dashboard/analytics') },
-      ]
-    }
     return [
       { title: 'Add Doctor', description: 'Create a new clinician profile and assign role metadata.', action: () => navigate('/create-doctor') },
       { title: 'Add Patient', description: 'Register a new patient identity and baseline demographics.', action: () => navigate('/create-patient') },
       { title: 'Open Registry', description: 'Review the patient registry snapshot and then move into the full live directory.', action: () => navigate('/admin-dashboard/patients') },
       { title: 'Open Analytics', description: 'Inspect appointment load, trend panels, and operational charts.', action: () => navigate('/admin-dashboard/analytics') },
     ]
-  }, [isNurse, isSuperAdmin, navigate])
+  }, [isSuperAdmin, navigate])
 
   const scopeCards = [
     {
       label: 'Access Scope',
-      value: isSuperAdmin ? 'System-wide governance' : isNurse ? 'Clinical operations coordination' : 'Facility administration',
+      value: isSuperAdmin ? 'System-wide governance' : 'Facility administration',
       tone: 'info',
     },
     {
       label: 'Provisioning',
-      value: isSuperAdmin ? 'Admins, doctors, patients' : isNurse ? 'Patients and directory only' : 'Doctors and patients',
+      value: isSuperAdmin ? 'Admins, doctors, patients' : 'Doctors and patients',
       tone: 'success',
     },
     {
@@ -172,21 +161,17 @@ export const AdminOverview = () => {
       <section className={styles.heroSection}>
         <div>
           <span className={styles.kicker}>
-            {isSuperAdmin ? 'Enterprise control layer' : isNurse ? 'Shift operations layer' : 'Production command center'}
+            {isSuperAdmin ? 'Enterprise control layer' : 'Production command center'}
           </span>
           <h2>
             {isSuperAdmin
               ? 'Govern live users, alerts, and platform readiness without fabricated metrics'
-              : isNurse
-                ? 'Coordinate patient flow, live telemetry, and open issues from one calm operational view'
-                : 'Operational visibility without fabricated data'}
+              : 'Operational visibility without fabricated data'}
           </h2>
           <p>
             {isSuperAdmin
               ? 'This command center keeps governance, user operations, and system health in one place. Any module without a trusted backend source stays visible as a pending capability, not fake data.'
-              : isNurse
-                ? 'This workspace keeps the floor team aligned around users, directory access, alerts, and health telemetry. Unsupported modules remain visible as controlled gaps.'
-                : 'This dashboard surfaces live user, clinical, audit, and infrastructure signals. Modules without a trusted backend source remain visible as disabled production gaps.'}
+              : 'This dashboard surfaces live user, clinical, audit, and infrastructure signals. Modules without a trusted backend source remain visible as disabled production gaps.'}
           </p>
         </div>
         <div className={styles.heroCapabilities}>

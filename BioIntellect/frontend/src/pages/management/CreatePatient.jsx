@@ -10,7 +10,7 @@ import { AnimatedButton } from '@/components/ui/AnimatedButton'
 import { genderOptions, bloodTypeOptions } from '@/config/options'
 import {
     splitDelimitedValues,
-    validateMinimumPassword
+    validateStrongPassword
 } from '@/utils/userFormUtils'
 import styles from './CreatePatient.module.css'
 
@@ -33,6 +33,7 @@ const CreatePatient = ({ onBack, userRole }) => {
     const [formData, setFormData] = useState({
         email: '',
         password: '',
+        confirmPassword: '',
         firstName: '',
         lastName: '',
         firstNameAr: '', // [NEW] Arabic Name
@@ -89,7 +90,7 @@ const CreatePatient = ({ onBack, userRole }) => {
     }
 
     const validatePassword = (pass) => {
-        return validateMinimumPassword(pass, 8) || null
+        return validateStrongPassword(pass) || null
     }
 
     // Set default country (Egypt) once countries are loaded
@@ -109,6 +110,11 @@ const CreatePatient = ({ onBack, userRole }) => {
         const passwordError = validatePassword(formData.password)
         if (passwordError) {
             setError(passwordError)
+            return
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            setError('Passwords do not match.')
             return
         }
 
@@ -140,7 +146,7 @@ const CreatePatient = ({ onBack, userRole }) => {
                 mrn: result.mrn
             })
             setFormData({
-                email: '', password: '', firstName: '', lastName: '',
+                email: '', password: '', confirmPassword: '', firstName: '', lastName: '',
                 firstNameAr: '', lastNameAr: '',
                 dateOfBirth: '', gender: 'male', bloodType: 'unknown', phone: '',
                 nationalId: '', passportNumber: '',
@@ -222,6 +228,13 @@ const CreatePatient = ({ onBack, userRole }) => {
                                         {showPassword ? "HIDE" : "SHOW"}
                                     </button>
                                 </div>
+                                <InputField
+                                    label="Confirm Password"
+                                    type={showPassword ? "text" : "password"}
+                                    value={formData.confirmPassword}
+                                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                                    required
+                                />
                             </div>
                         </section>
 

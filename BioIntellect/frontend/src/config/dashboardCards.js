@@ -10,8 +10,7 @@ export const getAdminCards = (userSpecialty, handlers) => {
         onCreateAdmin,
         onEcgAnalysis,
         onMriSegmentation,
-        onMedicalLlm,
-        onPatientDirectory
+        onMedicalLlm
     } = handlers;
 
     const cards = [
@@ -34,15 +33,6 @@ export const getAdminCards = (userSpecialty, handlers) => {
             color: '#10b981',
             tag: 'STAFF',
             restricted: true
-        },
-        {
-            id: 'reg',
-            title: 'Patient Directory',
-            description: 'Comprehensive patient management system: search, edit, and clinical history retrieval.',
-            icon: analyticsIcon,
-            action: onPatientDirectory,
-            color: '#0066cc',
-            tag: 'PATIENTS'
         },
         {
             id: 'ecg',

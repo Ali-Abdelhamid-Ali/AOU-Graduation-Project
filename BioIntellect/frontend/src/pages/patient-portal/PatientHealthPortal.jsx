@@ -93,7 +93,7 @@ export const PatientHealthPortal = () => {
       ),
       notes: currentUser.notes || '',
     })
-    setPhotoPreview(currentUser.photo_url || currentUser.avatar_url || null)
+    setPhotoPreview(currentUser.photo_url || null)
 
     if (currentUser.country_id) {
       selectCountry(currentUser.country_id)

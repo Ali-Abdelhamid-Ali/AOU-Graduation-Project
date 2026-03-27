@@ -1,11 +1,15 @@
 .sidebar {
-  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
+  max-height: 100dvh;
   background:
     radial-gradient(circle at top left, rgba(0, 102, 204, 0.1), transparent 28%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94));
   border-inline-end: 1px solid rgba(15, 23, 42, 0.08);
   display: flex;
   flex-direction: column;
+  align-self: flex-start;
+  overflow: hidden;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -176,6 +180,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  overflow-y: auto;
 }
 
 .collapsed .nav {
@@ -307,6 +312,9 @@ html.dark .logoutBtn {
   .sidebar {
     position: static;
     min-height: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
   }
 }
 
@@ -316,6 +324,9 @@ html.dark .logoutBtn {
     inset-inline: 0;
     bottom: 0;
     min-height: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
     width: 100% !important;
     flex-direction: row;
     align-items: center;

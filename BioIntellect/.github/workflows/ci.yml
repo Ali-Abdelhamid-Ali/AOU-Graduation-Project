@@ -22,6 +22,11 @@ jobs:
           cd backend
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
+
+      - name: Validate Qdrant/Protobuf compatibility
+        run: |
+          cd backend
+          python -c "import google.protobuf; from qdrant_client import QdrantClient; print('protobuf', google.protobuf.__version__)"
       
       - name: Run Pytest
         run: |

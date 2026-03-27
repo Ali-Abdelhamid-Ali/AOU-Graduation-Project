@@ -92,7 +92,7 @@ export const Login = ({
     }
   }
 
-  const isPatientPortal = userRole === 'patient'
+
 
   return (
     <div className={styles.pageWrapper}>
@@ -120,12 +120,10 @@ export const Login = ({
         >
           <div className={styles.header}>
             <h1 className={styles.title}>
-              {isPatientPortal ? 'Patient Portal' : 'Medical Staff Portal'}
+              Welcome to BioIntellect
             </h1>
             <p className={styles.subtitle}>
-              {isPatientPortal
-                ? 'Sign in to review your records, appointments, and AI-assisted results.'
-                : 'Enter your clinical credentials to access BioIntellect.'}
+              Sign in to access your dashboard and records.
             </p>
           </div>
 
@@ -186,28 +184,13 @@ export const Login = ({
             </AnimatedButton>
           </form>
 
-          <div className={styles.divider}>
-            <span>or</span>
-          </div>
+
 
           <div className={styles.footer}>
-            {isPatientPortal ? (
-              <p>
-                Need a patient account?{' '}
-                <button
-                  type="button"
-                  className={styles.signUpLink}
-                  onClick={onSignUpClick}
-                >
-                  Create one now
-                </button>
-              </p>
-            ) : (
               <p>
                 Don&apos;t have an account? Contact your administrator for secure
                 provisioning.
               </p>
-            )}
           </div>
         </motion.div>
       </div>

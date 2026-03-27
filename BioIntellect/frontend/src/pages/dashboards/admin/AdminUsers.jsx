@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { usersAPI } from '@/services/api'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
-import { EmptyPanel, SectionLoading, ErrorBanner, toneClassMap } from './SharedPanels'
+import { EmptyPanel, SectionLoading, ErrorBanner } from './SharedPanels'
 import styles from '../AdminOperationsDashboard.module.css'
 
 const unwrapList = (response) => {
@@ -13,7 +13,7 @@ const unwrapList = (response) => {
 }
 
 const normalizeUserRecord = (type, item = {}) => {
-  const roleMap = { administrators: 'Administrator', doctors: 'Doctor', nurses: 'Nurse', patients: 'Patient' }
+  const roleMap = { administrators: 'Administrator', doctors: 'Doctor', patients: 'Patient' }
   const name = item.full_name || [item.first_name, item.last_name].filter(Boolean).join(' ') || item.email || 'Unnamed user'
   const secondary = item.specialty || item.department || item.mrn || item.medical_record_number || item.license_number || 'Profile details unavailable'
   const contact = [item.email, item.phone].filter(Boolean).join(' | ') || 'No contact details'
@@ -41,32 +41,37 @@ export const AdminUsers = () => {
   useEffect(() => {
     let cancelled = false
     const activeParam = statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined
+    const params = { limit: 50, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }
+
+    const listByType = async (type) => {
+      try {
+        const response = await usersAPI.list(type, params)
+        return { type, data: unwrapList(response), error: '' }
+      } catch (err) {
+        return { type, data: [], error: getApiErrorMessage(err, `Failed to load ${type}.`) }
+      }
+    }
 
     const load = async () => {
       setLoading(true)
       setError('')
-      try {
-        const [patients, doctors, administrators, nurses] = await Promise.all([
-          usersAPI.list('patients', { limit: 50, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }),
-          usersAPI.list('doctors', { limit: 50, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }),
-          usersAPI.list('administrators', { limit: 50, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }),
-          usersAPI.list('nurses', { limit: 50, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }),
-        ])
-        if (!cancelled) {
-          const rows = [
-            ...unwrapList(administrators).map((i) => normalizeUserRecord('administrators', i)),
-            ...unwrapList(doctors).map((i) => normalizeUserRecord('doctors', i)),
-            ...unwrapList(nurses).map((i) => normalizeUserRecord('nurses', i)),
-            ...unwrapList(patients).map((i) => normalizeUserRecord('patients', i)),
-          ]
-          setUsers(rows)
-          setLoading(false)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(getApiErrorMessage(err, 'Failed to load user table.'))
-          setLoading(false)
-        }
+      const [patients, doctors, administrators] = await Promise.all([
+        listByType('patients'),
+        listByType('doctors'),
+        listByType('administrators'),
+      ])
+
+      if (!cancelled) {
+        const rows = [
+          ...administrators.data.map((i) => normalizeUserRecord('administrators', i)),
+          ...doctors.data.map((i) => normalizeUserRecord('doctors', i)),
+          ...patients.data.map((i) => normalizeUserRecord('patients', i)),
+        ]
+
+        const errors = [patients.error, doctors.error, administrators.error].filter(Boolean)
+        setUsers(rows)
+        setError(rows.length ? '' : errors[0] || 'Failed to load user table.')
+        setLoading(false)
       }
     }
     load()
@@ -116,7 +121,7 @@ export const AdminUsers = () => {
         <div className={styles.panelHeading}>
           <div>
             <h3>User Management</h3>
-            <p>Unified view across administrators, doctors, nurses, and patients.</p>
+            <p>Unified view across administrators, doctors, and patients.</p>
           </div>
         </div>
 
@@ -136,7 +141,6 @@ export const AdminUsers = () => {
               <option value="all">All roles</option>
               <option value="administrator">Administrators</option>
               <option value="doctor">Doctors</option>
-              <option value="nurse">Nurses</option>
               <option value="patient">Patients</option>
             </select>
           </label>

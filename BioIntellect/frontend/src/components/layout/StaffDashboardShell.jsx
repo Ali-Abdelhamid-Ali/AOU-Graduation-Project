@@ -190,15 +190,17 @@ export const StaffDashboardShell = ({
           </div>
 
           <div className={styles.topBarActions}>
-            <label className={styles.searchField}>
-              <span className="sr-only">{searchLabel}</span>
-              <input
-                type="search"
-                value={searchValue}
-                onChange={(event) => onSearchChange?.(event.target.value)}
-                placeholder={searchPlaceholder}
-              />
-            </label>
+            {onSearchChange !== undefined && (
+              <label className={styles.searchField}>
+                <span className="sr-only">{searchLabel}</span>
+                <input
+                  type="search"
+                  value={searchValue}
+                  onChange={(event) => onSearchChange(event.target.value)}
+                  placeholder={searchPlaceholder}
+                />
+              </label>
+            )}
 
             <div className={styles.notificationGroup}>
               <button

@@ -1,4 +1,4 @@
-﻿"""User Routes - Complete User Management API."""
+"""User Routes - Complete User Management API."""
 
 from fastapi import APIRouter, Depends, Query, HTTPException, UploadFile, File
 from typing import Optional, List, Any
@@ -852,19 +852,30 @@ async def update_my_profile(
 ):
     """Update current user's profile."""
     try:
+        # Use mode='json' to serialize date/datetime objects to ISO strings
+        # so the Supabase client can JSON-encode them without errors.
+        raw_data = profile_data.model_dump(mode="json", exclude_unset=True)
+        logger.info(
+            f"Profile update request for user {user['id']} (role={user.get('role')}): "
+            f"{list(raw_data.keys())} ({len(raw_data)} fields)"
+        )
         profile = await repo.update_my_profile(
             user["id"],
-            profile_data.model_dump(exclude_unset=True),
+            raw_data,
             role=user.get("role"),
         )
         if not profile:
+            logger.warning(f"Profile not found after update for user {user['id']}")
             raise HTTPException(status_code=404, detail="Profile not found")
-        logger.info(f"Profile updated by user {user['id']}")
+        logger.info(f"Profile updated successfully for user {user['id']}")
         return profile
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update profile for user {user['id']}: {str(e)}")
+        logger.error(
+            f"Failed to update profile for user {user['id']}: {type(e).__name__}: {str(e)}",
+            exc_info=True,
+        )
         raise HTTPException(status_code=500, detail="Failed to update profile")
 
 
@@ -878,6 +889,7 @@ async def upload_avatar(
     file: UploadFile = File(...),
     user: dict[str, Any] = Depends(get_current_user),
     user_repo: UserRepository = Depends(UserRepository),
+    auth_repo: AuthRepository = Depends(AuthRepository),
     storage_repo: StorageRepository = Depends(StorageRepository),
     clinical_repo: ClinicalRepository = Depends(ClinicalRepository),
 ):
@@ -895,41 +907,36 @@ async def upload_avatar(
             content,
             file.content_type or "application/octet-stream",
         )
+        public_url = storage_repo.get_public_url(path, bucket_name="avatars")
 
-        # Get public URL
-        # NOTE: This depends on storage_repo.admin_client being available.
-        # But we refactored StorageRepository to use async client and removed .admin_client property!
-        # This line will FAIL!
-        # public_url = f"{storage_repo.admin_client.storage_url}/object/public/{storage_repo.bucket}/{path}"
+        profile = None
+        profile_updated = False
+        try:
+            profile = await user_repo.update_my_profile(
+                user["id"], {"avatar_url": public_url}, role=user.get("role")
+            )
+            profile_updated = profile is not None
+        except Exception as profile_error:
+            logger.warning(
+                f"Avatar profile update failed for user {user['id']}: {str(profile_error)}"
+            )
 
-        # We need a method in StorageRepository to get public URL.
-        # But for now, let's look at how to construct it.
-        # Supabase storage URL structure is constant.
-        # Or I can add a method `get_public_url` to StorageRepository.
+        metadata_updated = False
+        try:
+            await auth_repo.update_user_metadata(
+                user["id"], {"avatar_url": public_url, "photo_url": public_url}
+            )
+            metadata_updated = True
+        except Exception as metadata_error:
+            logger.warning(
+                f"Avatar metadata fallback update failed for user {user['id']}: {str(metadata_error)}"
+            )
 
-        # Adding get_public_url to StorageRepo would be cleaner.
-        # But I can't edit StorageRepo in this tool call.
-        # I'll rely on constructing it manually if I know the base URL.
-        # OR, assuming get_public_url exists (I didn't add it).
-
-        # Wait, I can probably infer the URL if I have the project URL.
-        # _config.url in client.py.
-        # But here I don't have access to it easily.
-
-        # Let's fix this by calling a new method `get_public_url` on storage_repo,
-        # AND I Must add that method to StorageRepository in next step.
-        # Or I can use `storage_repo.get_signed_url` if public is not required?
-        # Avatars are usually public.
-
-        # Let's assume I'll add `get_public_url` to `StorageRepository`.
-        public_url = storage_repo.get_public_url(path)
-
-        # Update user profile with avatar URL
-        # Create new repo instance? No, use injected `user_repo`
-
-        profile = await user_repo.update_my_profile(
-            user["id"], {"avatar_url": public_url}
-        )
+        if not (profile_updated or metadata_updated):
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to persist profile photo",
+            )
 
         logger.info(f"Avatar uploaded by user {user['id']}: {path}")
         return {"success": True, "avatar_url": public_url, "profile": profile}

@@ -16,15 +16,11 @@ import { getDashboardHomeRoute } from '@/utils/dashboardRoutes'
 import './index.css'
 
 // ──────────────────────────── Auth Pages ────────────────────────────
-const SelectRole = lazy(() =>
-  import('@/pages/auth/SelectRole').then((m) => ({ default: m.SelectRole }))
-)
+
 const Login = lazy(() =>
   import('@/pages/auth/Login').then((m) => ({ default: m.Login }))
 )
-const SignUp = lazy(() =>
-  import('@/pages/auth/SignUp').then((m) => ({ default: m.SignUp }))
-)
+
 const ResetPassword = lazy(() =>
   import('@/pages/auth/ResetPassword').then((m) => ({ default: m.ResetPassword }))
 )
@@ -87,16 +83,6 @@ const DoctorOverview = lazy(() =>
     default: m.DoctorOverview || m.default,
   }))
 )
-const DoctorSchedule = lazy(() =>
-  import('@/pages/dashboards/doctor/DoctorSchedule').then((m) => ({
-    default: m.DoctorSchedule || m.default,
-  }))
-)
-const DoctorQueue = lazy(() =>
-  import('@/pages/dashboards/doctor/DoctorQueue').then((m) => ({
-    default: m.DoctorQueue || m.default,
-  }))
-)
 const DoctorPatients = lazy(() =>
   import('@/pages/dashboards/doctor/DoctorPatients').then((m) => ({
     default: m.DoctorPatients || m.default,
@@ -105,11 +91,6 @@ const DoctorPatients = lazy(() =>
 const DoctorResults = lazy(() =>
   import('@/pages/dashboards/doctor/DoctorResults').then((m) => ({
     default: m.DoctorResults || m.default,
-  }))
-)
-const DoctorReports = lazy(() =>
-  import('@/pages/dashboards/doctor/DoctorReports').then((m) => ({
-    default: m.DoctorReports || m.default,
   }))
 )
 const DoctorMessages = lazy(() =>
@@ -173,11 +154,6 @@ const MedicalLlm = lazy(() =>
 )
 
 // ──────────────────────────── Management & Public ────────────────────────────
-const PatientDirectory = lazy(() =>
-  import('@/pages/management/PatientDirectory').then((m) => ({
-    default: m.PatientDirectory,
-  }))
-)
 const HomePage = lazy(() =>
   import('@/pages/public/HomePage').then((m) => ({ default: m.HomePage }))
 )
@@ -265,32 +241,17 @@ export function AppRoutes() {
           path="/"
           element={
             <HomePage
-              onEnter={() => navigate('/select-role')}
+              onEnter={() => navigate('/login')}
               onAboutClick={() => navigate('/project-info')}
             />
           }
-        />
-        <Route
-          path="/select-role"
-          element={<SelectRole onRoleSelected={() => navigate('/login')} onBack={handleBack} />}
         />
         <Route
           path="/login"
           element={
             <Login
               onLoginSuccess={(role) => navigate(getDashboardHomeRoute(role))}
-              onSignUpClick={() => navigate('/signup')}
               onForgotPasswordClick={() => navigate('/reset-password')}
-              onBack={handleBack}
-            />
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <SignUp
-              onSignUpSuccess={() => navigate('/email-confirmation')}
-              onLoginClick={() => navigate('/login')}
               onBack={handleBack}
             />
           }
@@ -322,7 +283,7 @@ export function AppRoutes() {
         {/* ──── Admin Dashboard (NESTED ROUTES — each section is its own component) ──── */}
         <Route
           element={
-            <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.NURSE]}>
+            <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN]}>
               <AdminLayout onLogout={signOut} />
             </ProtectedRoute>
           }
@@ -344,11 +305,8 @@ export function AppRoutes() {
           }
         >
           <Route path="/doctor-dashboard" element={<DoctorOverview />} />
-          <Route path="/doctor-dashboard/schedule" element={<DoctorSchedule />} />
-          <Route path="/doctor-dashboard/queue" element={<DoctorQueue />} />
           <Route path="/doctor-dashboard/patients" element={<DoctorPatients />} />
           <Route path="/doctor-dashboard/results" element={<DoctorResults />} />
-          <Route path="/doctor-dashboard/reports" element={<DoctorReports />} />
           <Route path="/doctor-dashboard/messages" element={<DoctorMessages />} />
         </Route>
 
@@ -373,20 +331,10 @@ export function AppRoutes() {
 
         {/* ──── Standalone Protected Routes ──── */}
         <Route
-          path="/patient-directory"
-          element={
-            <ProtectedRoute
-              allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE]}
-            >
-              <PatientDirectory onBack={handleBack} />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/create-patient"
           element={
             <ProtectedRoute
-              allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE]}
+              allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR]}
             >
               <CreatePatient userRole={userRole} onBack={handleBack} />
             </ProtectedRoute>
@@ -435,7 +383,7 @@ export function AppRoutes() {
         <Route
           path="/medical-llm"
           element={
-            <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR, ROLES.NURSE]}>
+            <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR]}>
               <MedicalLlm onBack={handleBack} />
             </ProtectedRoute>
           }

@@ -1,6 +1,6 @@
 .shell {
   --staff-sidebar-width: 312px;
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: var(--staff-sidebar-width) minmax(0, 1fr);
   transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -18,7 +18,10 @@
 .sidebar {
   position: sticky;
   top: 0;
-  height: 100vh;
+  align-self: start;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   padding: calc(var(--spacing-xl) + 4px);
   border-inline-end: 1px solid rgba(15, 23, 42, 0.08);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(245, 247, 250, 0.9));
@@ -652,6 +655,8 @@ html.dark .notificationPanelAction {
   .sidebar {
     position: static;
     height: auto;
+    max-height: none;
+    overflow: visible;
     border-inline-end: 0;
     border-bottom: 1px solid rgba(15, 23, 42, 0.08);
   }

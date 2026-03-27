@@ -184,10 +184,10 @@ class AuthController:
             logger.error(f"Sign out failed for user {user_id}: {str(e)}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    async def get_me(self, user_id: str, email: str, role: str):
+    async def get_me(self, user_id: str, email: str, role: str, avatar_url: str | None = None):
         """Get current user profile."""
         try:
-            data = await self.auth_service.get_me(user_id, email, role)
+            data = await self.auth_service.get_me(user_id, email, role, avatar_url)
             return SuccessResponse(
                 success=True, data=data, message="User profile retrieved successfully"
             )

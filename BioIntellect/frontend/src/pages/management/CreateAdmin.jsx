@@ -7,7 +7,7 @@ import { InputField } from '@/components/ui/InputField'
 import { SelectField } from '@/components/ui/SelectField'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
-import { validateMinimumPassword } from '@/utils/userFormUtils'
+import { validateStrongPassword } from '@/utils/userFormUtils'
 import styles from './CreateDoctor.module.css' // Reusing styles for consistency
 import { adminOptions } from '@/config/options'
 
@@ -91,7 +91,7 @@ const CreateAdmin = ({ onBack, userRole }) => {
         if (!formData.password) {
             errors.password = 'Password is required'
         } else {
-            const passwordError = validateMinimumPassword(formData.password, 8)
+            const passwordError = validateStrongPassword(formData.password)
             if (passwordError) {
                 errors.password = passwordError
             }

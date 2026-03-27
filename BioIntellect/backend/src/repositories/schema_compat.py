@@ -24,6 +24,7 @@ _TABLE_COLUMNS: dict[str, set[str]] = {
         "region_id",
         "city",
         "address",
+        "avatar_url",
     },
     "audit_logs": {
         "id",
@@ -432,6 +433,7 @@ _TABLE_COLUMNS: dict[str, set[str]] = {
         "region_id",
         "city",
         "address",
+        "avatar_url",
     },
     "notifications": {
         "id",
@@ -473,6 +475,7 @@ _TABLE_COLUMNS: dict[str, set[str]] = {
         "city",
         "region_id",
         "country_id",
+        "avatar_url",
         "emergency_contact_name",
         "emergency_contact_phone",
         "emergency_contact_relation",

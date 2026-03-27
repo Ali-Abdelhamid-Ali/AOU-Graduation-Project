@@ -32,10 +32,6 @@ export const adminOptions = [
     { value: 'administrator', label: 'Admin' }
 ];
 
-export const nurseOptions = [
-    { value: 'nurse', label: 'Nurse' }
-];
-
 export const genderOptions = [
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },

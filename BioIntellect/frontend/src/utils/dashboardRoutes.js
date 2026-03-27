@@ -14,7 +14,7 @@ export const getDashboardHomeRoute = (role) => {
   }
 
   if (
-    [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.NURSE].includes(normalizedRole)
+    [ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(normalizedRole)
   ) {
     return '/admin-dashboard'
   }

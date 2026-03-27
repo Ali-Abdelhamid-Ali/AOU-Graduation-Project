@@ -77,10 +77,6 @@ export const DoctorPatients = () => {
         <article className={styles.panel}>
           <div className={styles.panelHeading}><div><h3>Patient Actions</h3><p>Open related pages without losing the current workflow.</p></div></div>
           <div className={styles.actionGrid}>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/patient-directory')}>
-              <strong>Open Live Patient Directory</strong>
-              <p>Search the complete registry by name, MRN, or phone number.</p>
-            </button>
             <button type="button" className={styles.actionCard} onClick={() => navigate('/doctor-dashboard/results')}>
               <strong>Open Results Inbox</strong>
               <p>Review unread ECG and MRI outputs related to your active patients.</p>

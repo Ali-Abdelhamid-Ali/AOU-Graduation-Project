@@ -159,6 +159,12 @@ export const AuthProvider = ({ children }) => {
     const profile = apiUser?.profile || {}
     const profileId = profile?.id || apiUser?.id
     const authUserId = apiUser?.id
+    const resolvedAvatar =
+      apiUser?.avatar_url ||
+      apiUser?.photo_url ||
+      profile?.avatar_url ||
+      profile?.photo_url ||
+      null
 
     const fullUser = {
       ...profile,
@@ -168,8 +174,8 @@ export const AuthProvider = ({ children }) => {
       user_id: authUserId,
       email: apiUser?.email,
       user_role: normalizedRole,
-      photo_url: profile?.photo_url || profile?.avatar_url || null,
-      avatar_url: profile?.avatar_url || profile?.photo_url || null,
+      photo_url: resolvedAvatar,
+      avatar_url: resolvedAvatar,
       _raw_profile: profile,
     }
 
@@ -203,15 +209,13 @@ export const AuthProvider = ({ children }) => {
       try {
         let userPayload = null
 
-        if (!getAccessToken()) {
-          const refreshResponse = await authAPI.refresh()
+        const refreshResponse = await authAPI.refresh()
 
-          if (!refreshResponse?.success || !refreshResponse?.session?.access_token) {
-            throw new Error(refreshResponse?.message || 'Unable to restore the session')
-          }
-
+        if (refreshResponse?.success && refreshResponse?.session?.access_token) {
           applySessionPayload(refreshResponse.session)
           userPayload = refreshResponse.user || null
+        } else if (!getAccessToken()) {
+          throw new Error(refreshResponse?.message || 'Unable to restore the session')
         }
 
         if (!userPayload) {
@@ -244,6 +248,17 @@ export const AuthProvider = ({ children }) => {
 
   const refreshUser = useCallback(async () => {
     try {
+      const refreshResponse = await authAPI.refresh()
+
+      if (refreshResponse?.success && refreshResponse?.user) {
+        if (refreshResponse?.session?.access_token) {
+          applySessionPayload(refreshResponse.session)
+        }
+
+        await handleUserLoad(refreshResponse.user)
+        return { success: true, data: refreshResponse.user }
+      }
+
       const response = await authAPI.getMe()
       if (!response.success || !response.data) {
         throw new Error('Failed to refresh user session')
@@ -256,7 +271,7 @@ export const AuthProvider = ({ children }) => {
       setError(message)
       return { success: false, error: message }
     }
-  }, [handleUserLoad])
+  }, [applySessionPayload, handleUserLoad])
 
   const signIn = useCallback(
     async (email, password) => {

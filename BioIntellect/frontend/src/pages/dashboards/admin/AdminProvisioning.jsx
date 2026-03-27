@@ -12,7 +12,6 @@ export const AdminProvisioning = () => {
 
   const normalizedRole = currentUser?.user_role
   const isSuperAdmin = normalizedRole === ROLES.SUPER_ADMIN
-  const isNurse = normalizedRole === ROLES.NURSE
 
   const quickActions = useMemo(() => {
     if (isSuperAdmin) {
@@ -23,18 +22,12 @@ export const AdminProvisioning = () => {
         { title: 'Open Registry', description: 'Move into the patient registry page inside the admin workspace tree.', action: () => navigate('/admin-dashboard/patients') },
       ]
     }
-    if (isNurse) {
-      return [
-        { title: 'Add Patient', description: 'Register a patient record that requires immediate intake.', action: () => navigate('/create-patient') },
-        { title: 'Open Registry', description: 'Review the patient registry snapshot.', action: () => navigate('/admin-dashboard/patients') },
-      ]
-    }
     return [
       { title: 'Add Doctor', description: 'Create a new clinician profile and assign role metadata.', action: () => navigate('/create-doctor') },
       { title: 'Add Patient', description: 'Register a new patient identity and baseline demographics.', action: () => navigate('/create-patient') },
       { title: 'Open Registry', description: 'Review the patient registry.', action: () => navigate('/admin-dashboard/patients') },
     ]
-  }, [isNurse, isSuperAdmin, navigate])
+  }, [isSuperAdmin, navigate])
 
   return (
     <>
@@ -84,10 +77,8 @@ export const AdminProvisioning = () => {
             </div>
             <div className={styles.healthMetric}>
               <span>Doctor Creation</span>
-              <strong>{isNurse ? 'Restricted' : 'Enabled'}</strong>
-              <span className={`${styles.badge} ${isNurse ? styles.toneWarning : styles.toneSuccess}`}>
-                {isNurse ? 'guarded' : 'allowed'}
-              </span>
+              <strong>Enabled</strong>
+              <span className={`${styles.badge} ${styles.toneSuccess}`}>allowed</span>
             </div>
             <div className={styles.healthMetric}>
               <span>Patient Intake</span>

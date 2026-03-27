@@ -71,13 +71,23 @@ def get_auth_controller():
     response_model=AuthResponse,
     responses={
         400: {"model": ApiErrorResponse},
+        401: {"model": ApiErrorResponse},
+        403: {"model": ApiErrorResponse},
         422: {"model": ApiErrorResponse},
         500: {"model": ApiErrorResponse},
     },
 )
 async def sign_up(
-    data: SignUpDTO, controller: AuthController = Depends(get_auth_controller)
+    data: SignUpDTO,
+    user: dict = Depends(get_current_user),
+    controller: AuthController = Depends(get_auth_controller),
 ):
+    # Only admins can create new accounts
+    if user.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can create new accounts.",
+        )
     return await controller.sign_up(data)
 
 
@@ -217,7 +227,9 @@ async def get_me(
     user: dict = Depends(get_current_user),
     controller: AuthController = Depends(get_auth_controller),
 ):
-    return await controller.get_me(user["id"], user["email"], user["role"])
+    return await controller.get_me(
+        user["id"], user["email"], user["role"], user.get("avatar_url")
+    )
 
 
 @router.post(

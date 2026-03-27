@@ -182,10 +182,6 @@ export const AdminPatients = () => {
             </div>
           </div>
           <div className={styles.actionGrid}>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/patient-directory')}>
-              <strong>Open Full Directory</strong>
-              <p>Launch the deeper patient management view for search and profile editing.</p>
-            </button>
             <button type="button" className={styles.actionCard} onClick={() => navigate('/create-patient')}>
               <strong>Add Patient</strong>
               <p>Open the existing patient enrollment flow from within the admin workflow tree.</p>

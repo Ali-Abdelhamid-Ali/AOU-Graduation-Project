@@ -177,6 +177,21 @@ class AuthRepository:
             raise Exception("Password update failed on server")
         return response
 
+    @async_retry(max_retries=3)
+    async def update_user_metadata(self, user_id: str, metadata: Dict[str, Any]):
+        """Update auth user metadata without depending on profile table schema."""
+        client = await self._get_admin()
+        current_user = await client.auth.admin.get_user_by_id(user_id)
+        current_profile = getattr(current_user, "user", None)
+        existing_metadata = dict(getattr(current_profile, "user_metadata", None) or {})
+        merged_metadata = {**existing_metadata, **metadata}
+        response = await client.auth.admin.update_user_by_id(
+            user_id, {"user_metadata": merged_metadata}
+        )
+        if not response.user:
+            raise Exception("User metadata update failed on server")
+        return response
+
     async def sign_out(
         self, user_id: str, scope: str = "local", jwt: Optional[str] = None
     ):

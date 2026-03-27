@@ -157,15 +157,35 @@ def create_app() -> FastAPI:
             raise RuntimeError(f"Unsupported embedding backend during startup: {embedding_backend}")
 
         app.state.embedding_client = embedding_client
-        app.state.vectordb_client = vectordb_provider_factory.create(Provider=settings.VECTOR_DB_BACKEND)
-        try:
-            app.state.vectordb_client.connect()
-            logger.info(f"Connected to vector database using {settings.VECTOR_DB_BACKEND} provider")
-        except Exception as exc:
-            logger.warning(
-                f"Vector database initialization skipped; continuing without vectordb client: {exc}"
+        app.state.vectordb_client = vectordb_provider_factory.create(
+            Provider=settings.VECTOR_DB_BACKEND
+        )
+        if app.state.vectordb_client is None:
+            failure_context = (
+                vectordb_provider_factory.last_error
+                if vectordb_provider_factory.last_error
+                else "unknown error"
             )
-            app.state.vectordb_client = None
+            logger.warning(
+                "Vector database provider is unavailable; "
+                f"provider={settings.VECTOR_DB_BACKEND}, "
+                f"db_path={vectordb_provider_factory.last_db_path}, "
+                f"reason={failure_context}; continuing without vectordb client"
+            )
+        else:
+            try:
+                app.state.vectordb_client.connect()
+                logger.info(
+                    f"Connected to vector database using {settings.VECTOR_DB_BACKEND} provider"
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Vector database initialization skipped; "
+                    f"provider={settings.VECTOR_DB_BACKEND}, "
+                    f"db_path={vectordb_provider_factory.last_db_path}, "
+                    f"error={exc}; continuing without vectordb client"
+                )
+                app.state.vectordb_client = None
         app.state.template_parser = template_parser(language=settings.PRIMARY_LANG, default_language=settings.DEFAULT_LANG)
         
 

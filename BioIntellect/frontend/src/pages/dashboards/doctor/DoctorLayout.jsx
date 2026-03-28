@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 
 import StaffDashboardShell from '@/components/layout/StaffDashboardShell'
 import { brandingConfig } from '@/config/brandingConfig'
@@ -18,10 +18,6 @@ const viewMeta = {
     title: 'Results Inbox',
     subtitle: 'Unread ECG and MRI analyses linked to your current cases.',
   },
-  '/doctor-dashboard/messages': {
-    title: 'Messages Center',
-    subtitle: 'Unread care-team alerts, patient updates, and workflow notices.',
-  },
 }
 
 const getViewMeta = (pathname) => {
@@ -36,7 +32,6 @@ const getViewMeta = (pathname) => {
 export const DoctorLayout = ({ onLogout }) => {
   const { currentUser } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
 
   const currentMeta = useMemo(() => getViewMeta(location.pathname), [location.pathname])
 
@@ -53,7 +48,6 @@ export const DoctorLayout = ({ onLogout }) => {
         title: 'Clinical tools',
         items: [
           { key: 'results', label: 'Results Inbox', description: 'Pending ECG and MRI reviews', glyph: 'RS', route: '/doctor-dashboard/results' },
-          { key: 'messages', label: 'Messages', description: 'Patient and care-team notifications', glyph: 'MS', route: '/doctor-dashboard/messages' },
           { key: 'ecg', label: 'ECG Workspace', description: 'Doctor-only intake for ECG uploads', glyph: 'EC', route: '/ecg-analysis' },
           { key: 'mri', label: 'MRI Workspace', description: 'Doctor-only intake for MRI uploads', glyph: 'MR', route: '/mri-analysis' },
         ],
@@ -72,8 +66,6 @@ export const DoctorLayout = ({ onLogout }) => {
       headerSubtitle={currentMeta.subtitle}
       notificationCount={0}
       notificationItems={[]}
-      notificationActionLabel="Open messages center"
-      onNotificationAction={() => navigate('/doctor-dashboard/messages')}
     >
       <Outlet />
     </StaffDashboardShell>

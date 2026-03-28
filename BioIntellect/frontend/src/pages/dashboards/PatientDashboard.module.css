@@ -11,10 +11,10 @@
 .errorBanner {
   background:
     radial-gradient(circle at top right, rgba(0, 102, 204, 0.08), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 252, 255, 0.92));
-  border: 1px solid rgba(15, 23, 42, 0.07);
+    linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface));
+  border: 1px solid var(--color-border);
   border-radius: 28px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--shadow-lg);
 }
 
 .hero {
@@ -31,7 +31,7 @@
 
 .heroKicker {
   display: inline-flex;
-  width: fit-content;
+  inline-size: fit-content;
   padding: 7px 12px;
   border-radius: var(--radius-full);
   background: rgba(0, 102, 204, 0.1);
@@ -53,7 +53,7 @@
 
 .heroSubtitle {
   margin: 0;
-  max-width: 62ch;
+  max-inline-size: 62ch;
   color: var(--color-text-muted);
   font-size: 1rem;
 }
@@ -69,11 +69,16 @@
   border-radius: 18px;
   padding: 12px 18px;
   font-weight: var(--font-weight-semibold);
+  font-size: 1rem;
+  min-block-size: 54px;
+  min-inline-size: 180px;
   cursor: pointer;
   transition:
     transform var(--transition-fast),
     border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .primaryAction {
@@ -84,9 +89,17 @@
 }
 
 .secondaryAction {
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.92);
-  color: inherit;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+.secondaryAction:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  box-shadow: 0 16px 28px rgba(0, 102, 204, 0.12);
 }
 
 .primaryAction:hover,
@@ -132,7 +145,7 @@
 }
 
 .statCard {
-  min-height: 170px;
+  min-block-size: 170px;
   padding: var(--spacing-lg);
   display: grid;
   gap: 8px;
@@ -164,7 +177,7 @@
   justify-content: space-between;
   gap: var(--spacing-md);
   align-items: flex-start;
-  margin-bottom: var(--spacing-md);
+  margin-block-end: var(--spacing-md);
 }
 
 .sectionTitle {
@@ -188,9 +201,10 @@
   gap: var(--spacing-md);
   text-align: start;
   padding: var(--spacing-lg);
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--color-border);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(236, 253, 245, 0.8));
+    radial-gradient(circle at top right, rgba(0, 102, 204, 0.08), transparent 34%),
+    linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface-soft));
   cursor: pointer;
   transition:
     transform var(--transition-fast),
@@ -199,19 +213,19 @@
 }
 
 .actionCard:hover {
-  border-color: rgba(0, 168, 107, 0.16);
-  box-shadow: 0 18px 32px rgba(0, 168, 107, 0.12);
+  border-color: var(--color-primary);
+  box-shadow: 0 18px 32px rgba(0, 102, 204, 0.12);
 }
 
 .actionGlyph {
-  width: 46px;
-  height: 46px;
+  inline-size: 46px;
+  block-size: 46px;
   flex: 0 0 46px;
   display: grid;
   place-items: center;
   border-radius: 16px;
-  background: rgba(0, 168, 107, 0.1);
-  color: var(--color-secondary-dark);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
   font-weight: var(--font-weight-bold);
 }
 
@@ -245,11 +259,11 @@
   gap: var(--spacing-sm);
   align-items: flex-start;
   padding: var(--spacing-sm) 0;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  border-block-end: 1px solid var(--color-border-subtle);
 }
 
 .listItem:last-child {
-  border-bottom: 0;
+  border-block-end: 0;
 }
 
 .listItem p {
@@ -270,7 +284,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
+  min-block-size: 28px;
   padding: 0 10px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
@@ -320,7 +334,7 @@
 .trendChart {
   grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
   align-items: end;
-  min-height: 220px;
+  min-block-size: 220px;
 }
 
 .trendColumn {
@@ -336,19 +350,19 @@
 }
 
 .trendTrack {
-  width: 100%;
-  min-height: 140px;
+  inline-size: 100%;
+  min-block-size: 140px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding: 10px;
   border-radius: 18px;
-  background: rgba(148, 163, 184, 0.12);
+  background: var(--color-surface-soft);
 }
 
 .trendBar {
   display: block;
-  width: 100%;
+  inline-size: 100%;
   border-radius: 14px;
   background: linear-gradient(180deg, var(--color-secondary), var(--color-primary));
 }
@@ -361,18 +375,18 @@
 }
 
 .emptyState {
-  min-height: 180px;
+  min-block-size: 180px;
   place-content: center;
   text-align: center;
   border-radius: 22px;
-  border: 1px dashed rgba(0, 102, 204, 0.16);
+  border: 1px dashed var(--color-border-strong);
   background:
     repeating-linear-gradient(
       -45deg,
       rgba(0, 102, 204, 0.04),
       rgba(0, 102, 204, 0.04) 12px,
-      rgba(255, 255, 255, 0.82) 12px,
-      rgba(255, 255, 255, 0.82) 24px
+      var(--color-surface) 12px,
+      var(--color-surface) 24px
     );
 }
 
@@ -385,8 +399,8 @@
 .errorBanner {
   background:
     radial-gradient(circle at top right, rgba(239, 68, 68, 0.12), transparent 32%),
-    linear-gradient(180deg, rgba(254, 226, 226, 0.96), rgba(255, 255, 255, 0.96));
-  border-color: rgba(239, 68, 68, 0.18);
+    linear-gradient(180deg, var(--color-error-bg), var(--color-surface));
+  border-color: var(--color-error);
 }
 
 .loadingGrid {
@@ -394,7 +408,7 @@
 }
 
 .loadingCard {
-  min-height: 180px;
+  min-block-size: 180px;
   border-radius: 28px;
 }
 
@@ -406,14 +420,31 @@ html.dark .readinessCard,
 html.dark .errorBanner {
   background:
     radial-gradient(circle at top right, rgba(0, 102, 204, 0.12), transparent 30%),
-    linear-gradient(180deg, rgba(20, 24, 34, 0.96), rgba(10, 14, 22, 0.94));
+    linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface));
   border-color: rgba(255, 255, 255, 0.08);
+}
+
+html.dark .secondaryAction {
+  border-color: var(--color-border);
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+}
+
+html.dark .secondaryAction:hover {
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-bg);
+  color: var(--color-primary-light);
 }
 
 html.dark .heroMetaCard,
 html.dark .trendTrack {
   border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface-soft);
+}
+
+html.dark .actionCard:hover {
+  border-color: var(--color-primary-light);
+  box-shadow: 0 18px 32px rgba(77, 148, 255, 0.14);
 }
 
 @media (max-width: 920px) {

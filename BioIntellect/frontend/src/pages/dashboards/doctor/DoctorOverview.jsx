@@ -51,7 +51,6 @@ export const DoctorOverview = () => {
   const quickActions = [
     { title: 'Open ECG Workspace', description: 'Shared intake for ECG studies.', action: () => navigate('/ecg-analysis') },
     { title: 'Open MRI Workspace', description: 'Shared intake for MRI studies.', action: () => navigate('/mri-analysis') },
-    { title: 'Messages Center', description: 'Review unread notifications.', action: () => navigate('/doctor-dashboard/messages') },
   ]
 
   if (loading) return <SectionLoading />
@@ -144,7 +143,7 @@ export const DoctorOverview = () => {
         {/* Notifications Preview */}
         <article className={styles.panel}>
           <div className={styles.panelHeading}>
-            <div><h3>Notifications</h3><p>Unread care-team alerts and notices.</p></div>
+            <div><h3>Workflow Alerts</h3><p>Unread operational alerts and case notices.</p></div>
           </div>
           {overview?.notifications?.length ? (
             <div className={styles.notificationList}>
@@ -162,7 +161,7 @@ export const DoctorOverview = () => {
               ))}
             </div>
           ) : (
-            <EmptyPanel title="Notification center is quiet" message="No unread notifications." />
+            <EmptyPanel title="Alert center is quiet" message="No unread alerts." />
           )}
         </article>
       </section>

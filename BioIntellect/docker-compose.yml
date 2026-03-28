@@ -1,8 +1,14 @@
+x-service-defaults: &service-defaults
+  init: true
+  restart: unless-stopped
+  networks:
+    - biointellect-network
+
 services:
   redis:
+    <<: *service-defaults
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
-    restart: unless-stopped
     volumes:
       - redis-data:/data
     healthcheck:
@@ -10,16 +16,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - biointellect-network
 
   mri-ai:
+    <<: *service-defaults
     build:
       context: "./AI/brain 3D/brain_seg_deploy"
       dockerfile: Dockerfile
     environment:
       TEMP_DIR: /tmp/biointellect-mri
-    restart: unless-stopped
     volumes:
       - mri-models:/app/models
       - mri-outputs:/app/outputs
@@ -33,10 +37,9 @@ services:
       timeout: 15s
       retries: 5
       start_period: 90s
-    networks:
-      - biointellect-network
 
   backend:
+    <<: *service-defaults
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -62,7 +65,6 @@ services:
         condition: service_healthy
       mri-ai:
         condition: service_healthy
-    restart: unless-stopped
     volumes:
       - backend-logs:/app/logs
       - backend-storage:/app/storage
@@ -76,25 +78,23 @@ services:
       timeout: 10s
       retries: 5
       start_period: 40s
-    networks:
-      - biointellect-network
 
   frontend:
+    <<: *service-defaults
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
+        VITE_API_URL: /api
         VITE_API_ROOT_URL: /api
-    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 5
-    networks:
-      - biointellect-network
 
   reverse-proxy:
+    <<: *service-defaults
     image: nginx:1.27-alpine
     depends_on:
       frontend:
@@ -103,7 +103,6 @@ services:
         condition: service_healthy
     ports:
       - "${PUBLIC_HTTP_PORT:-80}:80"
-    restart: unless-stopped
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
@@ -111,8 +110,6 @@ services:
       interval: 20s
       timeout: 5s
       retries: 5
-    networks:
-      - biointellect-network
 
 networks:
   biointellect-network:

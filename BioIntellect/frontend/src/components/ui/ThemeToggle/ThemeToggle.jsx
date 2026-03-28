@@ -1,19 +1,34 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useContext, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
+import AuthContext from '@/store/AuthContext'
+import { getThemeStorageKey, readThemePreference, writeThemePreference } from '@/utils/themeMode'
 
 export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window === 'undefined') return false
-    const stored = localStorage.getItem('biointellect_theme')
-    return stored === 'dark'
-  })
+  const authContext = useContext(AuthContext)
+  const currentUser = authContext?.currentUser || null
+  const userRole = authContext?.userRole || null
+  const storageKey = useMemo(() => getThemeStorageKey(currentUser, userRole), [
+    currentUser?.auth_user_id,
+    currentUser?.user_id,
+    currentUser?.profile_id,
+    currentUser?.id,
+    currentUser?.user_role,
+    currentUser?.role,
+    userRole,
+  ])
+
+  const [isDark, setIsDark] = useState(() => readThemePreference(storageKey))
+
+  useEffect(() => {
+    setIsDark(readThemePreference(storageKey))
+  }, [storageKey])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
-    localStorage.setItem('biointellect_theme', isDark ? 'dark' : 'light')
-  }, [isDark])
+    writeThemePreference(storageKey, isDark)
+  }, [isDark, storageKey])
 
   const toggle = () => setIsDark(prev => !prev)
 
@@ -24,7 +39,7 @@ export default function ThemeToggle() {
       style={{
         inlineSize: 100,
         blockSize: 50,
-        backgroundColor: 'var(--color-gray-200)',
+        backgroundColor: 'var(--color-toggle-bg)',
         borderRadius: 50,
         cursor: 'pointer',
         border: 'none',
@@ -33,11 +48,13 @@ export default function ThemeToggle() {
         alignItems: 'center',
         boxSizing: 'border-box',
         position: 'relative',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        boxShadow: 'var(--color-toggle-track-shadow)',
       }}
       animate={{
-        backgroundColor: isDark ? 'var(--color-gray-300)' : 'var(--color-gray-200)',
-        boxShadow: isDark ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+        backgroundColor: isDark ? 'var(--color-gray-300)' : 'var(--color-toggle-bg)',
+        boxShadow: isDark
+          ? 'var(--color-toggle-track-shadow-dark)'
+          : 'var(--color-toggle-track-shadow)',
       }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       className="theme-toggle-button"
@@ -66,9 +83,11 @@ export default function ThemeToggle() {
         style={{
           inlineSize: 38,
           blockSize: 38,
-          backgroundColor: isDark ? 'var(--color-primary)' : '#fbbf24',
+          backgroundColor: isDark ? 'var(--color-primary)' : 'var(--color-toggle-handle-light)',
           borderRadius: '50%',
-          boxShadow: isDark ? '0 2px 8px rgba(77, 148, 255, 0.4)' : '0 2px 8px rgba(251, 191, 36, 0.4)',
+          boxShadow: isDark
+            ? '0 2px 8px rgba(59, 130, 246, 0.4)'
+            : '0 2px 8px rgba(251, 191, 36, 0.4)',
           position: 'absolute',
           insetInlineStart: isDark ? '8px' : 'auto',
           insetInlineEnd: isDark ? 'auto' : '8px',
@@ -76,8 +95,10 @@ export default function ThemeToggle() {
         animate={{
           insetInlineStart: isDark ? '8px' : 'auto',
           insetInlineEnd: isDark ? 'auto' : '8px',
-          backgroundColor: isDark ? 'var(--color-primary)' : '#fbbf24',
-          boxShadow: isDark ? '0 2px 8px rgba(77, 148, 255, 0.4)' : '0 2px 8px rgba(251, 191, 36, 0.4)',
+          backgroundColor: isDark ? 'var(--color-primary)' : 'var(--color-toggle-handle-light)',
+          boxShadow: isDark
+            ? '0 2px 8px rgba(59, 130, 246, 0.4)'
+            : '0 2px 8px rgba(251, 191, 36, 0.4)',
         }}
         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
       />

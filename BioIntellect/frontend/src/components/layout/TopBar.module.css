@@ -1,8 +1,7 @@
 .topbar {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  inset-block-start: 0;
+  inset-inline: 0;
   height: 64px;
   background: var(--glass-bg);
   color: var(--color-text);
@@ -24,9 +23,9 @@
   justify-content: space-between;
   height: 100%;
   padding: 0 var(--spacing-lg);
-  max-width: 1440px;
+  max-inline-size: 1440px;
   margin: 0 auto;
-  width: 100%;
+  inline-size: 100%;
 }
 
 
@@ -226,7 +225,11 @@ html.dark .roleLabel:hover {
 }
 
 html.dark .backButton {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface-soft);
+}
+
+html.dark .topbar {
+  border-bottom-color: var(--color-border);
 }
 
 @media (max-width: 768px) {

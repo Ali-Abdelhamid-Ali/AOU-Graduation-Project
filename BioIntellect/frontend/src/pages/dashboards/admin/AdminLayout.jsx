@@ -102,15 +102,17 @@ export const AdminLayout = ({ onLogout }) => {
             glyph: 'PD',
             route: '/admin-dashboard/patients',
           },
-          {
-            key: 'provisioning',
-            label: isSuperAdmin ? 'Admin Provisioning' : 'Staff Provisioning',
-            description: isSuperAdmin
-              ? 'Administrator creation available'
-              : 'Role creation follows your permissions',
-            glyph: 'PR',
-            route: '/admin-dashboard/provisioning',
-          },
+          ...(isSuperAdmin
+            ? [
+                {
+                  key: 'provisioning',
+                  label: 'Admin Provisioning',
+                  description: 'Administrator creation available',
+                  glyph: 'PR',
+                  route: '/admin-dashboard/provisioning',
+                },
+              ]
+            : []),
         ],
       },
     ],

@@ -127,13 +127,13 @@ export const PatientResults = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Reviewed':
-        return '#10b981'
+        return { text: 'var(--color-success-dark)', bg: 'var(--color-success-bg)' }
       case 'Awaiting Review':
-        return '#2563eb'
+        return { text: 'var(--color-primary)', bg: 'var(--color-primary-bg)' }
       case 'Awaiting Analysis':
-        return '#f59e0b'
+        return { text: 'var(--color-warning-dark)', bg: 'var(--color-warning-bg)' }
       default:
-        return '#64748b'
+        return { text: 'var(--color-text-muted)', bg: 'var(--color-surface-soft)' }
     }
   }
 
@@ -176,36 +176,40 @@ export const PatientResults = () => {
       </div>
 
       <div className={styles.resultsGrid}>
-        {results.map((result) => (
-          <motion.div
-            key={result.id}
-            className={styles.resultCard}
-            whileHover={{ y: -5, boxShadow: '0 12px 20px -5px rgba(0,0,0,0.1)' }}
-          >
-            <div className={styles.cardHeader}>
-              <span className={styles.date}>{result.date}</span>
-              <span
-                className={styles.statusBadge}
-                style={{
-                  backgroundColor: `${getStatusColor(result.status)}15`,
-                  color: getStatusColor(result.status),
-                }}
-              >
-                {result.status}
-              </span>
-            </div>
-            <h3 className={styles.resultName}>{result.name}</h3>
-            <p className={styles.summary}>{result.summary}</p>
-            <button
-              className={styles.viewDetails}
-              onClick={() =>
-                navigate(`/patient-results/${result.type}/${result.resultId}`)
-              }
+        {results.map((result) => {
+          const statusColor = getStatusColor(result.status)
+
+          return (
+            <motion.div
+              key={result.id}
+              className={styles.resultCard}
+              whileHover={{ y: -5, boxShadow: 'var(--shadow-lg)' }}
             >
-              Open result details {'->'}
-            </button>
-          </motion.div>
-        ))}
+              <div className={styles.cardHeader}>
+                <span className={styles.date}>{result.date}</span>
+                <span
+                  className={styles.statusBadge}
+                  style={{
+                    backgroundColor: statusColor.bg,
+                    color: statusColor.text,
+                  }}
+                >
+                  {result.status}
+                </span>
+              </div>
+              <h3 className={styles.resultName}>{result.name}</h3>
+              <p className={styles.summary}>{result.summary}</p>
+              <button
+                className={styles.viewDetails}
+                onClick={() =>
+                  navigate(`/patient-results/${result.type}/${result.resultId}`)
+                }
+              >
+                Open result details {'->'}
+              </button>
+            </motion.div>
+          )
+        })}
       </div>
 
       {results.length === 0 && (

@@ -28,7 +28,6 @@ export const specialtyOptions = [
 ];
 
 export const adminOptions = [
-    { value: 'super_admin', label: 'Super Admin' },
     { value: 'administrator', label: 'Admin' }
 ];
 

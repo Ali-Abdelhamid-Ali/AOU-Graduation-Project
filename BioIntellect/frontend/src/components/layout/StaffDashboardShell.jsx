@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 import { brandingConfig } from '@/config/brandingConfig'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 import styles from './StaffDashboardShell.module.css'
 
 const isItemRouteActive = (item, pathname) => {
@@ -256,6 +257,8 @@ export const StaffDashboardShell = ({
                 </div>
               ) : null}
             </div>
+
+            <ThemeToggle />
 
             <div className={styles.profileChip}>
               <span className={styles.profileAvatar}>{profileInitials}</span>

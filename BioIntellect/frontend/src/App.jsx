@@ -93,11 +93,6 @@ const DoctorResults = lazy(() =>
     default: m.DoctorResults || m.default,
   }))
 )
-const DoctorMessages = lazy(() =>
-  import('@/pages/dashboards/doctor/DoctorMessages').then((m) => ({
-    default: m.DoctorMessages || m.default,
-  }))
-)
 
 // ──────────────────────────── Patient Dashboard ────────────────────────────
 const PatientDashboard = lazy(() =>
@@ -293,7 +288,14 @@ export function AppRoutes() {
           <Route path="/admin-dashboard/alerts" element={<AdminAlerts />} />
           <Route path="/admin-dashboard/users" element={<AdminUsers />} />
           <Route path="/admin-dashboard/patients" element={<AdminPatients />} />
-          <Route path="/admin-dashboard/provisioning" element={<AdminProvisioning />} />
+          <Route
+            path="/admin-dashboard/provisioning"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                <AdminProvisioning />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
         {/* ──── Doctor Dashboard (NESTED ROUTES — each section is its own component) ──── */}
@@ -307,7 +309,6 @@ export function AppRoutes() {
           <Route path="/doctor-dashboard" element={<DoctorOverview />} />
           <Route path="/doctor-dashboard/patients" element={<DoctorPatients />} />
           <Route path="/doctor-dashboard/results" element={<DoctorResults />} />
-          <Route path="/doctor-dashboard/messages" element={<DoctorMessages />} />
         </Route>
 
         {/* ──── Patient Dashboard (already properly nested) ──── */}
@@ -334,7 +335,7 @@ export function AppRoutes() {
           path="/create-patient"
           element={
             <ProtectedRoute
-              allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR]}
+              allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN]}
             >
               <CreatePatient userRole={userRole} onBack={handleBack} />
             </ProtectedRoute>
@@ -351,7 +352,7 @@ export function AppRoutes() {
         <Route
           path="/create-admin"
           element={
-            <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN]}>
+            <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
               <CreateAdmin userRole={userRole} onBack={handleBack} />
             </ProtectedRoute>
           }

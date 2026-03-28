@@ -4,6 +4,14 @@ import insightsIcon from '@/assets/images/icons/insights.png'
 import cardioIcon from '@/assets/images/icons/cardio.png'
 import neuroIcon from '@/assets/images/icons/neuro.png'
 
+const dashboardColors = {
+    admin: 'var(--color-accent)',
+    staff: 'var(--color-secondary)',
+    danger: 'var(--color-error)',
+    primary: 'var(--color-primary)',
+    indigo: 'var(--color-info-dark)'
+}
+
 export const getAdminCards = (userSpecialty, handlers) => {
     const {
         onCreateDoctor,
@@ -20,7 +28,7 @@ export const getAdminCards = (userSpecialty, handlers) => {
             description: 'Provision administrative accounts and manage system-wide security policies.',
             icon: securityIcon,
             action: onCreateAdmin,
-            color: '#f43f5e',
+            color: dashboardColors.admin,
             tag: 'ROOT',
             restricted: true
         },
@@ -30,7 +38,7 @@ export const getAdminCards = (userSpecialty, handlers) => {
             description: 'Manage medical staff credentials, specialized access levels, and department assignments.',
             icon: securityIcon,
             action: onCreateDoctor,
-            color: '#10b981',
+            color: dashboardColors.staff,
             tag: 'STAFF',
             restricted: true
         },
@@ -40,7 +48,7 @@ export const getAdminCards = (userSpecialty, handlers) => {
             description: 'CNN-Transformer based arrhythmia classification. Prioritized for Cardiologists.',
             icon: cardioIcon,
             action: onEcgAnalysis,
-            color: '#ef4444',
+            color: dashboardColors.danger,
             tag: 'CARDIOLOGY',
             priority: userSpecialty === 'cardiology' || userSpecialty === 'cardio',
             clinical: true
@@ -51,7 +59,7 @@ export const getAdminCards = (userSpecialty, handlers) => {
             description: '3D U-Net powered brain tumor segmentation. Prioritized for Neurologists.',
             icon: neuroIcon,
             action: onMriSegmentation,
-            color: '#3b82f6',
+            color: dashboardColors.primary,
             tag: 'NEUROLOGY',
             priority: userSpecialty === 'neurology' || userSpecialty === 'neuro',
             clinical: true
@@ -62,7 +70,7 @@ export const getAdminCards = (userSpecialty, handlers) => {
             description: 'Interactive AI decision support for diagnosis validation and medical knowledge.',
             icon: insightsIcon,
             action: onMedicalLlm,
-            color: '#6366f1',
+            color: dashboardColors.indigo,
             tag: 'ADVISOR',
             clinical: true
         }

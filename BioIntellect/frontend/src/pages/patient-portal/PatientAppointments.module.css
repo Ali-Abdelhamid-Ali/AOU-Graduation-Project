@@ -1,10 +1,11 @@
 .container {
-    max-width: 1000px;
+    max-inline-size: 1000px;
     margin: 0 auto;
+    padding: 0 1rem 2rem;
 }
 
 .header {
-    margin-bottom: 2rem;
+    margin-block-end: 2rem;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -14,85 +15,128 @@
 .title {
     font-size: 2rem;
     font-weight: 800;
-    color: #0f172a;
+    color: var(--color-text);
     letter-spacing: -0.02em;
-    margin-bottom: 0.5rem;
+    margin-block-end: 0.5rem;
 }
 
 .subtitle {
-    color: #64748b;
+    color: var(--color-text-muted);
 }
 
 .headerAction,
 .primaryAction,
 .bookBtn {
-    background: #0f172a;
-    color: white;
+    background: var(--gradient-primary);
+    color: var(--color-text-inverse);
     border: none;
     padding: 0.85rem 1.25rem;
     border-radius: 12px;
     font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(0, 102, 204, 0.18);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .headerAction {
-    min-width: 180px;
+    min-inline-size: 180px;
+}
+
+.headerAction:hover:not(:disabled),
+.primaryAction:hover:not(:disabled),
+.bookBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(0, 102, 204, 0.24);
+    filter: brightness(1.03);
+}
+
+.headerAction:focus-visible,
+.primaryAction:focus-visible,
+.bookBtn:focus-visible,
+.workspaceClose:focus-visible,
+.secondaryAction:focus-visible,
+.summaryBtn:focus-visible,
+.cancelBtn:focus-visible,
+.rescheduleBtn:focus-visible {
+    outline: 2px solid var(--color-primary-light);
+    outline-offset: 2px;
+}
+
+.headerAction:disabled,
+.primaryAction:disabled,
+.bookBtn:disabled,
+.actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+    transform: none;
+    box-shadow: none;
 }
 
 .feedbackBanner {
     border-radius: 16px;
     padding: 0.9rem 1rem;
-    margin-bottom: 1.25rem;
+    margin-block-end: 1.25rem;
     border: 1px solid transparent;
     font-weight: 600;
 }
 
 .feedbackSuccess {
-    background: #ecfdf5;
-    border-color: #a7f3d0;
-    color: #047857;
+    background: var(--color-success-bg);
+    border-color: var(--color-success);
+    color: var(--color-success-dark);
 }
 
 .feedbackError {
-    background: #fff1f2;
-    border-color: #fecdd3;
-    color: #be123c;
+    background: var(--color-error-bg);
+    border-color: var(--color-error);
+    color: var(--color-error-dark);
 }
 
 .workspaceCard {
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
     border-radius: 24px;
     padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    margin-block-end: 1.5rem;
+    box-shadow: var(--shadow-lg);
 }
 
 .workspaceHeader {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1.25rem;
+    margin-block-end: 1.25rem;
 }
 
 .workspaceTitle {
     font-size: 1.35rem;
     font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 0.35rem;
+    color: var(--color-text);
+    margin-block-end: 0.35rem;
 }
 
 .workspaceSubtitle {
-    color: #64748b;
+    color: var(--color-text-muted);
 }
 
 .workspaceClose,
 .secondaryAction {
-    border: 1px solid #cbd5e1;
-    background: white;
-    color: #334155;
+    border: 1px solid var(--color-border-strong);
+    background: var(--color-surface);
+    color: var(--color-text);
     border-radius: 12px;
     padding: 0.8rem 1rem;
     font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.workspaceClose:hover:not(:disabled),
+.secondaryAction:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border);
+    transform: translateY(-1px);
 }
 
 .formGrid,
@@ -111,17 +155,26 @@
 .field span {
     font-size: 0.85rem;
     font-weight: 700;
-    color: #334155;
+    color: var(--color-text-muted);
 }
 
 .field input,
 .field textarea {
-    border: 1px solid #dbe4ee;
+    border: 1px solid var(--color-border);
     border-radius: 14px;
     padding: 0.9rem 1rem;
     font: inherit;
-    color: #0f172a;
-    background: #f8fafc;
+    color: var(--color-text);
+    background: var(--color-surface-soft);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.field input:focus,
+.field textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-bg);
+    background: var(--color-surface);
 }
 
 .fieldWide,
@@ -142,20 +195,20 @@
     gap: 0.35rem;
     padding: 1rem;
     border-radius: 16px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-border);
 }
 
 .summaryItem span {
     font-size: 0.8rem;
     font-weight: 700;
-    color: #64748b;
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
 
 .summaryItem strong {
-    color: #0f172a;
+    color: var(--color-text);
     line-height: 1.5;
 }
 
@@ -166,8 +219,8 @@
 }
 
 .aptCard {
-    background: white;
-    border: 1px solid #eef2f6;
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
     border-radius: 20px;
     padding: 1.25rem;
     display: flex;
@@ -177,29 +230,29 @@
 }
 
 .dateBox {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    width: 70px;
-    height: 70px;
+    background: var(--color-surface-soft);
+    border: 1px solid var(--color-border);
+    inline-size: 70px;
+    block-size: 70px;
     border-radius: 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-width: 70px;
+    min-inline-size: 70px;
 }
 
 .day {
     font-size: 1.5rem;
     font-weight: 800;
-    color: #0f172a;
+    color: var(--color-text);
     line-height: 1;
 }
 
 .month {
     font-size: 0.75rem;
     font-weight: 700;
-    color: #64748b;
+    color: var(--color-text-muted);
     text-transform: uppercase;
 }
 
@@ -212,13 +265,13 @@
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 0.5rem;
+    margin-block-end: 0.5rem;
 }
 
 .doctorName {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--color-text);
 }
 
 .statusBadge {
@@ -226,19 +279,20 @@
     border-radius: 99px;
     font-size: 0.75rem;
     font-weight: 700;
+    border: 1px solid transparent;
 }
 
 .details {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #64748b;
+    color: var(--color-text-muted);
     font-size: 0.875rem;
     flex-wrap: wrap;
 }
 
 .dot {
-    color: #cbd5e1;
+    color: var(--color-border-strong);
 }
 
 .actions {
@@ -255,46 +309,54 @@
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
-    border: none;
+    border: 1px solid transparent;
 }
 
 .cancelBtn {
-    background: #fff1f2;
-    color: #e11d48;
+    background: var(--color-error-bg);
+    color: var(--color-error-dark);
+    border-color: rgba(220, 38, 38, 0.2);
 }
 
 .rescheduleBtn {
-    background: #eff6ff;
-    color: #2563eb;
+    background: var(--color-primary-bg);
+    color: var(--color-primary-dark);
+    border-color: rgba(0, 102, 204, 0.18);
 }
 
 .summaryBtn {
-    background: white;
-    border: 1px solid #e2e8f0;
-    color: #475569;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-text);
+}
+
+.actions button:hover:not(:disabled) {
+    transform: translateY(-1px);
 }
 
 .emptyState {
     text-align: center;
     padding: 4rem;
-    background: white;
+    background: var(--color-surface-elevated);
     border-radius: 24px;
-    border: 2px dashed #e2e8f0;
-    margin-top: 1rem;
+    border: 2px dashed var(--color-border);
+    margin-block-start: 1rem;
+    box-shadow: var(--shadow-sm);
 }
 
 .emptyIcon {
     font-size: 2rem;
     font-weight: 800;
-    margin-bottom: 1rem;
+    margin-block-end: 1rem;
     display: inline-flex;
-    width: 72px;
-    height: 72px;
+    inline-size: 72px;
+    block-size: 72px;
     border-radius: 18px;
     align-items: center;
     justify-content: center;
-    background: #eff6ff;
-    color: #2563eb;
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    box-shadow: inset 0 0 0 1px rgba(0, 102, 204, 0.08);
 }
 
 .aptCardSkeleton {
@@ -306,7 +368,7 @@
     gap: var(--spacing-lg);
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--color-border-subtle);
-    margin-bottom: var(--spacing-md);
+    margin-block-end: var(--spacing-md);
 }
 
 @media (max-width: 900px) {
@@ -315,7 +377,7 @@
     }
 
     .headerAction {
-        width: 100%;
+        inline-size: 100%;
     }
 
     .aptCard {
@@ -324,7 +386,7 @@
     }
 
     .actions {
-        width: 100%;
+        inline-size: 100%;
         justify-content: flex-start;
     }
 }
@@ -341,6 +403,6 @@
 
     .formActions button,
     .workspaceClose {
-        width: 100%;
+        inline-size: 100%;
     }
 }

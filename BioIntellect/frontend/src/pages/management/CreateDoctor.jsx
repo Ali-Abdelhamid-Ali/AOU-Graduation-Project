@@ -132,7 +132,7 @@ const CreateDoctor = ({ onBack, userRole }) => {
     if (success) {
         return (
             <div className={styles.pageWrapper}>
-                <TopBar userRole="admin" onBack={() => {
+                <TopBar userRole={userRole} onBack={() => {
                     setSuccess(false); setFormData({
                         firstName: '', lastName: '', firstNameAr: '', lastNameAr: '',
                         email: '', password: '', confirmPassword: '', specialty: '', phone: '',

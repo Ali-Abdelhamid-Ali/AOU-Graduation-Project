@@ -1,7 +1,10 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
 
 import { useAuth } from '@/store/AuthContext'
+import { AnimatedButton } from '@/components/ui/AnimatedButton'
+import { getThemeStorageKey, readThemePreference, writeThemePreference } from '@/utils/themeMode'
 import styles from './PatientSidebar.module.css'
 
 const menuItems = [
@@ -15,6 +18,19 @@ const menuItems = [
 export const PatientSidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { currentUser, signOut } = useAuth()
   const location = useLocation()
+  const themeStorageKey = getThemeStorageKey(currentUser)
+  const [isDark, setIsDark] = useState(() => {
+    return readThemePreference(themeStorageKey)
+  })
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark)
+    writeThemePreference(themeStorageKey, isDark)
+  }, [isDark, themeStorageKey])
+
+  useEffect(() => {
+    setIsDark(readThemePreference(themeStorageKey))
+  }, [themeStorageKey])
 
   const displayName =
     currentUser?.full_name ||
@@ -91,6 +107,19 @@ export const PatientSidebar = ({ isCollapsed, setIsCollapsed }) => {
           <span className={styles.navIcon}>LO</span>
           {!isCollapsed && <span>Log out</span>}
         </button>
+        <div className={styles.themeToggleWrap}>
+          <AnimatedButton
+            type="button"
+            variant="primary"
+            size="large"
+            fullWidth={!isCollapsed}
+            onClick={() => setIsDark((previous) => !previous)}
+            className={`${styles.themeToggleButton} ${isCollapsed ? styles.themeToggleButtonCollapsed : ''}`}
+          >
+            <span className={styles.themeToggleIcon}>{isDark ? '🌙' : '☀️'}</span>
+            {!isCollapsed && <span className={styles.themeToggleLabel}>{isDark ? 'Light Mode' : 'Dark Mode'}</span>}
+          </AnimatedButton>
+        </div>
       </div>
     </motion.aside>
   )

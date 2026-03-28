@@ -6,17 +6,17 @@
 .errorBanner {
   background:
     radial-gradient(circle at top right, rgba(0, 168, 107, 0.08), transparent 32%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 252, 251, 0.92));
-  border: 1px solid rgba(15, 23, 42, 0.07);
+    linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface));
+  border: 1px solid var(--color-border);
   border-radius: 28px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--shadow-lg);
 }
 
 .heroSection {
   display: grid;
   gap: var(--spacing-lg);
   padding: clamp(1.25rem, 3vw, 2rem);
-  margin-bottom: var(--spacing-lg);
+  margin-block-end: var(--spacing-lg);
 }
 
 .heroSection h2 {
@@ -31,10 +31,10 @@
 
 .kicker {
   display: inline-flex;
-  margin-bottom: var(--spacing-sm);
+  margin-block-end: var(--spacing-sm);
   padding: 7px 12px;
   border-radius: var(--radius-full);
-  background: rgba(0, 168, 107, 0.1);
+  background: var(--color-secondary-bg);
   color: var(--color-secondary-dark);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -62,12 +62,12 @@
 
 .metricGrid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  margin-bottom: var(--spacing-lg);
+  margin-block-end: var(--spacing-lg);
 }
 
 .splitGrid {
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  margin-bottom: var(--spacing-lg);
+  margin-block-end: var(--spacing-lg);
 }
 
 .metricCard,
@@ -76,7 +76,7 @@
 }
 
 .metricCard {
-  min-height: 168px;
+  min-block-size: 168px;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
@@ -116,7 +116,7 @@
 }
 
 .panelHeading {
-  margin-bottom: var(--spacing-lg);
+  margin-block-end: var(--spacing-lg);
 }
 
 .panelHeading h3 {
@@ -130,9 +130,9 @@
 .actionCard {
   text-align: start;
   padding: var(--spacing-lg);
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--color-border);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(236, 253, 245, 0.82));
+    linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface-soft));
   cursor: pointer;
   transition:
     transform var(--transition-fast),
@@ -142,8 +142,8 @@
 
 .actionCard:hover:not(:disabled) {
   transform: translateY(-2px);
-  border-color: rgba(0, 168, 107, 0.18);
-  box-shadow: 0 18px 32px rgba(0, 168, 107, 0.12);
+  border-color: var(--color-secondary);
+  box-shadow: var(--shadow-lg);
 }
 
 .actionCardDisabled {
@@ -156,14 +156,14 @@
 .resultItem,
 .notificationItem {
   padding: var(--spacing-sm) 0;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  border-block-end: 1px solid var(--color-border-subtle);
 }
 
 .timelineItem:last-child,
 .queueItem:last-child,
 .resultItem:last-child,
 .notificationItem:last-child {
-  border-bottom: 0;
+  border-block-end: 0;
 }
 
 .timelineItem {
@@ -210,7 +210,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
+  min-block-size: 28px;
   padding: 0 10px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
@@ -247,7 +247,7 @@
 }
 
 .emptyPanel {
-  min-height: 180px;
+  min-block-size: 180px;
   place-content: center;
   text-align: center;
   background:
@@ -255,19 +255,19 @@
       -45deg,
       rgba(0, 168, 107, 0.05),
       rgba(0, 168, 107, 0.05) 12px,
-      rgba(255, 255, 255, 0.82) 12px,
-      rgba(255, 255, 255, 0.82) 24px
+      var(--color-surface) 12px,
+      var(--color-surface) 24px
     );
   border-radius: 22px;
-  border: 1px dashed rgba(0, 168, 107, 0.16);
+  border: 1px dashed var(--color-border-strong);
 }
 
 .errorBanner {
-  margin-bottom: var(--spacing-lg);
+  margin-block-end: var(--spacing-lg);
   background:
     radial-gradient(circle at top right, rgba(239, 68, 68, 0.12), transparent 32%),
-    linear-gradient(180deg, rgba(254, 226, 226, 0.96), rgba(255, 255, 255, 0.96));
-  border-color: rgba(239, 68, 68, 0.18);
+    linear-gradient(180deg, var(--color-error-bg), var(--color-surface));
+  border-color: var(--color-error);
 }
 
 .loadingGrid {
@@ -275,7 +275,7 @@
 }
 
 .loadingCard {
-  min-height: 160px;
+  min-block-size: 160px;
   border-radius: 28px;
 }
 
@@ -287,7 +287,7 @@ html.dark .patientCard,
 html.dark .errorBanner {
   background:
     radial-gradient(circle at top right, rgba(0, 168, 107, 0.12), transparent 30%),
-    linear-gradient(180deg, rgba(20, 24, 34, 0.96), rgba(10, 14, 22, 0.94));
+    linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface));
   border-color: rgba(255, 255, 255, 0.08);
 }
 

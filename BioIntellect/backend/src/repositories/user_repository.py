@@ -136,7 +136,6 @@ class UserRepository:
                 return key
         return None
 
-    # â”پâ”پâ”پâ”پ USER ROLES â”پâ”پâ”پâ”پ
 
     async def list_user_roles(
         self,

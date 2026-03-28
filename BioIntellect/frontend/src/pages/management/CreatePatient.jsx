@@ -166,7 +166,7 @@ const CreatePatient = ({ onBack, userRole }) => {
     if (success) {
         return (
             <div className={styles.pageWrapper}>
-                <TopBar userRole="admin" onBack={() => setSuccess(null)} />
+                <TopBar userRole={userRole} onBack={() => setSuccess(null)} />
                 <div className={styles.container}>
                     <motion.div className={styles.card} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                         <div className={styles.successView}>
@@ -205,7 +205,7 @@ const CreatePatient = ({ onBack, userRole }) => {
 
                     <AnimatePresence>
                         {error && (
-                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className={styles.alertError}>
+                            <motion.div initial={{ opacity: 0, blockSize: 0 }} animate={{ opacity: 1, blockSize: 'auto' }} exit={{ opacity: 0, blockSize: 0 }} className={styles.alertError}>
                                 {error}
                             </motion.div>
                         )}

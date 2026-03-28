@@ -7,7 +7,7 @@
   background:
     radial-gradient(circle at top left, rgba(0, 102, 204, 0.12), transparent 26%),
     radial-gradient(circle at 85% 5%, rgba(0, 168, 107, 0.16), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 247, 250, 0.98));
+    linear-gradient(180deg, var(--color-background), var(--color-surface-soft));
   color: var(--color-text);
 }
 
@@ -23,8 +23,8 @@
   max-height: 100dvh;
   overflow: hidden;
   padding: calc(var(--spacing-xl) + 4px);
-  border-inline-end: 1px solid rgba(15, 23, 42, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(245, 247, 250, 0.9));
+  border-inline-end: 1px solid var(--color-border);
+  background: linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface));
   backdrop-filter: blur(20px);
   display: flex;
   flex-direction: column;
@@ -83,8 +83,8 @@
 }
 
 .collapseToggle {
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   border-radius: 12px;
   width: 34px;
   height: 34px;
@@ -130,9 +130,9 @@
   border-radius: 28px;
   background:
     radial-gradient(circle at top right, rgba(0, 168, 107, 0.12), transparent 42%),
-    linear-gradient(160deg, rgba(0, 102, 204, 0.08), rgba(255, 255, 255, 0.74));
-  border: 1px solid rgba(0, 102, 204, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    linear-gradient(160deg, var(--color-primary-bg), var(--color-surface));
+  border: 1px solid var(--color-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
   transition:
     padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     border-color var(--transition-fast),
@@ -168,7 +168,7 @@
   color: var(--color-text-inverse);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-bold);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .collapsed .roleAvatar {
@@ -265,9 +265,9 @@
 
 .navButton:hover:not(:disabled),
 .navButtonActive {
-  border-color: rgba(0, 102, 204, 0.14);
-  background: rgba(0, 102, 204, 0.08);
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  box-shadow: var(--shadow-sm);
   transform: translateX(3px);
 }
 
@@ -288,8 +288,8 @@
   display: grid;
   place-items: center;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   color: var(--color-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
@@ -331,7 +331,7 @@
   display: grid;
   gap: var(--spacing-sm);
   padding-top: var(--spacing-sm);
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  border-top: 1px solid var(--color-border);
 }
 
 .collapsed .sidebarFooter {
@@ -352,8 +352,8 @@
 
 .logoutButton,
 .notificationButton {
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   color: inherit;
   border-radius: 18px;
   padding: 11px 14px;
@@ -384,8 +384,8 @@
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   color: var(--color-primary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
@@ -397,8 +397,8 @@
 
 .logoutButton:hover,
 .notificationButton:hover {
-  border-color: rgba(0, 102, 204, 0.24);
-  background: rgba(255, 255, 255, 1);
+  border-color: var(--color-primary);
+  background: var(--color-surface-hover);
   transform: translateY(-1px);
 }
 
@@ -417,9 +417,10 @@
   align-items: center;
   gap: var(--spacing-lg);
   padding: 24px clamp(1rem, 3vw, 2rem);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  background: rgba(250, 251, 252, 0.84);
-  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(18px) saturate(180%);
 }
 
 .topBarCopy {
@@ -430,6 +431,7 @@
   margin: 0;
   font-size: clamp(1.55rem, 2.1vw, 2.3rem);
   letter-spacing: -0.02em;
+  color: var(--color-text);
 }
 
 .topBarSubtitle {
@@ -457,8 +459,8 @@
 .searchField input {
   width: 100%;
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .notificationButton {
@@ -475,9 +477,9 @@
   width: min(380px, 82vw);
   padding: 1rem;
   border-radius: 24px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-xl);
   backdrop-filter: blur(18px);
   display: grid;
   gap: 0.85rem;
@@ -504,7 +506,7 @@
 }
 
 .notificationPanelAction {
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--color-border);
   background: rgba(0, 102, 204, 0.08);
   color: var(--color-primary);
   border-radius: 999px;
@@ -538,7 +540,7 @@
   align-items: flex-start;
   gap: 0.75rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .notificationRow:last-child {
@@ -577,9 +579,9 @@
   min-width: 220px;
   padding: 8px 10px;
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.05);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .profileAvatar {
@@ -612,12 +614,12 @@ html.dark .shell {
   background:
     radial-gradient(circle at top left, rgba(0, 102, 204, 0.18), transparent 26%),
     radial-gradient(circle at 85% 5%, rgba(0, 168, 107, 0.16), transparent 24%),
-    linear-gradient(180deg, rgba(10, 14, 22, 0.98), rgba(14, 18, 26, 0.98));
+    linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface));
 }
 
 html.dark .sidebar {
-  background: linear-gradient(180deg, rgba(21, 26, 36, 0.92), rgba(11, 15, 23, 0.96));
-  border-inline-end-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, var(--color-surface-elevated), var(--color-surface));
+  border-inline-end-color: var(--color-border);
 }
 
 html.dark .roleCard,
@@ -628,23 +630,39 @@ html.dark .profileChip,
 html.dark .searchField input,
 html.dark .logoutGlyph,
 html.dark .collapseToggle {
-  background: rgba(17, 22, 30, 0.92);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface-elevated);
+  border-color: var(--color-border);
 }
 
 html.dark .topBar {
-  background: rgba(10, 14, 22, 0.78);
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg);
+  border-bottom-color: var(--glass-border);
+}
+
+html.dark .topBarTitle {
+  color: var(--color-text);
+}
+
+html.dark .topBarSubtitle {
+  color: var(--color-text-muted);
+}
+
+html.dark .notificationButton,
+html.dark .profileChip,
+html.dark .searchField input,
+html.dark .logoutButton,
+html.dark .collapseToggle {
+  box-shadow: var(--glass-shadow);
 }
 
 html.dark .notificationPanel {
-  background: rgba(17, 22, 30, 0.98);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface-elevated);
+  border-color: var(--color-border);
 }
 
 html.dark .notificationPanelAction {
-  background: rgba(0, 102, 204, 0.16);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--color-primary-bg);
+  border-color: var(--color-border);
 }
 
 @media (max-width: 1180px) {

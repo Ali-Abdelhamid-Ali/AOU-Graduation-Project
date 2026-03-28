@@ -1,0 +1,93 @@
+.card {
+  margin-block-start: 1rem;
+  padding: 1.2rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.description {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.badge {
+  align-self: flex-start;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  color: var(--color-text-inverse);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-block-start: 1rem;
+}
+
+.metricCard {
+  padding: 0.85rem;
+  border-radius: 0.9rem;
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-border);
+}
+
+.metricLabel {
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.metricValue {
+  font-size: 1.05rem;
+}
+
+.suggestionBox {
+  margin-block-start: 1rem;
+  padding: 0.95rem;
+  border-radius: 0.9rem;
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-border);
+}
+
+.suggestionTitle {
+  display: block;
+  margin-block-end: 0.35rem;
+}
+
+.suggestionText {
+  margin: 0;
+  color: var(--color-text);
+  line-height: 1.65;
+}
+
+.disclaimer {
+  margin: 1rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.83rem;
+  line-height: 1.6;
+}
+
+.htmlDarkFix {
+  color: var(--color-text);
+}
+
+.fullWidthMetricGrid {
+  grid-template-columns: 1fr;
+}

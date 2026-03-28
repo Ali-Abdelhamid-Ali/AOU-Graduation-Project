@@ -34,17 +34,11 @@ const doctorViewConfig = {
     title: 'Results Inbox',
     subtitle: 'Unread ECG and MRI analyses linked to your current cases.',
   },
-  messages: {
-    key: 'messages',
-    title: 'Messages Center',
-    subtitle: 'Unread care-team alerts, patient updates, and workflow notices.',
-  },
 }
 
 const getDoctorView = (pathname = '') => {
   if (pathname.startsWith('/doctor-dashboard/patients')) return doctorViewConfig.patients
   if (pathname.startsWith('/doctor-dashboard/results')) return doctorViewConfig.results
-  if (pathname.startsWith('/doctor-dashboard/messages')) return doctorViewConfig.messages
   return doctorViewConfig.overview
 }
 
@@ -160,13 +154,6 @@ export const DoctorDashboard = ({ onLogout }) => {
             route: '/doctor-dashboard/results',
           },
           {
-            key: 'messages',
-            label: 'Messages',
-            description: 'Patient and care-team notifications',
-            glyph: 'MS',
-            route: '/doctor-dashboard/messages',
-          },
-          {
             key: 'ecg',
             label: 'ECG Workspace',
             description: 'Doctor-only intake for ECG uploads and clinical review',
@@ -208,11 +195,6 @@ export const DoctorDashboard = ({ onLogout }) => {
       title: 'Open MRI Workspace',
       description: 'Shared intake for doctor-initiated and patient-uploaded MRI studies.',
       action: () => navigate('/mri-analysis'),
-    },
-    {
-      title: 'Messages Center',
-      description: 'Review unread notifications and patient-side workflow updates.',
-      action: () => navigate('/doctor-dashboard/messages'),
     },
   ]
 
@@ -373,8 +355,8 @@ export const DoctorDashboard = ({ onLogout }) => {
     <article className={styles.panel}>
       <div className={styles.panelHeading}>
         <div>
-          <h3>Messages & Notifications</h3>
-          <p>Unread care-team alerts and operational notices for this doctor account.</p>
+          <h3>Workflow Alerts</h3>
+          <p>Unread operational alerts and case notices for this doctor account.</p>
         </div>
       </div>
 
@@ -395,8 +377,8 @@ export const DoctorDashboard = ({ onLogout }) => {
         </div>
       ) : (
         <EmptyPanel
-          title="Notification center is quiet"
-          message="No unread or matching notifications were returned."
+          title="Alert center is quiet"
+          message="No unread or matching alerts were returned."
         />
       )}
     </article>
@@ -475,7 +457,7 @@ export const DoctorDashboard = ({ onLogout }) => {
       {renderWorkspaceHero(
         'Care delivery status',
         'Prioritize queue pressure, unread alerts, and shared diagnostic intake',
-        'This workspace is built from assigned cases, unread notifications, and pending ECG or MRI results. Both doctor and patient uploads flow into the same clinical workspaces, so review never depends on who initiated the study.'
+        'This workspace is built from assigned cases, unread alerts, and pending ECG or MRI results. Both doctor and patient uploads flow into the same clinical workspaces, so review never depends on who initiated the study.'
       )}
 
       <section className={styles.metricGrid}>
@@ -591,46 +573,12 @@ export const DoctorDashboard = ({ onLogout }) => {
     </>
   )
 
-  const renderMessagesView = () => (
-    <>
-      {renderWorkspaceHero(
-        'Messages center',
-        'See which alerts need a reply and which only need review',
-        'This center stays grounded in the real unread notification feed. MRI and ECG uploads from patients show up through the same shared workflow, then surface here as follow-up notices.'
-      )}
-      {renderNotificationsPanel()}
-      <section className={styles.splitGrid}>
-        {renderQueuePanel()}
-        <article className={styles.panel}>
-          <div className={styles.panelHeading}>
-            <div>
-              <h3>Reply Paths</h3>
-              <p>Move from alerts into the right production route instead of dead-end buttons.</p>
-            </div>
-          </div>
-          <div className={styles.actionGrid}>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/doctor-dashboard/results')}>
-              <strong>Open Results Inbox</strong>
-              <p>Useful when the message is driven by a new ECG or MRI upload.</p>
-            </button>
-            <button type="button" className={styles.actionCard} onClick={() => navigate('/medical-llm')}>
-              <strong>Open Assistant</strong>
-              <p>Use the assistant route for drafting communication or structured explanation text.</p>
-            </button>
-          </div>
-        </article>
-      </section>
-    </>
-  )
-
   const renderCurrentView = () => {
     switch (currentView.key) {
       case 'patients':
         return renderPatientsView()
       case 'results':
         return renderResultsView()
-      case 'messages':
-        return renderMessagesView()
       default:
         return renderOverview()
     }
@@ -646,8 +594,6 @@ export const DoctorDashboard = ({ onLogout }) => {
         onNavigate={handleNav}
         notificationCount={0}
         notificationItems={[]}
-        notificationActionLabel="Open messages center"
-        onNotificationAction={() => navigate('/doctor-dashboard/messages')}
         onLogout={onLogout}
         headerTitle={currentView.title}
         headerSubtitle={currentView.subtitle}
@@ -666,8 +612,6 @@ export const DoctorDashboard = ({ onLogout }) => {
       onNavigate={handleNav}
       notificationCount={notificationCount}
       notificationItems={notificationItems}
-      notificationActionLabel="Open messages center"
-      onNotificationAction={() => navigate('/doctor-dashboard/messages')}
       onLogout={onLogout}
       headerTitle={currentView.title}
       headerSubtitle={currentView.subtitle}

@@ -592,17 +592,17 @@ async def get_administrator(
 @router.post(
     "/administrators",
     response_model=AdministratorResponseDTO,
-    dependencies=[Depends(require_permission(Permission.MANAGE_USERS))],
+    dependencies=[Depends(require_permission(Permission.MANAGE_SUPER_ADMINS))],
 )
 async def create_administrator(
     admin_data: AdministratorCreateDTO,
     user: dict[str, Any] = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
 ):
-    """Create a new administrator (Admin/Super Admin only)."""
+    """Create a new administrator (Super Admin only)."""
     try:
-        # Use the specific role provided in data (admin or super_admin)
-        role = admin_data.role or "admin"
+        # This endpoint only provisions standard administrators.
+        role = "admin"
         # model_dump with mode='json' ensures date objects become ISO strings
         result = await auth_service.admin_create_user(
             role, admin_data.model_dump(mode="json")

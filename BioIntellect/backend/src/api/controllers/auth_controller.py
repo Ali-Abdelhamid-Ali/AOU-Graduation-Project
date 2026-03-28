@@ -1,4 +1,4 @@
-﻿"""Auth Controller - API Handlers for Authentication."""
+"""Auth Controller - API Handlers for Authentication."""
 
 from fastapi import HTTPException, status
 from typing import Optional
@@ -39,10 +39,10 @@ class AuthController:
 
     async def sign_in(self, data: SignInDTO):
         """Handle user authentication with rate limiting and security checks."""
-        # 1. Check Rate Limits (3 attempts, then backoff, 5 attempts email)
-        await self.auth_service.check_login_attempts(data.email)
-
         try:
+            # 1. Check Rate Limits (3 attempts, then backoff, 5 attempts email)
+            await self.auth_service.check_login_attempts(data.email)
+
             # 2. Attempt Login
             result = await self.auth_service.sign_in(data)
 

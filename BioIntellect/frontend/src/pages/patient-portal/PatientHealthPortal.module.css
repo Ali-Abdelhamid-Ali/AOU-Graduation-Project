@@ -1,5 +1,5 @@
 .portalWrapper {
-  max-width: 1100px;
+  max-inline-size: 1100px;
   margin: 0 auto;
   padding: 2rem 0;
 }
@@ -9,7 +9,7 @@
   justify-content: space-between;
   align-items: flex-end;
   gap: 1.5rem;
-  margin-bottom: 3rem;
+  margin-block-end: 3rem;
   padding: 0 1rem;
 }
 
@@ -24,7 +24,7 @@
   font-weight: 800;
   color: var(--color-text);
   letter-spacing: -0.02em;
-  margin-bottom: 0.5rem;
+  margin-block-end: 0.5rem;
 }
 
 .subtitle {
@@ -41,13 +41,13 @@
   border-radius: 16px;
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
-  min-width: 280px;
+  min-inline-size: 280px;
 }
 
 .avatar,
 .avatarFallback {
-  width: 72px;
-  height: 72px;
+  inline-size: 72px;
+  block-size: 72px;
   border-radius: 18px;
   object-fit: cover;
 }
@@ -78,7 +78,7 @@
 }
 
 .secondaryAction {
-  margin-top: 0.5rem;
+  margin-block-start: 0.5rem;
   align-self: flex-start;
   border: 1px solid var(--color-border);
   background: var(--color-surface-subtle);
@@ -87,6 +87,19 @@
   padding: 0.6rem 0.85rem;
   cursor: pointer;
   font-weight: 600;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.secondaryAction:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+  transform: translateY(-1px);
+}
+
+.secondaryAction:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 3px;
+  border-radius: 10px;
 }
 
 .mrnBadge {
@@ -107,7 +120,7 @@
   text-transform: uppercase;
   color: var(--color-text-light);
   letter-spacing: 0.05em;
-  margin-bottom: 4px;
+  margin-block-end: 4px;
 }
 
 .mrnValue {
@@ -115,9 +128,9 @@
   font-size: 1.25rem;
   font-weight: 800;
   color: var(--color-primary);
-  text-align: right;
+  text-align: end;
   word-break: break-word;
-  max-width: 22rem;
+  max-inline-size: 22rem;
 }
 
 .tabNav {
@@ -126,7 +139,7 @@
   background: var(--color-surface-subtle);
   padding: 0.5rem;
   border-radius: 16px;
-  margin-bottom: 2rem;
+  margin-block-end: 2rem;
   box-shadow: inset 0 2px 4px var(--shadow-color);
 }
 
@@ -149,13 +162,18 @@
 
 .tabBtn:hover {
   color: var(--color-text);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--color-surface-hover);
 }
 
 .tabBtn.active {
   background: var(--color-surface);
   color: var(--color-primary);
   box-shadow: var(--shadow-md);
+}
+
+.tabBtn:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
 }
 
 .tabIcon {
@@ -186,16 +204,17 @@
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--color-text);
-  border-left: 4px solid var(--color-primary);
-  padding-left: 1rem;
-  margin-bottom: 0.5rem;
+  border-inline-start: 4px solid var(--color-primary);
+  padding-inline-start: 1rem;
+  margin-block-end: 0.5rem;
 }
 
 .subSectionTitle {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-text);
-  margin: 1.5rem 0 0.5rem;
+  margin-block-start: 1.5rem;
+  margin-block-end: 0.5rem;
 }
 
 .formGrid {
@@ -205,9 +224,9 @@
 }
 
 .portalFooter {
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--color-border);
+  margin-block-start: 3rem;
+  padding-block-start: 2rem;
+  border-block-start: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -243,7 +262,7 @@
 
 .submitBtn {
   align-self: flex-end;
-  min-width: 280px;
+  min-inline-size: 280px;
 }
 
 @media (max-width: 900px) {
@@ -255,7 +274,7 @@
 
   .profileCard,
   .mrnBadge {
-    width: 100%;
+    inline-size: 100%;
   }
 
   .mrnBadge {
@@ -277,6 +296,6 @@
   }
 
   .submitBtn {
-    width: 100%;
+    inline-size: 100%;
   }
 }

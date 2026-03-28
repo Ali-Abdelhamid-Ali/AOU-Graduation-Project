@@ -209,13 +209,13 @@ export const PatientAppointments = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Scheduled':
-        return '#2563eb'
+        return { text: 'var(--color-primary)', bg: 'var(--color-primary-bg)' }
       case 'Completed':
-        return '#059669'
+        return { text: 'var(--color-success-dark)', bg: 'var(--color-success-bg)' }
       case 'Cancelled':
-        return '#dc2626'
+        return { text: 'var(--color-error-dark)', bg: 'var(--color-error-bg)' }
       default:
-        return '#64748b'
+        return { text: 'var(--color-text-muted)', bg: 'var(--color-surface-soft)' }
     }
   }
 
@@ -425,12 +425,15 @@ export const PatientAppointments = () => {
       </AnimatePresence>
 
       <div className={styles.appointmentList}>
-        {appointments.map((appointment) => (
-          <motion.div
-            key={appointment.id}
-            className={styles.aptCard}
-            whileHover={{ x: 5, backgroundColor: '#fdfdfd' }}
-          >
+        {appointments.map((appointment) => {
+          const statusColor = getStatusColor(appointment.status)
+
+          return (
+            <motion.div
+              key={appointment.id}
+              className={styles.aptCard}
+              whileHover={{ x: 5, backgroundColor: 'var(--color-surface-hover)' }}
+            >
             <div className={styles.dateBox}>
               <span className={styles.day}>{new Date(appointment.date).getDate()}</span>
               <span className={styles.month}>
@@ -444,8 +447,8 @@ export const PatientAppointments = () => {
                 <span
                   className={styles.statusBadge}
                   style={{
-                    backgroundColor: `${getStatusColor(appointment.status)}15`,
-                    color: getStatusColor(appointment.status),
+                    backgroundColor: statusColor.bg,
+                    color: statusColor.text,
                   }}
                 >
                   {appointment.status}
@@ -490,8 +493,9 @@ export const PatientAppointments = () => {
                 </>
               ) : null}
             </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          )
+        })}
       </div>
 
       {appointments.length === 0 ? (

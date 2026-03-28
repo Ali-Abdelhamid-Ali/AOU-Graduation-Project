@@ -11,6 +11,21 @@ import { validateStrongPassword } from '@/utils/userFormUtils'
 import styles from './CreateDoctor.module.css' // Reusing styles for consistency
 import { adminOptions } from '@/config/options'
 
+const initialAdminFormData = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: 'administrator',
+    password: '',
+    confirmPassword: '',
+    phone: '',
+    department: '',
+    employeeId: '',
+    countryId: '',
+    regionId: '',
+    hospitalId: ''
+}
+
 const CreateAdmin = ({ onBack, userRole }) => {
     const { registerAdmin, isLoading, error, clearError } = useAuth()
     const {
@@ -22,20 +37,7 @@ const CreateAdmin = ({ onBack, userRole }) => {
         resolveNames
     } = useGeography()
 
-    const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-        role: '',
-        password: '',
-        confirmPassword: '',
-        phone: '',
-        department: '',
-        employeeId: '',
-        countryId: '',
-        regionId: '',
-        hospitalId: ''
-    })
+    const [formData, setFormData] = useState(initialAdminFormData)
 
     const [validationErrors, setValidationErrors] = useState({})
     const [success, setSuccess] = useState(false)
@@ -121,13 +123,8 @@ const CreateAdmin = ({ onBack, userRole }) => {
     if (success) {
         return (
             <div className={styles.pageWrapper}>
-                <TopBar userRole="admin" onBack={() => {
-                    setSuccess(false); setFormData({
-                        firstName: '', lastName: '',
-                        email: '', role: '', password: '', confirmPassword: '',
-                        phone: '', department: '', employeeId: '',
-                        countryId: '', regionId: '', hospitalId: ''
-                    })
+                <TopBar userRole={userRole} onBack={() => {
+                    setSuccess(false); setFormData(initialAdminFormData)
                 }} />
                 <div className={styles.container}>
                     <motion.div className={styles.card} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
@@ -135,7 +132,7 @@ const CreateAdmin = ({ onBack, userRole }) => {
                             <div className={styles.successIcon}>🔑</div>
                             <h2 className={styles.title}>Admin Access Granted</h2>
                             <p className={styles.subtitle}>
-                                <strong>{formData.firstName} {formData.lastName}</strong> provisioned as {formData.role === 'admin' ? 'Administrator' : 'Super Admin'}.
+                                <strong>{formData.firstName} {formData.lastName}</strong> provisioned as Administrator.
                                 <br /><br />
                                 <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>
                                     Account created successfully. Share login credentials manually through your approved administrative onboarding process.
@@ -143,12 +140,7 @@ const CreateAdmin = ({ onBack, userRole }) => {
                             </p>
                             <div className={styles.successActions}>
                                 <AnimatedButton variant="primary" fullWidth onClick={() => {
-                                    setSuccess(false); setFormData({
-                                        firstName: '', lastName: '',
-                                        email: '', role: '', password: '', confirmPassword: '',
-                                        phone: '', department: '', employeeId: '',
-                                        countryId: '', regionId: '', hospitalId: ''
-                                    })
+                                    setSuccess(false); setFormData(initialAdminFormData)
                                 }}>Provision Another Administrator</AnimatedButton>
                                 <AnimatedButton variant="secondary" fullWidth onClick={onBack}>Back to Dashboard</AnimatedButton>
                             </div>
@@ -277,7 +269,7 @@ const CreateAdmin = ({ onBack, userRole }) => {
                             size="large"
                             fullWidth
                             isLoading={isLoading}
-                            style={{ marginTop: '1.5rem' }}
+                            style={{ marginBlockStart: '1.5rem' }}
                         >
                             Authorize Administrator Credentials
                         </AnimatedButton>

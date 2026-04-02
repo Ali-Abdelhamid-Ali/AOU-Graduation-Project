@@ -7,15 +7,23 @@ from uuid import uuid4
 from src.observability.audit import AuditAction, log_audit
 from src.observability.logger import get_logger
 from src.repositories.clinical_repository import ClinicalRepository
+from src.repositories.storage_repository import StorageRepository
 from src.services.ai.ai_service import AIService
+from src.services.domain.file_service import FileService
 
 logger = get_logger("service.clinical")
 
 
 class ClinicalService:
-    def __init__(self, clinical_repo: ClinicalRepository, ai_service: AIService):
+    def __init__(
+        self,
+        clinical_repo: ClinicalRepository,
+        ai_service: AIService,
+        storage_repo: StorageRepository | None = None,
+    ):
         self.clinical_repo = clinical_repo
         self.ai_service = ai_service
+        self.storage_repo = storage_repo or StorageRepository()
 
     @staticmethod
     def _generate_case_number(hospital_id: Optional[str]) -> str:
@@ -151,7 +159,6 @@ class ClinicalService:
         )
         return history
 
-    # â”پâ”پâ”پâ”پ ECG DOMAIN â”پâ”پâ”پâ”پ
 
     async def create_ecg_signal(
         self, user_id: str, data: dict
@@ -170,6 +177,43 @@ class ClinicalService:
         )
         return signal
 
+    async def create_ecg_result(
+        self, user_id: str, data: dict
+    ) -> Optional[Dict[str, Any]]:
+        """Creates an ECG result record."""
+        result = await self.clinical_repo.create_ecg_result(data)
+        log_audit(
+            AuditAction.ANALYZE_IMAGE,
+            user_id=user_id,
+            details={
+                "result_id": result.get("id")
+                if isinstance(result, dict)
+                else getattr(result, "id", None),
+                "action": "create_ecg_result",
+            },
+        )
+        return result
+
+    async def upload_ecg_signal(
+        self,
+        user_id: str,
+        patient_id: str,
+        case_id: str,
+        file_name: str,
+        content: bytes,
+        content_type: str,
+    ) -> Dict[str, Any]:
+        """Uploads ECG file to storage and creates linked ECG signal record."""
+        file_service = FileService(self.storage_repo, self.clinical_repo)
+        return await file_service.upload_ecg_signal(
+            user_id,
+            patient_id,
+            case_id,
+            file_name,
+            content,
+            content_type,
+        )
+
     async def run_ecg_analysis(
         self, user_id: str, signal_id: str
     ) -> Optional[Dict[str, Any]]:
@@ -177,10 +221,32 @@ class ClinicalService:
         # 1. Fetch signal data
         signal = await self.clinical_repo.get_ecg_signal(signal_id)
         if not signal:
-            raise Exception("ECG Signal not found")
+            raise ValueError("ECG signal not found")
+
+        file_id = signal.get("file_id")
+        file_payload = None
+        if file_id:
+            file_record = await self.clinical_repo.get_medical_file(file_id)
+            if file_record:
+                file_path = file_record.get("file_path")
+                if file_path:
+                    file_payload = await self.storage_repo.download_file(
+                        file_path,
+                        bucket_name=file_record.get("storage_bucket"),
+                    )
+
+        if not file_payload:
+            logger.error(
+                "ECG file payload not found for analysis",
+                signal_id=signal_id,
+                file_id=file_id,
+            )
+            raise ValueError("ECG file payload not found for analysis")
 
         # 2. Call AI Service (Isolated logic)
-        analysis = await self.ai_service.analyze_ecg(signal.get("signal_data", {}))
+        analysis = await self.ai_service.analyze_ecg(
+            signal.get("signal_data", {}), raw_file_bytes=file_payload
+        )
 
         # 3. Persist Result
         result_data = {

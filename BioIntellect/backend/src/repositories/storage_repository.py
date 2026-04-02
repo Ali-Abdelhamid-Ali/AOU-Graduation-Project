@@ -85,6 +85,19 @@ class StorageRepository:
         bucket = self._resolve_bucket(bucket_name)
         await client.storage.from_(bucket).remove([path])
 
+    async def download_file(
+        self, path: str, bucket_name: Optional[str] = None
+    ) -> bytes:
+        """Downloads raw binary content from storage."""
+        client = await self._get_client()
+        bucket = self._resolve_bucket(bucket_name)
+        response = await client.storage.from_(bucket).download(path)
+        if isinstance(response, (bytes, bytearray)):
+            return bytes(response)
+        if hasattr(response, "read"):
+            return await response.read()
+        raise ValueError(f"Failed to download file from storage: {path}")
+
     async def is_accessible(self, bucket_name: Optional[str] = None) -> bool:
         """Checks whether the configured storage bucket is reachable."""
         client = await self._get_client()

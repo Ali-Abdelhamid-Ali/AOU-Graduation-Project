@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from src.observability.logger import get_logger
 from src.repositories.clinical_repository import ClinicalRepository
+from src.repositories.user_repository import UserRepository
 from src.security.auth_middleware import (
     Permission,
     get_current_user,
@@ -16,6 +17,7 @@ from src.security.auth_middleware import (
 from src.services.ai.ai_service import AIService
 from src.services.domain.clinical_service import ClinicalService
 from src.services.domain.file_service import (
+    is_supported_ecg_upload,
     is_supported_mri_upload,
     normalize_upload_content_type,
 )
@@ -59,6 +61,26 @@ def get_clinical_service():
     repo = ClinicalRepository()
     ai = AIService()
     return ClinicalService(repo, ai)
+
+
+async def _validate_case_and_patient(case_id: str, patient_id: str) -> None:
+    clinical_repo = ClinicalRepository()
+    user_repo = UserRepository()
+
+    case_record = await clinical_repo.get_medical_case(case_id)
+    if not case_record:
+        raise HTTPException(status_code=404, detail="Medical case not found")
+
+    patient_record = await user_repo.get_patient(patient_id)
+    if not patient_record:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    case_patient_id = str(case_record.get("patient_id") or "")
+    if case_patient_id and case_patient_id != str(patient_id):
+        raise HTTPException(
+            status_code=400,
+            detail="case_id does not belong to the provided patient_id",
+        )
 
 
 class SignalAnalysisRequest(BaseModel):
@@ -539,38 +561,29 @@ async def create_ecg_signal_from_file(
 
         # Validate file type for ECG
         filename = file.filename or ""
-        valid_ecg_types = [
-            "application/dicom",
-            "application/octet-stream",
-            "image/jpeg",
-            "image/png",
-        ]
-        if file.content_type not in valid_ecg_types and not filename.lower().endswith(
-            (".dcm", ".jpg", ".jpeg", ".png")
-        ):
+        if not is_supported_ecg_upload(filename):
             raise HTTPException(
                 status_code=400,
-                detail="Invalid ECG file format. Must be DICOM or medical image format.",
+                detail="Invalid ECG file format. Supported format: .dat",
             )
 
-        signal_data = {
-            "patient_id": patient_id,
-            "case_id": case_id,
-            "signal_data": {
-                "file_name": filename,
-                "file_size": len(content),
-                "content_type": file.content_type,
-                "uploaded_at": "now()",
-            },
-        }
+        await _validate_case_and_patient(case_id, patient_id)
 
-        signal = await service.create_ecg_signal(user["id"], signal_data)
-        if not signal:
+        result = await service.upload_ecg_signal(
+            user["id"],
+            patient_id,
+            case_id,
+            filename,
+            content,
+            file.content_type or "application/octet-stream",
+        )
+
+        if not result:
             raise HTTPException(status_code=500, detail="Failed to create ECG signal")
         logger.info(
-            f"ECG signal created from file by user {user['id']}: {signal['id']}"
+            f"ECG signal created from file by user {user['id']}: {result['signal_record']['id']}"
         )
-        return signal
+        return result["signal_record"]
 
     except HTTPException:
         raise
@@ -1424,7 +1437,6 @@ async def get_patient_friendly_mri_result(
     }
 
 
-# â”پâ”پâ”پâ”پ ANALYSIS ENDPOINTS â”پâ”پâ”پâ”پ
 
 
 @router.post(
@@ -1484,9 +1496,12 @@ async def analyze_ecg_by_signal(
         return {"success": True, "data": result}
     except HTTPException:
         raise
+    except ValueError as exc:
+        logger.warning(f"ECG analysis validation failed for signal {payload.signal_id}: {exc}")
+        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.error(f"Failed to analyze ECG signal {payload.signal_id}: {exc}")
-        raise HTTPException(status_code=500, detail="Failed to analyze ECG")
+        logger.exception(f"Failed to analyze ECG signal {payload.signal_id}: {exc}")
+        raise HTTPException(status_code=500, detail=f"Failed to analyze ECG: {exc}")
 
 
 @router.post("/mri/analyze")

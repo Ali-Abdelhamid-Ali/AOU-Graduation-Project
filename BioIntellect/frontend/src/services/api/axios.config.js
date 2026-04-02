@@ -10,6 +10,10 @@ import { normalizeApiErrorPayload } from '@/utils/apiErrorUtils'
 import { API_BASE_URL } from './baseUrl'
 
 const LOOPBACK_BASE_PATTERN = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i
+const DEFAULT_API_TIMEOUT_MS = 15000
+const API_TIMEOUT_MS = Number(
+  import.meta.env.VITE_API_TIMEOUT_MS || DEFAULT_API_TIMEOUT_MS
+)
 
 const buildAlternateLoopbackBase = (value) => {
   const source = String(value || '').trim()
@@ -30,7 +34,7 @@ const buildAlternateLoopbackBase = (value) => {
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: API_TIMEOUT_MS,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -139,7 +143,7 @@ apiClient.interceptors.response.use(
 
       const detail =
         error.code === 'ECONNABORTED'
-          ? `The API request timed out while contacting ${API_BASE_URL}.`
+          ? `The API request timed out while contacting ${API_BASE_URL}. The backend accepted the connection but did not respond in time.`
           : `Cannot reach the API server at ${API_BASE_URL}. Check the backend process and the Vite dev proxy target.`
 
       return Promise.reject(

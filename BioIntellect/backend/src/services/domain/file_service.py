@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
-
+import os
 from src.observability.audit import AuditAction, log_audit
 from src.observability.logger import get_logger
 from src.repositories.clinical_repository import ClinicalRepository
@@ -14,6 +14,8 @@ logger = get_logger("service.file")
 
 
 MRI_FILE_SUFFIXES = (".dcm", ".dicom", ".jpg", ".jpeg", ".png", ".nii", ".nii.gz")
+ECG_FILE_SUFFIXES = (".dat",)
+ECG_STORAGE_MIME_TYPE = os.getenv("ECG_STORAGE_MIME_TYPE", "application/octet-stream")
 GENERAL_MEDICAL_FILE_TYPES = ("ecg", "mri")
 DEFAULT_STORAGE_BUCKET = "medical-files"
 STORAGE_BUCKET_BY_FILE_TYPE = {
@@ -39,6 +41,8 @@ def normalize_upload_content_type(file_name: str, content_type: Optional[str]) -
 
     if extension in {".nii", ".nii.gz", ".gz"}:
         return "application/octet-stream"
+    if extension in ECG_FILE_SUFFIXES:
+        return ECG_STORAGE_MIME_TYPE
     if extension in {".dcm", ".dicom"}:
         return "application/dicom"
     if extension == ".pdf":
@@ -51,6 +55,12 @@ def normalize_upload_content_type(file_name: str, content_type: Optional[str]) -
         return "application/octet-stream"
 
     return normalized_type or "application/octet-stream"
+
+
+def is_supported_ecg_upload(file_name: str) -> bool:
+    """Validate ECG uploads and only allow `.dat` files."""
+    normalized_name = (file_name or "").lower()
+    return normalized_name.endswith(ECG_FILE_SUFFIXES)
 
 
 def is_supported_mri_upload(file_name: str, content_type: Optional[str]) -> bool:

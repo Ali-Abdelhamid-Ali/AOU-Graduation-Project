@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 import httpx
@@ -12,6 +12,7 @@ from fastapi import UploadFile
 
 from src.config.settings import settings
 from src.security.config import security_config
+from src.services.ai.ecg_inference import ECGInferenceEngine
 
 
 MRI_CLASS_COLORS: dict[int, list[int]] = {
@@ -34,14 +35,15 @@ class AIService:
         self.is_enabled = bool(self.api_key)
         self.mri_service_url = settings.mri_segmentation_service_url.rstrip("/")
         self.mri_timeout_seconds = max(30, settings.mri_segmentation_timeout_seconds)
+        self.ecg_inference = ECGInferenceEngine()
 
     def get_model_info(self, modality: str = "mri") -> Dict[str, str]:
         """Return stable metadata for the model exposed to the frontend."""
         catalog = {
             "ecg": {
-                "name": "BioIntellect ECG CNN-Transformer",
-                "version": "2026.03",
-                "checksum": "ecg-cnn-transformer-2026-03",
+                "name": "BioIntellect ECG Multimodal InceptionTime",
+                "version": "2026.04",
+                "checksum": "ecg-inceptiontime-multimodal-asymmetric-loss",
                 "release_date": "2026-03-01",
             },
             "mri": {
@@ -63,112 +65,34 @@ class AIService:
         """Prevents basic prompt injection and normalizes clinical text."""
         return text.strip()[:2000]
 
-    async def analyze_ecg(self, signal_data: dict) -> Dict[str, Any]:
-        """Simulates advanced ECG signal analysis."""
-        quality_score = float(signal_data.get("quality_score") or 95.0)
-        lead_count = int(signal_data.get("lead_count") or 12)
-        heart_rate = 72 if quality_score >= 85 else 88
-        rhythm = (
-            "Normal Sinus Rhythm"
-            if quality_score >= 85
-            else "Possible Atrial Fibrillation"
-        )
-        confidence = 0.94 if quality_score >= 85 else 0.81
-        detected_conditions = (
-            [{"condition": "Normal Sinus Rhythm", "confidence": confidence}]
-            if quality_score >= 85
-            else [
-                {"condition": "Irregular Rhythm Pattern", "confidence": confidence},
-                {"condition": "Clinical Review Recommended", "confidence": 0.76},
-            ]
-        )
-        recommendations = (
-            [
-                "No urgent abnormality detected.",
-                "Correlate with symptoms and prior ECG history.",
-            ]
-            if quality_score >= 85
-            else [
-                "Repeat ECG under controlled acquisition conditions.",
-                "Escalate to cardiology review if symptoms persist.",
-            ]
-        )
+    async def analyze_ecg(
+        self, signal_data: dict, raw_file_bytes: Optional[bytes] = None
+    ) -> Dict[str, Any]:
+        """Runs model-based ECG preprocessing + inference using trained weights."""
+        payload: Any = raw_file_bytes if raw_file_bytes is not None else signal_data
+        if payload is None:
+            raise ValueError("Missing ECG payload for analysis.")
 
-        return {
-            "prediction": rhythm,
-            "confidence": confidence,
-            "ai_notes": (
-                "Normal ECG. Regular sinus rhythm with normal intervals."
-                if quality_score >= 85
-                else "Signal quality or rhythm pattern warrants physician review."
-            ),
-            "risk_score": 15.0 if quality_score >= 85 else 42.0,
-            "heart_rate": heart_rate,
-            "heart_rate_variability": 38.5 if quality_score >= 85 else 52.1,
-            "detected_conditions": detected_conditions,
-            "recommendations": recommendations,
-            "lead_count": lead_count,
-            "model_info": self.get_model_info("ecg"),
-        }
+        analysis = self.ecg_inference.predict(payload, signal_meta=signal_data or {})
+        analysis["model_info"] = self.get_model_info("ecg")
+        return analysis
 
     async def analyze_mri(self, scan_data: dict) -> Dict[str, Any]:
         """Legacy MRI analysis path kept for older scan-only flows."""
-        filename = str(
-            scan_data.get("file_name") or scan_data.get("primary_filename") or ""
-        )
-        normalized_name = filename.lower()
-        tumor_detected = "normal" not in normalized_name and "clear" not in normalized_name
-        confidence = 0.92 if tumor_detected else 0.97
-        total_volume_cm3 = 18.4 if tumor_detected else 0.0
-        segmented_regions = (
-            [
-                {"region": "whole_tumor", "volume_ml": 18.4},
-                {"region": "edema", "volume_ml": 6.1},
-                {"region": "enhancing_core", "volume_ml": 4.8},
-            ]
-            if tumor_detected
-            else []
-        )
-        abnormalities = (
-            [
-                {
-                    "name": "Right frontal lobe mass effect",
-                    "severity": "moderate",
-                    "confidence": confidence,
-                }
-            ]
-            if tumor_detected
-            else []
-        )
+        _ = scan_data
         return {
-            "prediction": (
-                "High-grade glioma"
-                if tumor_detected
-                else "No suspicious lesion detected"
-            ),
-            "confidence": confidence,
-            "segmented_regions": segmented_regions,
-            "ai_notes": (
-                "Findings are suspicious for a right frontal lobe high-grade glioma."
-                if tumor_detected
-                else "No suspicious focal lesion identified on the provided study summary."
-            ),
-            "severity_score": 85.0 if tumor_detected else 8.0,
-            "tumor_detected": tumor_detected,
-            "total_volume_cm3": total_volume_cm3,
-            "measurements": {
-                "largest_diameter_mm": 31.2 if tumor_detected else 0.0,
-                "edema_volume_cm3": 6.1 if tumor_detected else 0.0,
-            },
-            "recommendations": (
-                [
-                    "Urgent neuroradiology review recommended.",
-                    "Compare against prior MRI if available.",
-                ]
-                if tumor_detected
-                else ["Routine specialist review is sufficient."]
-            ),
-            "abnormalities": abnormalities,
+            "prediction": "MRI segmentation flow only",
+            "confidence": 0.0,
+            "segmented_regions": [],
+            "ai_notes": "Use /mri/segment for the real MRI segmentation workflow.",
+            "severity_score": 0.0,
+            "tumor_detected": False,
+            "total_volume_cm3": 0.0,
+            "measurements": {},
+            "recommendations": [
+                "Use the MRI segmentation endpoint for actual model-based analysis.",
+            ],
+            "abnormalities": [],
             "model_info": self.get_model_info("mri"),
         }
 
@@ -211,7 +135,7 @@ class AIService:
                     f"{self.mri_service_url}/predict",
                     files=request_files,
                 )
-        except httpx.TimeoutException as exc:
+        except httpx.TimeoutException:
             self.logger.warning(
                 "MRI segmentation service timed out; using offline fallback."
             )
@@ -220,7 +144,7 @@ class AIService:
                 patient_id=patient_id,
                 reason="MRI segmentation service timed out.",
             )
-        except httpx.HTTPError as exc:
+        except httpx.HTTPError:
             self.logger.warning(
                 "MRI segmentation service is unavailable; using offline fallback."
             )
@@ -232,7 +156,7 @@ class AIService:
 
         try:
             payload = response.json()
-        except ValueError as exc:
+        except ValueError:
             self.logger.warning(
                 "MRI segmentation service returned invalid JSON; using offline fallback."
             )

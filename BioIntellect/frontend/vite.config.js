@@ -17,7 +17,7 @@ const blockFigmaPrototypeImports = () => ({
 
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, __dirname, '')
-  const apiProxyTarget = env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8001'
+  const apiProxyTarget = env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8000'
 
   return {
     plugins: [

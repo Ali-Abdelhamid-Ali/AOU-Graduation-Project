@@ -1,0 +1,1884 @@
+{
+  "1AVB": {
+    "code": "1AVB",
+    "summary": "First degree AV block is a conduction delay at the atrioventricular node characterized by a consistently prolonged PR interval exceeding 200ms. It is generally benign but may indicate underlying conduction disease or drug effect.",
+    "ecg_features": [
+      "PR interval > 200ms (0.20 sec)",
+      "Every P wave is followed by a QRS complex",
+      "Normal P wave morphology",
+      "Regular rhythm maintained"
+    ],
+    "clinical_significance": "First degree AV block is usually a benign finding but can progress to higher-degree block, especially in the setting of acute inferior MI, myocarditis, or drug toxicity. It may be a marker of underlying structural heart disease, vagal tone elevation, or electrolyte disturbance. In asymptomatic patients, no treatment is required, but monitoring for progression is important.",
+    "common_associations": [
+      "Left anterior fascicular block (LAFB)",
+      "Right bundle branch block (RBBB)",
+      "Left ventricular hypertrophy (LVH)",
+      "Digitalis effect",
+      "Inferior myocardial infarction",
+      "Atrial fibrillation"
+    ],
+    "typical_patient": "Older adults with structural heart disease, athletes with high vagal tone, or patients on AV-nodal blocking medications such as digoxin, beta-blockers, or calcium channel blockers.",
+    "management_hints": [
+      "Review current medications (digoxin, beta-blockers, calcium channel blockers)",
+      "Check electrolytes, especially potassium",
+      "Serial ECG monitoring for progression to higher-degree block",
+      "Cardiology referral if symptomatic or associated with bundle branch block"
+    ],
+    "report_template": "Sinus rhythm with first degree AV block (PR interval prolonged). No evidence of higher-degree block. Clinical correlation recommended."
+  },
+  "2AVB": {
+    "code": "2AVB",
+    "summary": "Second degree AV block is an intermittent failure of atrial impulse conduction to the ventricles, classified as Mobitz type I (Wenckebach) with progressive PR prolongation or Mobitz type II with fixed PR and sudden dropped beats.",
+    "ecg_features": [
+      "Intermittent non-conducted P waves",
+      "Mobitz I: progressive PR prolongation before dropped beat",
+      "Mobitz II: fixed PR interval with sudden non-conducted P wave",
+      "Ventricular rate less than atrial rate"
+    ],
+    "clinical_significance": "Mobitz type I is often benign and associated with inferior MI or increased vagal tone. Mobitz type II is more serious, indicating infranodal disease, and carries a risk of progression to complete heart block. Prompt cardiology evaluation is required especially for Mobitz type II.",
+    "common_associations": [
+      "Inferior myocardial infarction",
+      "Right bundle branch block",
+      "Left anterior fascicular block",
+      "Digitalis toxicity",
+      "Atrial flutter with variable block"
+    ],
+    "typical_patient": "Elderly patients with structural heart disease or acute inferior myocardial infarction. Mobitz I may occur in athletes or younger patients with high vagal tone.",
+    "management_hints": [
+      "Identify and treat underlying cause",
+      "Mobitz II requires urgent cardiology referral and consideration of pacemaker",
+      "Discontinue AV-nodal blocking drugs if implicated",
+      "Continuous cardiac monitoring",
+      "Atropine for symptomatic bradycardia as bridge therapy"
+    ],
+    "report_template": "Second degree AV block present. Cardiology review recommended to determine type and assess need for pacing."
+  },
+  "3AVB": {
+    "code": "3AVB",
+    "summary": "Third degree (complete) AV block is complete dissociation between atrial and ventricular activity, with the ventricles driven by an escape rhythm. This is a critical arrhythmia requiring urgent intervention.",
+    "ecg_features": [
+      "Complete AV dissociation",
+      "P waves and QRS complexes are independent",
+      "Slow ventricular escape rate (20-50/min)",
+      "Wide QRS if ventricular escape; narrow if junctional escape",
+      "Atrial rate faster than ventricular rate"
+    ],
+    "clinical_significance": "Complete heart block is a medical emergency associated with syncope, hemodynamic compromise, and risk of asystole. It may be caused by inferior MI (usually transient), anterior MI (usually permanent), infiltrative disease, or drug toxicity. Permanent pacemaker implantation is typically required.",
+    "common_associations": [
+      "Inferior myocardial infarction",
+      "Anterior myocardial infarction",
+      "Right bundle branch block",
+      "Left ventricular hypertrophy",
+      "Digitalis toxicity",
+      "Syncope"
+    ],
+    "typical_patient": "Elderly patients with structural heart disease or acute MI. Can occur in younger patients with congenital complete heart block or myocarditis.",
+    "management_hints": [
+      "Immediate cardiology consultation",
+      "Transcutaneous or transvenous temporary pacing",
+      "Discontinue AV-nodal blocking agents",
+      "Atropine for junctional escape (limited effect)",
+      "Permanent pacemaker implantation in most cases",
+      "Monitor hemodynamics continuously"
+    ],
+    "report_template": "Complete third degree AV block with AV dissociation and ventricular escape rhythm. Urgent cardiology review and pacing evaluation required."
+  },
+  "ABQRS": {
+    "code": "ABQRS",
+    "summary": "Abnormal QRS morphology indicating disturbance in ventricular depolarization. This is a non-specific finding that encompasses a variety of intraventricular conduction abnormalities.",
+    "ecg_features": [
+      "Widened or morphologically abnormal QRS complex",
+      "May include notching, slurring, or fragmentation",
+      "Not meeting criteria for complete bundle branch block",
+      "Abnormal QRS axis possible"
+    ],
+    "clinical_significance": "Abnormal QRS morphology is a non-specific marker of ventricular conduction disturbance. It may reflect underlying ischemia, infarction, cardiomyopathy, or electrolyte abnormality. Further characterization of the underlying cause is essential.",
+    "common_associations": [
+      "Myocardial infarction",
+      "Ischemic heart disease",
+      "Intraventricular conduction delay",
+      "Electrolyte disturbances",
+      "Cardiomyopathy"
+    ],
+    "typical_patient": "Patients with known or suspected structural heart disease, ischemia, or electrolyte abnormalities.",
+    "management_hints": [
+      "Correlate with clinical history and symptoms",
+      "Check electrolytes",
+      "Serial ECG comparison",
+      "Consider echocardiogram",
+      "Cardiology referral if new or unexplained"
+    ],
+    "report_template": "Abnormal QRS morphology noted. Clinical correlation and further evaluation recommended."
+  },
+  "AFIB": {
+    "code": "AFIB",
+    "summary": "Atrial fibrillation is an irregularly irregular supraventricular arrhythmia characterized by chaotic atrial activity and absence of distinct P waves, resulting in an irregular ventricular response.",
+    "ecg_features": [
+      "Absent discrete P waves",
+      "Irregularly irregular RR intervals",
+      "Fibrillatory baseline (f waves)",
+      "Narrow QRS unless aberrant conduction or pre-existing bundle branch block",
+      "Variable ventricular rate"
+    ],
+    "clinical_significance": "Atrial fibrillation is the most common sustained cardiac arrhythmia and significantly increases the risk of stroke and heart failure. Rate control and anticoagulation are cornerstones of management. Rhythm control may be considered in symptomatic patients. CHA2DS2-VASc score should guide anticoagulation decisions.",
+    "common_associations": [
+      "Left ventricular hypertrophy",
+      "Heart failure",
+      "Mitral valve disease",
+      "Ischemic heart disease",
+      "Digitalis effect",
+      "Thyrotoxicosis",
+      "Left atrial enlargement"
+    ],
+    "typical_patient": "Elderly patients with hypertension, heart failure, valvular disease, or coronary artery disease. Increasingly common with advancing age.",
+    "management_hints": [
+      "Rate control with beta-blockers or calcium channel blockers",
+      "Anticoagulation based on CHA2DS2-VASc score",
+      "Rhythm control with cardioversion or antiarrhythmics if indicated",
+      "Treat underlying cause",
+      "Check thyroid function",
+      "Echocardiogram to assess for structural disease"
+    ],
+    "report_template": "Atrial fibrillation with ventricular rate. Anticoagulation assessment and cardiology review recommended."
+  },
+  "AFLT": {
+    "code": "AFLT",
+    "summary": "Atrial flutter is a rapid regular atrial arrhythmia typically at 250-350 bpm with characteristic sawtooth flutter waves, usually conducting to the ventricles with a fixed ratio (most commonly 2:1).",
+    "ecg_features": [
+      "Sawtooth flutter waves (F waves) at 250-350 bpm",
+      "Regular atrial activity",
+      "Fixed AV conduction ratio (2:1, 3:1, 4:1)",
+      "Ventricular rate typically 150 bpm with 2:1 block",
+      "No discrete P waves"
+    ],
+    "clinical_significance": "Atrial flutter carries similar thromboembolic risk to atrial fibrillation and requires anticoagulation. It is often unstable and may convert to atrial fibrillation. Catheter ablation has high success rates for typical flutter. Rate control is often challenging.",
+    "common_associations": [
+      "Atrial fibrillation",
+      "Left ventricular hypertrophy",
+      "Right atrial enlargement",
+      "COPD",
+      "Heart failure",
+      "Post-cardiac surgery"
+    ],
+    "typical_patient": "Patients with structural heart disease, chronic lung disease, or post-cardiac surgery. Similar demographics to atrial fibrillation.",
+    "management_hints": [
+      "Rate control with AV-nodal blocking agents",
+      "Anticoagulation as per atrial fibrillation guidelines",
+      "Cardioversion if hemodynamically unstable",
+      "Catheter ablation for recurrent typical flutter",
+      "Treat underlying cause"
+    ],
+    "report_template": "Atrial flutter with AV block and ventricular rate. Rate control and anticoagulation assessment required."
+  },
+  "ALMI": {
+    "code": "ALMI",
+    "summary": "Anterolateral myocardial infarction indicates ischemic injury involving the anterior and lateral walls of the left ventricle, typically from occlusion of the left anterior descending or left circumflex artery.",
+    "ecg_features": [
+      "Pathological Q waves in I, aVL, V2-V6",
+      "ST elevation or depression in anterolateral leads",
+      "T wave inversion in I, aVL, V4-V6",
+      "Loss of R wave progression in anterior chest leads"
+    ],
+    "clinical_significance": "Anterolateral MI represents a large territory of myocardium at risk, often resulting in significant left ventricular dysfunction. Early reperfusion therapy is critical. Long-term risk of heart failure and ventricular arrhythmias is substantial.",
+    "common_associations": [
+      "Left anterior fascicular block",
+      "Left bundle branch block",
+      "Left ventricular hypertrophy",
+      "Atrial fibrillation",
+      "Non-specific intraventricular conduction delay"
+    ],
+    "typical_patient": "Middle-aged to elderly patients with risk factors for coronary artery disease including hypertension, diabetes, dyslipidemia, and smoking.",
+    "management_hints": [
+      "Urgent reperfusion if acute (primary PCI or thrombolysis)",
+      "Serial troponin and ECGs",
+      "Aspirin and dual antiplatelet therapy",
+      "Anticoagulation",
+      "Beta-blocker and ACE inhibitor",
+      "Echocardiogram to assess LV function"
+    ],
+    "report_template": "ECG findings consistent with anterolateral myocardial infarction. Urgent clinical correlation and cardiology review required."
+  },
+  "AMI": {
+    "code": "AMI",
+    "summary": "Anterior myocardial infarction involves ischemic injury to the anterior wall of the left ventricle, typically due to occlusion of the left anterior descending coronary artery.",
+    "ecg_features": [
+      "Pathological Q waves in V1-V4",
+      "Poor R wave progression in anterior leads",
+      "ST elevation in V1-V4 (if acute)",
+      "T wave inversion in anterior leads",
+      "Loss of septal R waves"
+    ],
+    "clinical_significance": "Anterior MI carries the highest mortality among MI territories due to involvement of a large myocardial mass. Anterior STEMI requires immediate cath lab activation. Risk of complete heart block, ventricular aneurysm, and cardiogenic shock is significant.",
+    "common_associations": [
+      "Left bundle branch block",
+      "Left anterior fascicular block",
+      "Ventricular aneurysm",
+      "Left ventricular hypertrophy",
+      "Atrial fibrillation"
+    ],
+    "typical_patient": "Patients with significant coronary artery disease, typically older males with multiple cardiovascular risk factors.",
+    "management_hints": [
+      "Immediate cath lab activation for STEMI",
+      "Serial troponin measurement",
+      "Aspirin and P2Y12 inhibitor",
+      "Anticoagulation",
+      "Echocardiogram for LV function assessment",
+      "Consideration of ICD if EF severely reduced"
+    ],
+    "report_template": "ECG changes consistent with anterior myocardial infarction. Urgent clinical and laboratory correlation required."
+  },
+  "ANEUR": {
+    "code": "ANEUR",
+    "summary": "ST-T changes compatible with left ventricular aneurysm, characterized by persistent ST elevation in leads overlying a previous transmural myocardial infarction territory.",
+    "ecg_features": [
+      "Persistent ST elevation weeks to months after MI",
+      "Pathological Q waves in the same territory",
+      "ST elevation typically concave or convex upward",
+      "No reciprocal ST depression (unlike acute STEMI)",
+      "T waves may be upright or inverted"
+    ],
+    "clinical_significance": "Ventricular aneurysm is a late complication of transmural MI, associated with risk of heart failure, ventricular arrhythmias, and mural thrombus with systemic embolization. Echocardiogram is essential for confirmation.",
+    "common_associations": [
+      "Anterior myocardial infarction",
+      "Anteroseptal infarction",
+      "Left ventricular dysfunction",
+      "Ventricular tachycardia",
+      "Mural thrombus"
+    ],
+    "typical_patient": "Patients with history of large transmural anterior MI, often with delayed or no reperfusion therapy.",
+    "management_hints": [
+      "Echocardiogram to confirm aneurysm and assess for thrombus",
+      "Anticoagulation if mural thrombus present",
+      "Cardiology referral",
+      "ICD evaluation for ventricular arrhythmias",
+      "Surgical aneurysm resection in selected cases"
+    ],
+    "report_template": "Persistent ST elevation with Q waves in anterior leads, consistent with previous MI and possible ventricular aneurysm. Echocardiogram recommended."
+  },
+  "ASMI": {
+    "code": "ASMI",
+    "summary": "Anteroseptal myocardial infarction involves ischemic injury to the anterior septum and anterior wall, typically due to proximal LAD occlusion.",
+    "ecg_features": [
+      "Pathological Q waves or QS complexes in V1-V3",
+      "Poor R wave progression in V1-V4",
+      "ST changes in V1-V4",
+      "T wave inversion anteroseptal leads"
+    ],
+    "clinical_significance": "Anteroseptal MI indicates involvement of the interventricular septum and anterior free wall. Complete LBBB may develop. Risk of septal rupture in acute setting. Long-term LV dysfunction depends on infarct size.",
+    "common_associations": [
+      "Left bundle branch block",
+      "Left anterior fascicular block",
+      "Incomplete right bundle branch block",
+      "Atrial fibrillation",
+      "Left ventricular hypertrophy"
+    ],
+    "typical_patient": "Patients with coronary artery disease, particularly proximal LAD disease.",
+    "management_hints": [
+      "Urgent reperfusion if acute",
+      "Serial ECG and troponin",
+      "Echocardiogram",
+      "Dual antiplatelet and anticoagulation",
+      "Beta-blocker and ACE inhibitor"
+    ],
+    "report_template": "ECG changes consistent with anteroseptal myocardial infarction. Clinical and laboratory correlation required."
+  },
+  "BIGU": {
+    "code": "BIGU",
+    "summary": "Bigeminal pattern refers to a rhythm where every normal beat is followed by a premature beat (either atrial or ventricular), creating a repeating paired pattern.",
+    "ecg_features": [
+      "Alternating normal and premature beats",
+      "Regular paired pattern",
+      "Premature beats may be wide (ventricular) or narrow (atrial)",
+      "Compensatory or non-compensatory pauses",
+      "Effective heart rate may be halved"
+    ],
+    "clinical_significance": "Bigeminy may be benign in structurally normal hearts but can indicate underlying ischemia, electrolyte disturbance, or drug toxicity, especially digitalis. Frequent ventricular bigeminy can cause hemodynamic compromise if sustained.",
+    "common_associations": [
+      "Left ventricular hypertrophy",
+      "Ischemic heart disease",
+      "Digitalis toxicity",
+      "Hypokalemia",
+      "Left anterior fascicular block"
+    ],
+    "typical_patient": "Can occur in any age group; more concerning in patients with structural heart disease or on cardiac medications.",
+    "management_hints": [
+      "Check electrolytes (potassium, magnesium)",
+      "Review medications (digoxin, stimulants)",
+      "Holter monitor for quantification",
+      "Echocardiogram if frequent",
+      "Cardiology referral if symptomatic or high burden"
+    ],
+    "report_template": "Bigeminal pattern noted. Clinical correlation, electrolyte check, and medication review recommended."
+  },
+  "CLBBB": {
+    "code": "CLBBB",
+    "summary": "Complete left bundle branch block is a major intraventricular conduction disturbance with QRS duration ≥120ms and characteristic morphology, most commonly due to ischemic heart disease.",
+    "ecg_features": [
+      "QRS duration ≥ 120ms",
+      "Broad notched R waves in I, aVL, V5-V6",
+      "QS or rS pattern in V1-V2",
+      "No septal Q waves in lateral leads",
+      "Secondary ST-T changes (discordant)",
+      "Left axis deviation common"
+    ],
+    "clinical_significance": "New LBBB in the setting of chest pain should be treated as STEMI equivalent. Chronic LBBB indicates significant conduction disease and is associated with cardiomyopathy, ischemic heart disease, and increased mortality. Standard ischemia assessment is limited in the presence of LBBB.",
+    "common_associations": [
+      "Ischemic heart disease",
+      "Dilated cardiomyopathy",
+      "Hypertensive heart disease",
+      "Left ventricular hypertrophy",
+      "Atrial fibrillation",
+      "Heart failure"
+    ],
+    "typical_patient": "Older patients with structural heart disease, hypertension, or known coronary artery disease.",
+    "management_hints": [
+      "New LBBB with chest pain: activate cath lab (Sgarbossa criteria)",
+      "Echocardiogram to assess LV function",
+      "Cardiac resynchronization therapy (CRT) if EF ≤35% with LBBB",
+      "Treat underlying cause",
+      "Cardiology referral"
+    ],
+    "report_template": "Complete left bundle branch block present. Clinical correlation required; new LBBB with symptoms warrants urgent evaluation."
+  },
+  "CRBBB": {
+    "code": "CRBBB",
+    "summary": "Complete right bundle branch block is characterized by delayed right ventricular activation with QRS ≥120ms and RSR' pattern in V1, commonly found in patients with or without structural heart disease.",
+    "ecg_features": [
+      "QRS duration ≥ 120ms",
+      "RSR' or rSR' pattern in V1-V2 (M-shaped)",
+      "Wide slurred S waves in I, aVL, V5-V6",
+      "Secondary ST-T changes in V1-V2",
+      "Right axis deviation may be present"
+    ],
+    "clinical_significance": "Isolated RBBB may be a normal variant in younger patients but warrants investigation for underlying cardiopulmonary disease when new. Combined with left anterior or posterior fascicular block (bifascicular block) increases risk of complete heart block.",
+    "common_associations": [
+      "Left anterior fascicular block (bifascicular block)",
+      "Left ventricular hypertrophy",
+      "Pulmonary embolism",
+      "Atrial fibrillation",
+      "Ischemic heart disease",
+      "Atrial septal defect"
+    ],
+    "typical_patient": "Wide age range; may be incidental in otherwise healthy individuals or associated with cardiopulmonary disease.",
+    "management_hints": [
+      "New RBBB: investigate for acute pulmonary embolism or MI",
+      "Bifascicular block: monitor for progression to complete heart block",
+      "Echocardiogram",
+      "Cardiology referral if symptomatic or new"
+    ],
+    "report_template": "Complete right bundle branch block. Clinical correlation recommended; new RBBB warrants investigation for underlying cause."
+  },
+  "DIG": {
+    "code": "DIG",
+    "summary": "ECG changes compatible with digitalis effect, characterized by sagging ST depression and T wave changes, typically in patients receiving digoxin therapy.",
+    "ecg_features": [
+      "Sagging or scooping ST segment depression",
+      "T wave flattening or inversion",
+      "Shortened QT interval",
+      "Prominent U waves",
+      "PR interval prolongation",
+      "Changes most prominent in lateral leads"
+    ],
+    "clinical_significance": "Digitalis effect is an expected ECG finding in patients on therapeutic digoxin and does not necessarily indicate toxicity. Digitalis toxicity causes a wide spectrum of arrhythmias including AV block, junctional rhythms, and ventricular arrhythmias. Serum digoxin level should be checked.",
+    "common_associations": [
+      "Atrial fibrillation with controlled rate",
+      "First degree AV block",
+      "Electrolyte disturbances (hypokalemia, hypomagnesemia)",
+      "Renal impairment"
+    ],
+    "typical_patient": "Patients with atrial fibrillation or heart failure receiving digoxin therapy, typically elderly.",
+    "management_hints": [
+      "Check serum digoxin level",
+      "Check electrolytes (potassium, magnesium)",
+      "Monitor renal function",
+      "Assess for signs of toxicity (nausea, visual disturbances)",
+      "Reduce dose if toxic levels",
+      "Digibind for severe toxicity"
+    ],
+    "report_template": "ST-T changes compatible with digitalis effect. Check digoxin level and electrolytes."
+  },
+  "EL": {
+    "code": "EL",
+    "summary": "ECG changes compatible with electrolyte disturbance or drug effect, most commonly manifested as QT prolongation with associated T wave abnormalities.",
+    "ecg_features": [
+      "Prolonged QT/QTc interval",
+      "Flat or inverted T waves",
+      "Prominent U waves",
+      "Non-specific ST-T changes",
+      "May have bradycardia"
+    ],
+    "clinical_significance": "Electrolyte abnormalities, particularly hypokalemia, hypomagnesemia, and hypocalcemia, can prolong the QT interval and predispose to potentially fatal arrhythmias including torsades de pointes. Multiple drugs also prolong the QT interval.",
+    "common_associations": [
+      "Atrial fibrillation",
+      "First degree AV block",
+      "Left ventricular hypertrophy",
+      "Digitalis effect",
+      "Renal failure"
+    ],
+    "typical_patient": "Patients on diuretics, antiarrhythmics, antibiotics, or antipsychotics; patients with renal failure or malnutrition.",
+    "management_hints": [
+      "Urgent electrolyte panel (K+, Mg2+, Ca2+)",
+      "Review all medications for QT-prolonging drugs",
+      "Replace electrolytes as indicated",
+      "Continuous monitoring if QTc > 500ms",
+      "Cardiology referral",
+      "Avoid further QT-prolonging drugs"
+    ],
+    "report_template": "QT prolongation and non-specific ST-T changes compatible with electrolyte disturbance or drug effect. Electrolyte panel and medication review required."
+  },
+  "HVOLT": {
+    "code": "HVOLT",
+    "summary": "High QRS voltage indicates increased amplitude of QRS complexes, often meeting voltage criteria for left ventricular hypertrophy, particularly in chest leads.",
+    "ecg_features": [
+      "S in V1 + R in V5 or V6 > 35mm (Sokolow-Lyon)",
+      "R in aVL > 11mm",
+      "Increased QRS amplitude in precordial leads",
+      "May lack strain pattern"
+    ],
+    "clinical_significance": "High voltage alone has low specificity for true LVH. It is common in young, thin, athletic individuals as a normal variant. In the appropriate clinical context (hypertension, aortic stenosis), it supports the diagnosis of LVH and warrants echocardiographic confirmation.",
+    "common_associations": [
+      "Left ventricular hypertrophy",
+      "Young athletic individuals",
+      "Hypertension",
+      "Aortic stenosis"
+    ],
+    "typical_patient": "Young thin adults as a normal variant, or older patients with hypertension or valvular disease.",
+    "management_hints": [
+      "Echocardiogram to assess true LV mass",
+      "Blood pressure measurement",
+      "Clinically correlate with patient age and body habitus",
+      "Cardiology referral if echocardiogram confirms LVH"
+    ],
+    "report_template": "High QRS voltage noted, meeting criteria suggestive of left ventricular hypertrophy. Echocardiogram recommended for confirmation."
+  },
+  "ILBBB": {
+    "code": "ILBBB",
+    "summary": "Incomplete left bundle branch block is a partial conduction delay in the left bundle system with QRS duration between 110-119ms and LBBB morphological features.",
+    "ecg_features": [
+      "QRS duration 110-119ms",
+      "Broad or notched R waves in I, aVL, V5-V6",
+      "Absent septal Q waves",
+      "rS or QS in V1",
+      "Secondary ST-T changes present"
+    ],
+    "clinical_significance": "Incomplete LBBB may represent early or partial left bundle disease. It carries less prognostic significance than complete LBBB but warrants clinical evaluation for underlying structural heart disease.",
+    "common_associations": [
+      "Ischemic heart disease",
+      "Left ventricular hypertrophy",
+      "Cardiomyopathy",
+      "Atrial fibrillation"
+    ],
+    "typical_patient": "Similar to complete LBBB but often earlier stage of conduction disease.",
+    "management_hints": [
+      "Echocardiogram",
+      "Cardiology follow-up",
+      "Monitor for progression to complete LBBB",
+      "Treat underlying disease"
+    ],
+    "report_template": "Incomplete left bundle branch block pattern noted. Clinical correlation and echocardiogram recommended."
+  },
+  "ILMI": {
+    "code": "ILMI",
+    "summary": "Inferolateral myocardial infarction involves combined inferior and lateral wall ischemic injury, typically from occlusion of a dominant RCA or LCx artery.",
+    "ecg_features": [
+      "Pathological Q waves in II, III, aVF and V5-V6",
+      "ST changes in inferior and lateral leads",
+      "T wave inversion inferolateral leads",
+      "Reciprocal changes in aVL and I"
+    ],
+    "clinical_significance": "Inferolateral MI represents a larger territory than isolated inferior MI and carries greater risk of LV dysfunction. Right ventricular involvement should be assessed with right-sided leads.",
+    "common_associations": [
+      "Left anterior fascicular block",
+      "Atrial fibrillation",
+      "Right ventricular infarction",
+      "Left ventricular hypertrophy"
+    ],
+    "typical_patient": "Patients with multi-vessel coronary artery disease, often with prior cardiovascular history.",
+    "management_hints": [
+      "Urgent reperfusion if acute",
+      "Right-sided ECG leads to assess RV involvement",
+      "Serial troponin and ECG",
+      "Echocardiogram",
+      "Antiplatelet and anticoagulation therapy"
+    ],
+    "report_template": "ECG changes consistent with inferolateral myocardial infarction. Urgent clinical correlation required."
+  },
+  "IMI": {
+    "code": "IMI",
+    "summary": "Inferior myocardial infarction involves ischemic injury to the inferior wall of the left ventricle, typically from right coronary artery occlusion.",
+    "ecg_features": [
+      "Pathological Q waves in II, III, aVF",
+      "ST elevation in II, III, aVF (if acute)",
+      "Reciprocal ST depression in I, aVL",
+      "T wave inversion in inferior leads",
+      "ST depression in V1-V2 suggests posterior extension"
+    ],
+    "clinical_significance": "Inferior MI is the most common MI territory. Right ventricular infarction occurs in up to 40% of inferior MIs and must be screened for with right-sided leads as it affects management. Complete heart block may complicate inferior MI.",
+    "common_associations": [
+      "Right ventricular infarction",
+      "Posterior myocardial infarction",
+      "First degree AV block",
+      "Complete heart block",
+      "Atrial fibrillation"
+    ],
+    "typical_patient": "Patients with coronary artery disease; inferior MI more common in diabetics and women who may present atypically.",
+    "management_hints": [
+      "Right-sided leads (V3R-V5R) to exclude RV infarction",
+      "Avoid nitrates if RV infarction present",
+      "Primary PCI or thrombolysis if acute STEMI",
+      "Serial ECG and troponin",
+      "Antiplatelet and anticoagulation therapy",
+      "Monitor for AV block"
+    ],
+    "report_template": "ECG changes consistent with inferior myocardial infarction. Right-sided leads and urgent clinical correlation required."
+  },
+  "INJAL": {
+    "code": "INJAL",
+    "summary": "Subendocardial injury pattern in anterolateral leads, manifested as ST depression and T wave inversion in I, aVL, and V4-V6, suggesting non-transmural ischemia or NSTEMI.",
+    "ecg_features": [
+      "ST depression in I, aVL, V4-V6",
+      "T wave inversion anterolateral leads",
+      "No pathological Q waves",
+      "Horizontal or downsloping ST depression"
+    ],
+    "clinical_significance": "Anterolateral subendocardial injury pattern is a high-risk ECG finding suggesting significant anterolateral ischemia or NSTEMI. Prompt evaluation with serial troponins and cardiology review is mandatory.",
+    "common_associations": [
+      "Non-ST elevation MI",
+      "Left ventricular hypertrophy",
+      "Digitalis effect",
+      "Tachyarrhythmias"
+    ],
+    "typical_patient": "Patients with known or suspected coronary artery disease presenting with chest pain or equivalent symptoms.",
+    "management_hints": [
+      "Serial troponin measurements",
+      "Continuous ECG monitoring",
+      "Antiplatelet therapy",
+      "Anticoagulation",
+      "Urgent cardiology review",
+      "Consider early invasive strategy"
+    ],
+    "report_template": "ST depression and T wave changes in anterolateral leads consistent with subendocardial injury. Serial troponin and urgent cardiology review required."
+  },
+  "INJAS": {
+    "code": "INJAS",
+    "summary": "Subendocardial injury in anteroseptal leads, with ST depression and T wave inversion in V1-V4, indicating anteroseptal ischemia or NSTEMI.",
+    "ecg_features": [
+      "ST depression in V1-V4",
+      "Deep T wave inversion anteroseptal",
+      "No ST elevation",
+      "May have prolonged QT"
+    ],
+    "clinical_significance": "Deep T wave inversion in anteroseptal leads (Wellens pattern) may indicate critical proximal LAD stenosis requiring urgent intervention even in the absence of ongoing pain.",
+    "common_associations": [
+      "Proximal LAD disease",
+      "Left ventricular hypertrophy",
+      "Atrial fibrillation",
+      "Anteroseptal infarction"
+    ],
+    "typical_patient": "Patients presenting with unstable angina or NSTEMI, especially with proximal LAD disease.",
+    "management_hints": [
+      "Serial troponin",
+      "Continuous monitoring",
+      "Antiplatelet and anticoagulation",
+      "Urgent cardiology review",
+      "Early angiography",
+      "Recognize Wellens syndrome pattern"
+    ],
+    "report_template": "Anteroseptal ST-T changes consistent with subendocardial injury. Serial troponin and urgent cardiology review required."
+  },
+  "INJIL": {
+    "code": "INJIL",
+    "summary": "Subendocardial injury in inferolateral leads with ST depression and T wave inversion in inferior and lateral leads, consistent with inferolateral NSTEMI.",
+    "ecg_features": [
+      "ST depression in II, III, aVF, V5-V6",
+      "T wave inversion inferolateral leads",
+      "No ST elevation",
+      "Horizontal or downsloping ST changes"
+    ],
+    "clinical_significance": "Inferolateral subendocardial injury pattern indicates significant ischemia in the inferior and lateral territories, often from multi-vessel disease or dominant circumflex/RCA involvement.",
+    "common_associations": [
+      "Ischemic heart disease",
+      "Left ventricular hypertrophy",
+      "Atrial fibrillation"
+    ],
+    "typical_patient": "Patients with multi-vessel coronary artery disease presenting with acute coronary syndrome.",
+    "management_hints": [
+      "Serial troponin",
+      "Cardiology review",
+      "Antiplatelet and anticoagulation",
+      "Consider early invasive strategy"
+    ],
+    "report_template": "Inferolateral ST-T changes consistent with subendocardial injury. Serial troponin and urgent cardiology review required."
+  },
+  "INJIN": {
+    "code": "INJIN",
+    "summary": "Subendocardial injury in inferior leads with ST depression and T wave inversion in II, III, and aVF, suggesting inferior NSTEMI or significant inferior ischemia.",
+    "ecg_features": [
+      "ST depression in II, III, aVF",
+      "T wave inversion inferior leads",
+      "No ST elevation",
+      "May have reciprocal lateral changes"
+    ],
+    "clinical_significance": "Inferior subendocardial injury warrants urgent evaluation for NSTEMI. Serial troponins and continuous monitoring are required. Right-sided leads should be obtained.",
+    "common_associations": [
+      "Inferior ischemia",
+      "Right ventricular involvement",
+      "Posterior extension"
+    ],
+    "typical_patient": "Patients with known or suspected RCA or LCx disease.",
+    "management_hints": [
+      "Serial troponin",
+      "Right-sided leads",
+      "Antiplatelet and anticoagulation",
+      "Cardiology review"
+    ],
+    "report_template": "Inferior ST-T changes consistent with subendocardial injury. Serial troponin and cardiology review required."
+  },
+  "INJLA": {
+    "code": "INJLA",
+    "summary": "Subendocardial injury in lateral leads with ST depression and T wave inversion in I, aVL, V5-V6, suggesting lateral NSTEMI or significant lateral ischemia.",
+    "ecg_features": [
+      "ST depression in I, aVL, V5-V6",
+      "T wave inversion lateral leads",
+      "No ST elevation",
+      "Downsloping or horizontal ST depression"
+    ],
+    "clinical_significance": "Lateral subendocardial injury indicates significant ischemia in the lateral wall territory, often from left circumflex artery disease.",
+    "common_associations": [
+      "Left ventricular hypertrophy with strain",
+      "Digitalis effect",
+      "Ischemic heart disease"
+    ],
+    "typical_patient": "Patients with circumflex or obtuse marginal artery disease.",
+    "management_hints": [
+      "Serial troponin",
+      "Antiplatelet and anticoagulation",
+      "Cardiology review",
+      "Consider echocardiogram"
+    ],
+    "report_template": "Lateral ST-T changes consistent with subendocardial injury. Serial troponin and cardiology review required."
+  },
+  "INVT": {
+    "code": "INVT",
+    "summary": "Inverted T waves are a non-specific finding that may reflect ischemia, ventricular strain, bundle branch block, or be a normal variant in certain leads.",
+    "ecg_features": [
+      "Negative T wave deflection",
+      "May be diffuse or regional",
+      "Symmetric or asymmetric inversion",
+      "Associated ST changes may be present"
+    ],
+    "clinical_significance": "T wave inversion can be a marker of myocardial ischemia, ventricular hypertrophy with strain, cardiomyopathy, or may be a normal variant (V1-V3 in young women, aVR). Deep symmetric T wave inversion in anterior leads (Wellens pattern) suggests critical LAD stenosis.",
+    "common_associations": [
+      "Left ventricular hypertrophy",
+      "Ischemic heart disease",
+      "Pulmonary embolism (anterior leads)",
+      "Cardiomyopathy",
+      "Digitalis effect"
+    ],
+    "typical_patient": "Wide range; depends on distribution and clinical context.",
+    "management_hints": [
+      "Correlate with clinical symptoms",
+      "Serial ECG comparison",
+      "Troponin if ischemia suspected",
+      "Echocardiogram",
+      "Cardiology referral if new or unexplained"
+    ],
+    "report_template": "T wave inversion noted. Clinical correlation required; ischemia should be excluded in the appropriate clinical context."
+  },
+  "IPLMI": {
+    "code": "IPLMI",
+    "summary": "Inferoposterolateral myocardial infarction involves combined inferior, posterior, and lateral wall injury, typically from occlusion of a dominant RCA or large LCx artery.",
+    "ecg_features": [
+      "Q waves in II, III, aVF (inferior)",
+      "Tall R waves in V1-V2 (posterior)",
+      "Q waves or ST changes in V5-V6 (lateral)",
+      "ST elevation inferolateral in acute phase",
+      "Reciprocal ST depression in anterior leads"
+    ],
+    "clinical_significance": "Inferoposterolateral MI represents one of the largest MI territories and carries significant risk of LV dysfunction, heart failure, and arrhythmias. Requires urgent reperfusion.",
+    "common_associations": [
+      "Right ventricular infarction",
+      "Atrial fibrillation",
+      "Complete AV block"
+    ],
+    "typical_patient": "Patients with significant multi-vessel coronary disease or dominant vessel occlusion.",
+    "management_hints": [
+      "Urgent reperfusion",
+      "Right-sided leads",
+      "Posterior leads (V7-V9)",
+      "Serial ECG and troponin",
+      "Intensive monitoring"
+    ],
+    "report_template": "ECG changes consistent with inferoposterolateral myocardial infarction. Urgent reperfusion evaluation required."
+  },
+  "IPMI": {
+    "code": "IPMI",
+    "summary": "Inferoposterior myocardial infarction involves combined inferior and posterior wall injury, typically from RCA occlusion with posterior extension.",
+    "ecg_features": [
+      "Q waves in II, III, aVF",
+      "Tall R waves in V1-V2 (posterior changes)",
+      "ST depression V1-V3 (reciprocal to posterior elevation)",
+      "R/S ratio > 1 in V1-V2"
+    ],
+    "clinical_significance": "Posterior extension of inferior MI increases the area at risk and worsens prognosis. Posterior leads (V7-V9) should be obtained to confirm ST elevation in the posterior territory.",
+    "common_associations": [
+      "Right ventricular infarction",
+      "AV block",
+      "Atrial fibrillation"
+    ],
+    "typical_patient": "Patients with RCA disease presenting with acute inferior MI.",
+    "management_hints": [
+      "Posterior leads V7-V9",
+      "Right-sided leads",
+      "Urgent reperfusion",
+      "Monitor for AV block and RV failure"
+    ],
+    "report_template": "ECG changes consistent with inferoposterior myocardial infarction. Posterior and right-sided leads recommended. Urgent clinical correlation required."
+  },
+  "IRBBB": {
+    "code": "IRBBB",
+    "summary": "Incomplete right bundle branch block is a partial conduction delay in the right bundle with QRS duration 110-119ms and rSR' pattern in V1.",
+    "ecg_features": [
+      "QRS duration 110-119ms",
+      "rSR' pattern in V1-V2",
+      "Wide S waves in I, V5-V6",
+      "Minor secondary ST-T changes"
+    ],
+    "clinical_significance": "Incomplete RBBB is often a normal variant, particularly in young individuals and athletes. It may also be seen with atrial septal defect or early right heart strain. Usually benign without additional findings.",
+    "common_associations": [
+      "Atrial septal defect",
+      "Right ventricular volume overload",
+      "Normal variant in young adults",
+      "Pulmonary disease"
+    ],
+    "typical_patient": "Young adults as normal variant, or patients with right heart abnormalities.",
+    "management_hints": [
+      "Usually no treatment required",
+      "Echocardiogram to exclude ASD or structural disease",
+      "Monitor for progression to complete RBBB",
+      "Cardiology referral if new or associated with symptoms"
+    ],
+    "report_template": "Incomplete right bundle branch block. Usually benign; clinical correlation and echocardiogram recommended if clinically indicated."
+  },
+  "ISCAL": {
+    "code": "ISCAL",
+    "summary": "Ischemic ST-T changes in anterolateral leads, including ST depression and T wave inversion in I, aVL, and V4-V6, indicating anterolateral myocardial ischemia.",
+    "ecg_features": [
+      "ST depression in anterolateral leads (I, aVL, V4-V6)",
+      "T wave inversion or flattening anterolateral",
+      "Horizontal or downsloping ST changes",
+      "No Q waves"
+    ],
+    "clinical_significance": "Anterolateral ischemic changes indicate compromised blood supply to the anterior and lateral walls, most commonly from LAD or circumflex territory disease. Requires correlation with symptoms and troponin measurement.",
+    "common_associations": [
+      "Left ventricular hypertrophy with strain",
+      "Digitalis effect",
+      "Tachyarrhythmias",
+      "Heart failure"
+    ],
+    "typical_patient": "Patients with known or suspected coronary artery disease.",
+    "management_hints": [
+      "Serial troponin",
+      "Correlate with symptoms",
+      "Serial ECG",
+      "Cardiology referral",
+      "Risk stratification"
+    ],
+    "report_template": "ST-T changes in anterolateral leads consistent with myocardial ischemia. Clinical correlation and troponin measurement required."
+  },
+  "ISCAN": {
+    "code": "ISCAN",
+    "summary": "Ischemic changes in anterior leads with ST depression or T wave inversion in V1-V4, suggesting anterior myocardial ischemia.",
+    "ecg_features": [
+      "ST depression or T wave inversion in V1-V4",
+      "Anterior lead changes",
+      "No Q waves",
+      "May have deep symmetric T inversion (Wellens)"
+    ],
+    "clinical_significance": "Anterior ischemic changes may represent LAD territory ischemia. Deep symmetric T wave inversion in V1-V4 (Wellens syndrome) indicates critical LAD stenosis requiring urgent intervention.",
+    "common_associations": [
+      "Proximal LAD disease",
+      "Anteroseptal ischemia",
+      "Left ventricular hypertrophy"
+    ],
+    "typical_patient": "Patients with LAD territory disease.",
+    "management_hints": [
+      "Serial troponin",
+      "Continuous monitoring",
+      "Recognize Wellens syndrome",
+      "Urgent cardiology review",
+      "Avoid stress testing in Wellens pattern"
+    ],
+    "report_template": "Anterior ischemic ST-T changes noted. Serial troponin and clinical correlation required."
+  },
+  "ISCAS": {
+    "code": "ISCAS",
+    "summary": "Ischemic changes in anteroseptal leads with ST-T abnormalities in V1-V3, suggesting anteroseptal ischemia.",
+    "ecg_features": [
+      "ST-T changes in V1-V3",
+      "T wave inversion or flattening anteroseptal",
+      "No Q waves",
+      "ST depression horizontal or downsloping"
+    ],
+    "clinical_significance": "Anteroseptal ischemia indicates involvement of the proximal LAD or septal perforator territory. Serial monitoring and troponin testing are required.",
+    "common_associations": [
+      "Anteroseptal MI",
+      "Left bundle branch block",
+      "Left ventricular hypertrophy"
+    ],
+    "typical_patient": "Patients with proximal LAD disease.",
+    "management_hints": [
+      "Serial troponin",
+      "Continuous ECG monitoring",
+      "Cardiology referral",
+      "Risk stratification"
+    ],
+    "report_template": "Anteroseptal ischemic changes noted. Clinical correlation and troponin measurement recommended."
+  },
+  "ISCIL": {
+    "code": "ISCIL",
+    "summary": "Ischemic ST-T changes in inferolateral leads, suggesting inferolateral myocardial ischemia from RCA or LCx territory involvement.",
+    "ecg_features": [
+      "ST depression in II, III, aVF, V5-V6",
+      "T wave inversion inferolateral",
+      "No Q waves",
+      "May have reciprocal anterior changes"
+    ],
+    "clinical_significance": "Inferolateral ischemia suggests multi-vessel disease or dominant vessel involvement. Correlation with symptoms and troponin measurement is essential.",
+    "common_associations": [
+      "Ischemic heart disease",
+      "Left ventricular hypertrophy",
+      "Heart failure"
+    ],
+    "typical_patient": "Patients with multi-vessel coronary artery disease.",
+    "management_hints": [
+      "Serial troponin",
+      "Cardiology review",
+      "Risk stratification",
+      "Antiplatelet therapy if ACS"
+    ],
+    "report_template": "Inferolateral ischemic ST-T changes noted. Clinical correlation and troponin measurement required."
+  },
+  "ISCIN": {
+    "code": "ISCIN",
+    "summary": "Ischemic changes in inferior leads with ST depression or T wave inversion in II, III, and aVF, indicating inferior myocardial ischemia.",
+    "ecg_features": [
+      "ST depression in II, III, aVF",
+      "T wave inversion inferior leads",
+      "No ST elevation",
+      "No Q waves"
+    ],
+    "clinical_significance": "Inferior ischemic changes indicate RCA or LCx territory ischemia. Must be distinguished from acute inferior STEMI (which shows ST elevation). Serial ECG and troponin are required.",
+    "common_associations": [
+      "Inferior MI",
+      "RCA disease",
+      "Left ventricular hypertrophy",
+      "Digitalis effect"
+    ],
+    "typical_patient": "Patients with RCA or LCx disease.",
+    "management_hints": [
+      "Serial troponin and ECG",
+      "Right-sided leads",
+      "Cardiology review",
+      "Risk stratification"
+    ],
+    "report_template": "Inferior ischemic ST-T changes noted. Serial troponin and clinical correlation required."
+  },
+  "ISCLA": {
+    "code": "ISCLA",
+    "summary": "Ischemic changes in lateral leads with ST depression and T wave inversion in I, aVL, V5-V6, indicating lateral myocardial ischemia from circumflex territory disease.",
+    "ecg_features": [
+      "ST depression in I, aVL, V5-V6",
+      "T wave inversion lateral leads",
+      "No Q waves",
+      "Downsloping or horizontal ST changes"
+    ],
+    "clinical_significance": "Lateral ischemia suggests left circumflex or obtuse marginal artery disease. Serial troponin testing and cardiology review are required.",
+    "common_associations": [
+      "Left ventricular hypertrophy",
+      "Digitalis effect",
+      "Heart failure"
+    ],
+    "typical_patient": "Patients with circumflex artery disease.",
+    "management_hints": [
+      "Serial troponin",
+      "Continuous monitoring",
+      "Cardiology referral",
+      "Risk stratification"
+    ],
+    "report_template": "Lateral ischemic ST-T changes noted. Clinical correlation and troponin measurement required."
+  },
+  "ISC_": {
+    "code": "ISC_",
+    "summary": "Non-specific ischemic ST-T changes not localized to a specific territory, suggesting diffuse or non-localizing myocardial ischemia.",
+    "ecg_features": [
+      "Widespread ST depression or T wave changes",
+      "Non-localizing distribution",
+      "No Q waves",
+      "May be diffuse"
+    ],
+    "clinical_significance": "Non-specific ischemic changes require clinical correlation. They may reflect multi-vessel disease, subendocardial ischemia, or be related to non-cardiac causes. Troponin measurement is essential.",
+    "common_associations": [
+      "Multi-vessel coronary disease",
+      "Left ventricular hypertrophy",
+      "Heart failure",
+      "Digitalis effect"
+    ],
+    "typical_patient": "Patients with diffuse coronary artery disease or non-cardiac causes of ST-T changes.",
+    "management_hints": [
+      "Serial troponin",
+      "Continuous ECG monitoring",
+      "Cardiology referral",
+      "Exclude non-cardiac causes"
+    ],
+    "report_template": "Non-specific ischemic ST-T changes present. Clinical correlation, troponin measurement, and cardiology review recommended."
+  },
+  "IVCD": {
+    "code": "IVCD",
+    "summary": "Non-specific intraventricular conduction disturbance with mildly prolonged QRS not meeting criteria for complete bundle branch block.",
+    "ecg_features": [
+      "QRS duration 110-119ms",
+      "Non-specific morphology not meeting LBBB or RBBB criteria",
+      "May have notching or slurring",
+      "Mild secondary ST-T changes"
+    ],
+    "clinical_significance": "Non-specific IVCD may indicate early conduction system disease, myocardial fibrosis, or metabolic disturbance. Less prognostically significant than complete bundle branch block but warrants clinical evaluation.",
+    "common_associations": [
+      "Ischemic heart disease",
+      "Left ventricular hypertrophy",
+      "Cardiomyopathy",
+      "Atrial fibrillation"
+    ],
+    "typical_patient": "Patients with underlying structural heart disease or conduction system abnormalities.",
+    "management_hints": [
+      "Echocardiogram",
+      "Cardiology follow-up",
+      "Monitor for progression",
+      "Treat underlying disease"
+    ],
+    "report_template": "Non-specific intraventricular conduction disturbance noted. Clinical correlation and echocardiogram recommended."
+  },
+  "LAFB": {
+    "code": "LAFB",
+    "summary": "Left anterior fascicular block is characterized by left axis deviation due to delayed activation of the anterosuperior division of the left bundle branch.",
+    "ecg_features": [
+      "Left axis deviation (-45° to -90°)",
+      "Small Q waves in I, aVL",
+      "Small R waves in II, III, aVF",
+      "Normal QRS duration or mildly prolonged",
+      "rS pattern in inferior leads"
+    ],
+    "clinical_significance": "Isolated LAFB is often benign but may be associated with ischemic or structural heart disease. When combined with RBBB (bifascicular block), risk of complete heart block increases, especially if PR interval is also prolonged (trifascicular block).",
+    "common_associations": [
+      "Right bundle branch block (bifascicular)",
+      "Left ventricular hypertrophy",
+      "Ischemic heart disease",
+      "Atrial fibrillation"
+    ],
+    "typical_patient": "Older adults with hypertension, ischemic heart disease, or idiopathic conduction disease.",
+    "management_hints": [
+      "Evaluate for underlying structural heart disease",
+      "Echocardiogram",
+      "Monitor for progression especially if RBBB present",
+      "Cardiology referral for bifascicular block with symptoms"
+    ],
+    "report_template": "Left anterior fascicular block with left axis deviation. Clinical correlation and echocardiogram recommended."
+  },
+  "LAO/LAE": {
+    "code": "LAO/LAE",
+    "summary": "Left atrial overload or enlargement indicated by prolonged or bifid P waves in limb leads (P mitrale) or negative terminal deflection in V1.",
+    "ecg_features": [
+      "P wave duration > 120ms",
+      "Bifid or notched P waves in limb leads (P mitrale)",
+      "Negative terminal deflection of P wave in V1 > 1mm deep and 40ms wide",
+      "Prolonged PR interval possible"
+    ],
+    "clinical_significance": "Left atrial enlargement is associated with atrial fibrillation risk, mitral valve disease, left ventricular dysfunction, and hypertension. Echocardiogram should be performed to assess LA size and underlying cause.",
+    "common_associations": [
+      "Mitral valve disease",
+      "Left ventricular hypertrophy",
+      "Hypertension",
+      "Heart failure",
+      "Atrial fibrillation"
+    ],
+    "typical_patient": "Patients with mitral valve disease, hypertension, or heart failure.",
+    "management_hints": [
+      "Echocardiogram to assess LA size and mitral valve",
+      "Blood pressure control",
+      "Monitor for atrial fibrillation",
+      "Treat underlying cause"
+    ],
+    "report_template": "P wave morphology consistent with left atrial overload or enlargement. Echocardiogram recommended."
+  },
+  "LMI": {
+    "code": "LMI",
+    "summary": "Lateral myocardial infarction involves ischemic injury to the lateral wall of the left ventricle, typically from circumflex artery or obtuse marginal branch occlusion.",
+    "ecg_features": [
+      "Q waves in I, aVL, V5-V6",
+      "ST changes in lateral leads",
+      "T wave inversion lateral leads",
+      "May be isolated or part of larger MI"
+    ],
+    "clinical_significance": "Lateral MI may be electrically silent (circumflex territory is less well represented on standard ECG). Normal ECG does not exclude lateral MI. Posterior leads may be helpful.",
+    "common_associations": [
+      "Inferolateral MI",
+      "Atrial fibrillation",
+      "Left ventricular hypertrophy"
+    ],
+    "typical_patient": "Patients with circumflex artery disease.",
+    "management_hints": [
+      "Serial troponin",
+      "Echocardiogram",
+      "Cardiology referral",
+      "Reperfusion if acute"
+    ],
+    "report_template": "ECG changes consistent with lateral myocardial infarction. Clinical and laboratory correlation required."
+  },
+  "LNGQT": {
+    "code": "LNGQT",
+    "summary": "Prolonged QT interval with QTc exceeding 450ms in men or 470ms in women, predisposing to potentially fatal ventricular arrhythmias including torsades de pointes.",
+    "ecg_features": [
+      "QTc > 450ms (men) or > 470ms (women)",
+      "Prolonged repolarization phase",
+      "May have T wave abnormalities",
+      "U waves may be prominent"
+    ],
+    "clinical_significance": "Long QT syndrome significantly increases risk of torsades de pointes and sudden cardiac death. Causes include congenital LQTS, electrolyte disturbances (hypokalemia, hypomagnesemia), and numerous drugs (antiarrhythmics, antibiotics, antipsychotics). Urgent review of medications and electrolytes is required.",
+    "common_associations": [
+      "Electrolyte disturbances",
+      "Drug-induced QT prolongation",
+      "Digitalis effect",
+      "Ischemic heart disease",
+      "Congenital LQTS"
+    ],
+    "typical_patient": "Patients on QT-prolonging medications, those with electrolyte disturbances, or individuals with congenital LQTS (often younger).",
+    "management_hints": [
+      "Urgent electrolyte correction (K+ > 4.5, Mg++ > 2)",
+      "Withdraw all QT-prolonging drugs",
+      "Continuous monitoring if QTc > 500ms",
+      "Genetic testing if congenital LQTS suspected",
+      "ICD consideration for high-risk congenital LQTS",
+      "Cardiology referral"
+    ],
+    "report_template": "Prolonged QTc interval noted. Electrolyte panel, medication review, and cardiology referral required urgently."
+  },
+  "LOWT": {
+    "code": "LOWT",
+    "summary": "Low amplitude T waves, a non-specific finding that may reflect electrolyte disturbance, ischemia, pericardial effusion, or be a normal variant.",
+    "ecg_features": [
+      "Reduced T wave amplitude",
+      "T waves < 1mm in limb leads or < 2mm in precordial leads",
+      "May be diffuse or regional",
+      "Non-specific pattern"
+    ],
+    "clinical_significance": "Low T wave amplitude is non-specific and requires clinical correlation. Hypokalemia, hypothyroidism, and pericardial effusion are common causes. In the ischemic context, it may represent a resolving or early ischemic event.",
+    "common_associations": [
+      "Hypokalemia",
+      "Hypothyroidism",
+      "Pericardial effusion",
+      "Ischemia"
+    ],
+    "typical_patient": "Wide range; depends on clinical context.",
+    "management_hints": [
+      "Check electrolytes",
+      "Thyroid function tests if clinically indicated",
+      "Echocardiogram if pericardial effusion suspected",
+      "Correlate with clinical symptoms"
+    ],
+    "report_template": "Low amplitude T waves noted. Non-specific finding; electrolyte check and clinical correlation recommended."
+  },
+  "LPFB": {
+    "code": "LPFB",
+    "summary": "Left posterior fascicular block is characterized by right axis deviation due to delayed activation of the posteroinferior division of the left bundle branch.",
+    "ecg_features": [
+      "Right axis deviation (+90° to +180°)",
+      "Small R waves in I, aVL",
+      "Small Q waves in II, III, aVF",
+      "Normal or mildly prolonged QRS",
+      "Diagnosis of exclusion (rule out RVH, COPD, lateral MI)"
+    ],
+    "clinical_significance": "LPFB is less common than LAFB and usually indicates significant heart disease. It must be distinguished from right ventricular hypertrophy and lateral MI. Combined with RBBB (bifascicular block) is a significant finding.",
+    "common_associations": [
+      "Right bundle branch block",
+      "Ischemic heart disease",
+      "Right ventricular hypertrophy"
+    ],
+    "typical_patient": "Patients with structural heart disease; less common than LAFB.",
+    "management_hints": [
+      "Exclude RVH and lateral MI",
+      "Echocardiogram",
+      "Cardiology referral",
+      "Monitor for progression"
+    ],
+    "report_template": "Right axis deviation consistent with possible left posterior fascicular block. Right ventricular hypertrophy and lateral MI must be excluded clinically."
+  },
+  "LPR": {
+    "code": "LPR",
+    "summary": "Prolonged PR interval exceeding 200ms indicating delayed atrioventricular conduction, consistent with first degree AV block.",
+    "ecg_features": [
+      "PR interval > 200ms",
+      "All P waves conduct to QRS",
+      "Regular P-QRS relationship",
+      "Normal QRS morphology unless combined with bundle branch block"
+    ],
+    "clinical_significance": "Prolonged PR interval is usually benign but may progress to higher-degree block. It is associated with increased risk of atrial fibrillation in long-term follow-up. Review of AV-nodal blocking medications is essential.",
+    "common_associations": [
+      "Left anterior fascicular block",
+      "Right bundle branch block",
+      "Digitalis effect",
+      "Left ventricular hypertrophy"
+    ],
+    "typical_patient": "Older adults, athletes, or patients on AV-nodal blocking medications.",
+    "management_hints": [
+      "Review AV-nodal blocking medications",
+      "Check electrolytes",
+      "Serial ECG",
+      "Cardiology referral if symptomatic or progressing"
+    ],
+    "report_template": "Prolonged PR interval consistent with first degree AV block. Medication review and clinical correlation recommended."
+  },
+  "LVH": {
+    "code": "LVH",
+    "summary": "Left ventricular hypertrophy diagnosed by voltage criteria with or without associated strain pattern, most commonly from chronic pressure overload due to hypertension or aortic stenosis.",
+    "ecg_features": [
+      "Sokolow-Lyon index > 35mm (SV1 + RV5 or RV6)",
+      "R in aVL > 11mm",
+      "Strain pattern: ST depression and T inversion in lateral leads",
+      "Left axis deviation",
+      "Left atrial enlargement"
+    ],
+    "clinical_significance": "ECG LVH with strain is associated with increased cardiovascular morbidity and mortality. It indicates chronic pressure overload and warrants aggressive risk factor modification. Echocardiogram provides more accurate assessment of true LV mass.",
+    "common_associations": [
+      "Hypertension",
+      "Aortic stenosis",
+      "Left atrial enlargement",
+      "Atrial fibrillation",
+      "Ischemic heart disease"
+    ],
+    "typical_patient": "Patients with long-standing hypertension, aortic stenosis, or hypertrophic cardiomyopathy.",
+    "management_hints": [
+      "Echocardiogram to confirm and quantify LVH",
+      "Aggressive blood pressure control",
+      "Treat underlying valvular disease",
+      "Cardiovascular risk factor modification",
+      "Regular cardiology follow-up"
+    ],
+    "report_template": "Voltage criteria for left ventricular hypertrophy with associated strain pattern. Echocardiogram and blood pressure assessment recommended."
+  },
+  "LVOLT": {
+    "code": "LVOLT",
+    "summary": "Low QRS voltages in the frontal and horizontal leads, defined as QRS amplitude < 5mm in all limb leads and < 10mm in all precordial leads.",
+    "ecg_features": [
+      "QRS amplitude < 5mm in all limb leads",
+      "QRS amplitude < 10mm in all precordial leads",
+      "Diffuse low voltage",
+      "May have other associated findings"
+    ],
+    "clinical_significance": "Low voltage has multiple causes including pericardial effusion (most urgent), cardiac tamponade, obesity, COPD with hyperinflation, hypothyroidism, infiltrative cardiomyopathy (amyloidosis), and anasarca. Pericardial effusion with tamponade physiology is a medical emergency.",
+    "common_associations": [
+      "Pericardial effusion",
+      "Cardiac tamponade",
+      "COPD",
+      "Obesity",
+      "Cardiac amyloidosis",
+      "Hypothyroidism"
+    ],
+    "typical_patient": "Varies by cause; elderly with amyloidosis, patients with known malignancy (effusion), or obese/emphysematous patients.",
+    "management_hints": [
+      "Urgent echocardiogram to exclude pericardial effusion and tamponade",
+      "Thyroid function tests",
+      "Clinical assessment for COPD, obesity",
+      "Cardiology referral",
+      "Consider cardiac amyloidosis if appropriate clinical features"
+    ],
+    "report_template": "Low QRS voltages noted. Urgent echocardiogram to exclude pericardial effusion recommended."
+  },
+  "NDT": {
+    "code": "NDT",
+    "summary": "Non-diagnostic T wave abnormalities that cannot be ascribed to a specific pathological process, representing a non-specific ECG finding.",
+    "ecg_features": [
+      "T wave changes not meeting criteria for specific diagnosis",
+      "May include flattening, low amplitude, or borderline inversion",
+      "Non-specific distribution",
+      "No other major ECG abnormalities"
+    ],
+    "clinical_significance": "Non-diagnostic T abnormalities are a common, non-specific finding requiring clinical correlation. In symptomatic patients, they may represent early ischemia or be drug/metabolic in origin. In asymptomatic patients, they are often incidental.",
+    "common_associations": [
+      "Non-specific ischemic changes",
+      "Drug effects",
+      "Electrolyte disturbances",
+      "Normal variant"
+    ],
+    "typical_patient": "Wide range; often incidental finding.",
+    "management_hints": [
+      "Correlate with clinical symptoms",
+      "Check electrolytes and medications",
+      "Serial ECG if symptomatic",
+      "Cardiology referral if persistent or worsening"
+    ],
+    "report_template": "Non-diagnostic T wave abnormalities noted. Clinical correlation recommended."
+  },
+  "NORM": {
+    "code": "NORM",
+    "summary": "Normal ECG with normal sinus rhythm, normal intervals, normal axis, normal QRS morphology, and normal repolarization. No significant abnormality detected.",
+    "ecg_features": [
+      "Normal sinus rhythm",
+      "PR interval 120-200ms",
+      "QRS duration < 120ms",
+      "Normal QRS axis (-30° to +90°)",
+      "Normal repolarization",
+      "No significant ST-T changes",
+      "No Q waves"
+    ],
+    "clinical_significance": "A normal ECG provides important reassurance but does not exclude all cardiac conditions. Conditions such as intermittent arrhythmias, Wolff-Parkinson-White syndrome, and early cardiomyopathy may not always be apparent on a resting ECG.",
+    "common_associations": [],
+    "typical_patient": "Any age; represents the expected finding in a healthy individual without cardiac disease.",
+    "management_hints": [
+      "No specific action required",
+      "Routine follow-up as clinically indicated",
+      "Repeat ECG if symptoms develop",
+      "Consider Holter monitor if intermittent symptoms"
+    ],
+    "report_template": "Normal ECG. No significant abnormality detected."
+  },
+  "NST_": {
+    "code": "NST_",
+    "summary": "Non-specific ST changes that do not meet criteria for a specific diagnosis, representing a non-specific ECG finding requiring clinical correlation.",
+    "ecg_features": [
+      "Minor ST segment deviation",
+      "Not meeting criteria for ischemia or injury",
+      "May be diffuse or regional",
+      "T wave changes may accompany"
+    ],
+    "clinical_significance": "Non-specific ST changes are common and may be caused by a wide variety of conditions including hyperventilation, positional changes, medications, electrolyte disturbances, or be a normal variant. In the appropriate clinical context, ischemia must be excluded.",
+    "common_associations": [
+      "Left ventricular hypertrophy",
+      "Digitalis effect",
+      "Electrolyte disturbances",
+      "Drug effects"
+    ],
+    "typical_patient": "Wide range; depends on clinical context.",
+    "management_hints": [
+      "Correlate with clinical symptoms",
+      "Check electrolytes and medications",
+      "Serial ECG",
+      "Troponin if ischemia suspected"
+    ],
+    "report_template": "Non-specific ST changes noted. Clinical correlation recommended."
+  },
+  "NT_": {
+    "code": "NT_",
+    "summary": "Non-specific T wave changes including flattening or minor inversion that do not meet criteria for a specific diagnosis.",
+    "ecg_features": [
+      "T wave flattening or minor inversion",
+      "Non-specific distribution",
+      "No significant ST segment changes",
+      "Non-diagnostic pattern"
+    ],
+    "clinical_significance": "Non-specific T wave changes are very common and usually non-diagnostic. They may be related to electrolyte disturbances, medications, hyperventilation, or be a normal variant. Ischemia should be excluded in symptomatic patients.",
+    "common_associations": [
+      "Electrolyte disturbances",
+      "Drug effects",
+      "Normal variant",
+      "Ischemia"
+    ],
+    "typical_patient": "Wide range; often incidental.",
+    "management_hints": [
+      "Correlate with symptoms",
+      "Check electrolytes",
+      "Serial ECG if concerned",
+      "Troponin if ischemia suspected"
+    ],
+    "report_template": "Non-specific T wave changes noted. Clinical correlation recommended."
+  },
+  "PAC": {
+    "code": "PAC",
+    "summary": "Atrial premature complexes are ectopic beats originating from the atria before the next expected sinus beat, generally benign but may trigger atrial arrhythmias.",
+    "ecg_features": [
+      "Premature P waves with abnormal morphology",
+      "Narrow QRS unless aberrantly conducted",
+      "Non-compensatory pause",
+      "P wave may be hidden in preceding T wave",
+      "May occur in bigeminy or trigeminy"
+    ],
+    "clinical_significance": "Isolated PACs are generally benign in structurally normal hearts. Frequent PACs may trigger atrial fibrillation or flutter, particularly in susceptible patients. Very frequent PACs (>10,000/day) may rarely cause tachycardia-mediated cardiomyopathy.",
+    "common_associations": [
+      "Atrial fibrillation risk",
+      "Left atrial enlargement",
+      "Caffeine or stimulant use",
+      "Stress or fatigue"
+    ],
+    "typical_patient": "Common in all ages; usually benign. More concerning if frequent or associated with symptoms.",
+    "management_hints": [
+      "Reduce caffeine and stimulants",
+      "Reassurance if asymptomatic and structurally normal heart",
+      "Holter monitor to quantify burden",
+      "Echocardiogram",
+      "Cardiology referral if symptomatic or frequent"
+    ],
+    "report_template": "Atrial premature complexes noted. Generally benign; clinical correlation and lifestyle modification recommended."
+  },
+  "PACE": {
+    "code": "PACE",
+    "summary": "Normal functioning artificial pacemaker rhythm with appropriate pacing spikes, capture, and sensing, indicating properly functioning cardiac pacing device.",
+    "ecg_features": [
+      "Visible pacemaker spikes",
+      "Wide QRS complexes following pacing spikes (ventricular pacing)",
+      "LBBB morphology with right ventricular pacing",
+      "May have underlying rhythm in demand pacing mode",
+      "AV sequential pacing shows both atrial and ventricular spikes"
+    ],
+    "clinical_significance": "Pacemaker ECG interpretation requires knowledge of the pacing mode. Normal pacemaker function must be confirmed. Failure to pace, failure to capture, and failure to sense are important complications to identify.",
+    "common_associations": [
+      "Complete heart block",
+      "Sick sinus syndrome",
+      "Atrial fibrillation with slow ventricular response",
+      "Bifascicular block"
+    ],
+    "typical_patient": "Patients with symptomatic bradyarrhythmias, high-degree AV block, or sick sinus syndrome.",
+    "management_hints": [
+      "Verify pacing mode and programmed parameters",
+      "Assess for pacemaker malfunction (failure to pace, capture, sense)",
+      "Device check with electrophysiologist",
+      "Check pacemaker pocket site",
+      "Battery status assessment"
+    ],
+    "report_template": "Normal functioning artificial pacemaker rhythm. Device check recommended at scheduled interval."
+  },
+  "PMI": {
+    "code": "PMI",
+    "summary": "Posterior myocardial infarction involving the posterior wall of the left ventricle, manifested as tall R waves and ST depression in V1-V2 (reciprocal changes to posterior ST elevation).",
+    "ecg_features": [
+      "Tall R waves in V1-V2 (R > S in V1)",
+      "ST depression in V1-V2 (reciprocal)",
+      "Upright T waves in V1-V2",
+      "Posterior leads V7-V9 show ST elevation",
+      "Often associated with inferior MI"
+    ],
+    "clinical_significance": "Posterior MI is frequently missed on standard 12-lead ECG. Posterior leads (V7-V9) are essential for diagnosis. It is often associated with inferior or lateral MI. Urgent reperfusion therapy is required in acute setting.",
+    "common_associations": [
+      "Inferior MI",
+      "Lateral MI",
+      "RCA or LCx occlusion"
+    ],
+    "typical_patient": "Patients with acute coronary syndrome, particularly those with inferior MI.",
+    "management_hints": [
+      "Obtain posterior leads V7-V9",
+      "Urgent reperfusion if acute",
+      "Right-sided leads to exclude RV infarction",
+      "Serial ECG and troponin"
+    ],
+    "report_template": "ECG changes consistent with posterior myocardial infarction. Posterior leads V7-V9 recommended. Urgent clinical correlation required."
+  },
+  "PRC(S)": {
+    "code": "PRC(S)",
+    "summary": "Premature complex(es) of unspecified origin, encompassing both atrial and ventricular ectopic beats.",
+    "ecg_features": [
+      "Premature beats with or without compensatory pause",
+      "May be narrow (supraventricular) or wide (ventricular)",
+      "Occur before the next expected sinus beat",
+      "Variable morphology"
+    ],
+    "clinical_significance": "Premature complexes are common and usually benign. Their significance depends on frequency, morphology, and underlying structural heart disease. Frequent PVCs with underlying structural heart disease warrant further evaluation.",
+    "common_associations": [
+      "Ischemic heart disease",
+      "Left ventricular hypertrophy",
+      "Electrolyte disturbances",
+      "Drug effects"
+    ],
+    "typical_patient": "Common in all ages; clinical significance varies.",
+    "management_hints": [
+      "Determine type (atrial vs ventricular)",
+      "Check electrolytes",
+      "Holter monitor",
+      "Echocardiogram",
+      "Cardiology referral if frequent or symptomatic"
+    ],
+    "report_template": "Premature complex(es) noted. Clinical correlation and electrolyte check recommended."
+  },
+  "PSVT": {
+    "code": "PSVT",
+    "summary": "Paroxysmal supraventricular tachycardia is a sudden-onset, regular, narrow complex tachycardia typically at 150-250 bpm, most commonly due to AV nodal re-entry (AVNRT) or AV re-entry (AVRT).",
+    "ecg_features": [
+      "Regular narrow complex tachycardia at 150-250 bpm",
+      "Abrupt onset and termination",
+      "P waves may be hidden, retrograde, or absent",
+      "No pre-excitation in most cases",
+      "ST depression may occur due to rate"
+    ],
+    "clinical_significance": "PSVT is usually not life-threatening in structurally normal hearts but causes significant symptoms. It can be terminated with vagal maneuvers or adenosine. Recurrent PSVT may require catheter ablation for definitive cure.",
+    "common_associations": [
+      "Wolff-Parkinson-White syndrome (if AVRT)",
+      "Atrial flutter",
+      "Structural heart disease"
+    ],
+    "typical_patient": "Young to middle-aged adults, often without structural heart disease. WPW-associated AVRT may present at any age.",
+    "management_hints": [
+      "Vagal maneuvers (Valsalva, carotid massage)",
+      "Adenosine 6-12mg IV if vagal maneuvers fail",
+      "Synchronized cardioversion if hemodynamically unstable",
+      "Beta-blocker or calcium channel blocker for prevention",
+      "Electrophysiology study and catheter ablation for recurrent episodes",
+      "12-lead ECG during sinus rhythm to assess for pre-excitation"
+    ],
+    "report_template": "Paroxysmal supraventricular tachycardia present. Vagal maneuvers or adenosine recommended if hemodynamically stable."
+  },
+  "PVC": {
+    "code": "PVC",
+    "summary": "Ventricular premature complex is an ectopic beat originating from the ventricles, characterized by wide bizarre QRS morphology with compensatory pause.",
+    "ecg_features": [
+      "Wide QRS > 120ms",
+      "Bizarre, abnormal QRS morphology",
+      "Full compensatory pause",
+      "Retrograde P wave or AV dissociation",
+      "Discordant ST-T changes",
+      "Uniform or multiform morphology"
+    ],
+    "clinical_significance": "Isolated PVCs are usually benign in structurally normal hearts. Frequent PVCs (>10% of total beats) may cause tachycardia-mediated cardiomyopathy. PVCs in the setting of structural heart disease or post-MI carry prognostic significance.",
+    "common_associations": [
+      "Ischemic heart disease",
+      "Left ventricular hypertrophy",
+      "Hypokalemia",
+      "Digitalis toxicity",
+      "Cardiomyopathy"
+    ],
+    "typical_patient": "Common in all ages; more significant in those with structural heart disease.",
+    "management_hints": [
+      "Check electrolytes (especially K+ and Mg2+)",
+      "Review medications",
+      "Holter monitor to quantify burden",
+      "Echocardiogram to exclude structural disease",
+      "Cardiology referral if frequent, symptomatic, or associated with structural disease",
+      "Beta-blocker or antiarrhythmic if treatment required"
+    ],
+    "report_template": "Ventricular premature complex(es) noted. Electrolyte check and clinical correlation recommended."
+  },
+  "QWAVE": {
+    "code": "QWAVE",
+    "summary": "Pathological Q waves indicating prior myocardial necrosis, defined as duration > 40ms or amplitude > 25% of the R wave in two contiguous leads.",
+    "ecg_features": [
+      "Q wave duration > 40ms",
+      "Q wave amplitude > 25% of R wave",
+      "Present in two or more contiguous leads",
+      "May be associated with T wave inversion"
+    ],
+    "clinical_significance": "Pathological Q waves indicate prior transmural myocardial infarction. Their territory guides localization of the infarcted area. New Q waves suggest recent MI. Septal Q waves in lateral leads are normal and should not be mistaken for infarct Q waves.",
+    "common_associations": [
+      "Myocardial infarction (various territories)",
+      "Left bundle branch block",
+      "Wolff-Parkinson-White syndrome",
+      "Hypertrophic cardiomyopathy"
+    ],
+    "typical_patient": "Patients with prior history of myocardial infarction.",
+    "management_hints": [
+      "Correlate with history of MI",
+      "Serial ECG comparison",
+      "Echocardiogram to assess wall motion",
+      "Cardiology referral",
+      "Optimize secondary prevention therapy"
+    ],
+    "report_template": "Pathological Q waves noted consistent with prior myocardial infarction. Clinical correlation and echocardiogram recommended."
+  },
+  "RAO/RAE": {
+    "code": "RAO/RAE",
+    "summary": "Right atrial overload or enlargement indicated by peaked P waves (P pulmonale) in inferior leads, reflecting increased right atrial pressure or volume.",
+    "ecg_features": [
+      "Peaked P waves > 2.5mm in II, III, aVF (P pulmonale)",
+      "P wave duration normal (< 120ms)",
+      "Right axis deviation may coexist",
+      "May be associated with RVH"
+    ],
+    "clinical_significance": "Right atrial enlargement suggests chronic pulmonary disease, pulmonary hypertension, tricuspid valve disease, or congenital heart disease. Echocardiogram is essential to assess right heart size and function.",
+    "common_associations": [
+      "Right ventricular hypertrophy",
+      "Pulmonary hypertension",
+      "COPD",
+      "Tricuspid valve disease",
+      "Congenital heart disease"
+    ],
+    "typical_patient": "Patients with chronic lung disease, pulmonary hypertension, or right-sided valvular heart disease.",
+    "management_hints": [
+      "Echocardiogram to assess right heart",
+      "Pulmonary function tests",
+      "Right heart catheterization if pulmonary hypertension suspected",
+      "Treat underlying cause"
+    ],
+    "report_template": "P wave morphology consistent with right atrial overload or enlargement. Echocardiogram and pulmonary evaluation recommended."
+  },
+  "RVH": {
+    "code": "RVH",
+    "summary": "Right ventricular hypertrophy characterized by right axis deviation, tall R waves in V1, and deep S waves in lateral leads, resulting from chronic right ventricular pressure overload.",
+    "ecg_features": [
+      "Right axis deviation (> +90°)",
+      "R > S in V1 (R/S ratio > 1)",
+      "Deep S waves in V5-V6",
+      "ST depression and T inversion in V1-V3 (right ventricular strain)",
+      "Right atrial enlargement often coexists"
+    ],
+    "clinical_significance": "RVH indicates significant right heart pressure overload, most commonly from pulmonary hypertension or chronic lung disease. It is associated with increased morbidity and mortality. Echocardiogram and cardiopulmonary evaluation are essential.",
+    "common_associations": [
+      "Pulmonary hypertension",
+      "COPD",
+      "Pulmonary embolism",
+      "Mitral stenosis",
+      "Congenital heart disease",
+      "Right atrial enlargement"
+    ],
+    "typical_patient": "Patients with chronic pulmonary disease, pulmonary hypertension, or congenital heart disease.",
+    "management_hints": [
+      "Echocardiogram with right heart assessment",
+      "Pulmonary function tests",
+      "CT pulmonary angiography to exclude PE",
+      "Right heart catheterization if indicated",
+      "Treat underlying cause",
+      "Cardiology or pulmonology referral"
+    ],
+    "report_template": "ECG features consistent with right ventricular hypertrophy. Echocardiogram and pulmonary evaluation recommended."
+  },
+  "SARRH": {
+    "code": "SARRH",
+    "summary": "Sinus arrhythmia is a normal physiological variation in heart rate associated with respiration, accelerating with inspiration and decelerating with expiration.",
+    "ecg_features": [
+      "Irregular RR intervals varying with respiration",
+      "Normal P wave morphology and axis",
+      "Normal PR interval",
+      "Normal QRS morphology",
+      "Rate variation > 10% between fastest and slowest rates"
+    ],
+    "clinical_significance": "Sinus arrhythmia is a normal physiological finding, particularly prominent in young individuals and athletes with high vagal tone. It requires no treatment and carries an excellent prognosis.",
+    "common_associations": [
+      "Young age",
+      "Athletic conditioning",
+      "High vagal tone",
+      "Normal variant"
+    ],
+    "typical_patient": "Young adults and athletes; may diminish with age.",
+    "management_hints": [
+      "Reassurance",
+      "No treatment required",
+      "Differentiate from pathological arrhythmias if uncertain"
+    ],
+    "report_template": "Sinus arrhythmia present. Normal physiological variant. No action required."
+  },
+  "SBRAD": {
+    "code": "SBRAD",
+    "summary": "Sinus bradycardia with heart rate less than 60 bpm arising from the sinoatrial node, which may be physiological or pathological depending on the clinical context.",
+    "ecg_features": [
+      "Regular sinus rhythm with rate < 60 bpm",
+      "Normal P wave morphology and axis",
+      "Normal PR interval",
+      "Normal QRS morphology",
+      "Normal repolarization"
+    ],
+    "clinical_significance": "Sinus bradycardia is physiological in athletes and during sleep. Pathological causes include sick sinus syndrome, inferior MI, hypothyroidism, increased intracranial pressure, and medication effects (beta-blockers, calcium channel blockers, digoxin). Symptomatic bradycardia requires urgent evaluation.",
+    "common_associations": [
+      "Athletic heart",
+      "Beta-blocker therapy",
+      "Digoxin effect",
+      "Hypothyroidism",
+      "Inferior MI",
+      "Sick sinus syndrome"
+    ],
+    "typical_patient": "Athletes, well-trained individuals, or patients on negative chronotropic medications. Pathological in elderly with sick sinus syndrome.",
+    "management_hints": [
+      "Review medications (beta-blockers, digoxin, CCBs)",
+      "Thyroid function tests",
+      "Assess for symptoms (syncope, presyncope, fatigue)",
+      "Atropine for symptomatic bradycardia",
+      "Pacemaker if symptomatic sick sinus syndrome",
+      "Holter monitor if intermittent"
+    ],
+    "report_template": "Sinus bradycardia present. Clinical correlation recommended; investigate for underlying cause if symptomatic."
+  },
+  "SEHYP": {
+    "code": "SEHYP",
+    "summary": "Septal hypertrophy suggested by deep but narrow Q waves in lateral leads, which may indicate hypertrophic cardiomyopathy or represent a normal septal activation pattern.",
+    "ecg_features": [
+      "Deep narrow Q waves in I, aVL, V4-V6",
+      "Q wave duration < 40ms (narrow)",
+      "Q wave amplitude may be large",
+      "May have left ventricular hypertrophy criteria",
+      "Normal PR interval"
+    ],
+    "clinical_significance": "Septal Q waves in lateral leads can indicate septal hypertrophy, particularly in the context of hypertrophic cardiomyopathy (HCM). They must be distinguished from pathological Q waves of infarction (broader). Echocardiogram is essential for diagnosis.",
+    "common_associations": [
+      "Hypertrophic cardiomyopathy",
+      "Left ventricular hypertrophy",
+      "Normal septal activation variant"
+    ],
+    "typical_patient": "Young adults with HCM or older patients with hypertensive septal hypertrophy.",
+    "management_hints": [
+      "Echocardiogram to assess septal thickness and LV outflow",
+      "Family history for HCM",
+      "Genetic testing if HCM suspected",
+      "Cardiology referral",
+      "Avoid intense competitive sports until HCM excluded"
+    ],
+    "report_template": "Deep narrow Q waves in lateral leads suggesting possible septal hypertrophy. Echocardiogram recommended to exclude hypertrophic cardiomyopathy."
+  },
+  "SR": {
+    "code": "SR",
+    "summary": "Normal sinus rhythm with heart rate 60-100 bpm, regular RR intervals, and P waves originating from the sinoatrial node preceding each QRS complex.",
+    "ecg_features": [
+      "Regular rhythm at 60-100 bpm",
+      "Normal P wave axis (0° to +75°)",
+      "Positive P waves in I, II, aVF",
+      "Negative P waves in aVR",
+      "Consistent PR interval 120-200ms",
+      "Normal QRS morphology"
+    ],
+    "clinical_significance": "Sinus rhythm confirms normal sinoatrial node function and atrioventricular conduction. It is the expected normal rhythm and provides a baseline against which other abnormalities are assessed.",
+    "common_associations": [],
+    "typical_patient": "Normal finding in any healthy individual.",
+    "management_hints": [
+      "No specific action required for sinus rhythm itself",
+      "Assess other ECG parameters for abnormalities"
+    ],
+    "report_template": "Normal sinus rhythm. Rate and rhythm are regular."
+  },
+  "STACH": {
+    "code": "STACH",
+    "summary": "Sinus tachycardia with heart rate exceeding 100 bpm, arising from the sinoatrial node as a physiological response to increased sympathetic tone or pathological stressor.",
+    "ecg_features": [
+      "Regular sinus rhythm with rate > 100 bpm",
+      "Normal P wave morphology and axis",
+      "Normal PR interval (may shorten at high rates)",
+      "Normal QRS morphology",
+      "May have minor non-specific ST-T changes"
+    ],
+    "clinical_significance": "Sinus tachycardia is always secondary to an underlying cause and rarely requires treatment of the rhythm itself. Common causes include fever, pain, hypovolemia, anemia, pulmonary embolism, thyrotoxicosis, and heart failure. Identifying and treating the underlying cause is paramount.",
+    "common_associations": [
+      "Fever",
+      "Hypovolemia",
+      "Pulmonary embolism",
+      "Heart failure",
+      "Thyrotoxicosis",
+      "Anemia",
+      "Pain"
+    ],
+    "typical_patient": "Any patient under physiological or pathological stress. Rate typically proportional to the degree of stress.",
+    "management_hints": [
+      "Identify and treat underlying cause",
+      "Do NOT treat the tachycardia itself without addressing the cause",
+      "Pulmonary embolism must be excluded if rate is persistent",
+      "Thyroid function tests",
+      "Check for infection, pain, bleeding"
+    ],
+    "report_template": "Sinus tachycardia present. Investigation for underlying cause required."
+  },
+  "STD_": {
+    "code": "STD_",
+    "summary": "Non-specific ST depression not meeting criteria for a specific diagnosis, requiring clinical correlation to determine significance.",
+    "ecg_features": [
+      "ST segment depression",
+      "Less than 1mm in most leads",
+      "Non-specific distribution",
+      "Horizontal or downsloping pattern",
+      "May be diffuse"
+    ],
+    "clinical_significance": "Non-specific ST depression is a common ECG finding with a broad differential. In symptomatic patients it may represent ischemia. Other causes include LVH with strain, digitalis effect, hypokalemia, and tachycardia. Clinical context is essential for interpretation.",
+    "common_associations": [
+      "Left ventricular hypertrophy",
+      "Digitalis effect",
+      "Hypokalemia",
+      "Tachyarrhythmias",
+      "Ischemia"
+    ],
+    "typical_patient": "Wide range; depends on clinical context.",
+    "management_hints": [
+      "Correlate with clinical symptoms",
+      "Check electrolytes",
+      "Review medications",
+      "Serial ECG",
+      "Troponin if ischemia suspected"
+    ],
+    "report_template": "Non-specific ST depression noted. Clinical correlation and electrolyte check recommended."
+  },
+  "STE_": {
+    "code": "STE_",
+    "summary": "Non-specific ST elevation not localizing to a STEMI territory, which may represent early repolarization, pericarditis, or other non-ischemic causes.",
+    "ecg_features": [
+      "ST elevation < 2mm",
+      "Concave or saddle-shaped morphology",
+      "May be present in multiple leads",
+      "Not meeting STEMI criteria",
+      "No reciprocal depression (distinguishes from STEMI)"
+    ],
+    "clinical_significance": "Non-specific ST elevation must be carefully distinguished from acute STEMI. Early repolarization variant is common in young males. Pericarditis shows diffuse ST elevation with PR depression. Any new ST elevation with chest pain should be urgently evaluated.",
+    "common_associations": [
+      "Early repolarization variant",
+      "Pericarditis",
+      "Brugada syndrome (V1-V2)",
+      "Hypothermia (J waves)"
+    ],
+    "typical_patient": "Young males for early repolarization; any age for pericarditis.",
+    "management_hints": [
+      "Urgent clinical correlation to exclude STEMI",
+      "12-lead ECG with right-sided leads",
+      "Serial ECG",
+      "Troponin measurement",
+      "Consider pericarditis if diffuse with PR depression",
+      "Cardiology referral if uncertain"
+    ],
+    "report_template": "Non-specific ST elevation noted. Urgent clinical correlation to exclude acute MI required."
+  },
+  "SVARR": {
+    "code": "SVARR",
+    "summary": "Supraventricular arrhythmia of unspecified type originating above the Bundle of His, encompassing atrial and junctional arrhythmias.",
+    "ecg_features": [
+      "Narrow QRS complex (< 120ms) unless aberrantly conducted",
+      "Abnormal P wave morphology or absent P waves",
+      "Rate typically > 100 bpm",
+      "May be regular or irregular"
+    ],
+    "clinical_significance": "Supraventricular arrhythmia encompasses multiple rhythm disorders including atrial tachycardia, AVNRT, AVRT, and junctional tachycardia. Further characterization of the specific arrhythmia type guides management.",
+    "common_associations": [
+      "Structural heart disease",
+      "Electrolyte disturbances",
+      "Drug effects",
+      "Thyrotoxicosis"
+    ],
+    "typical_patient": "Wide range depending on specific arrhythmia type.",
+    "management_hints": [
+      "12-lead ECG during arrhythmia for characterization",
+      "Vagal maneuvers if appropriate",
+      "Rate control with AV-nodal blocking agents",
+      "Cardiology referral",
+      "Holter monitor if paroxysmal"
+    ],
+    "report_template": "Supraventricular arrhythmia present. Cardiology review for further characterization and management recommended."
+  },
+  "SVTAC": {
+    "code": "SVTAC",
+    "summary": "Supraventricular tachycardia, a rapid regular arrhythmia originating above the Bundle of His, typically presenting as a narrow complex tachycardia at 150-250 bpm.",
+    "ecg_features": [
+      "Regular narrow complex tachycardia",
+      "Rate 150-250 bpm",
+      "P waves may be absent, retrograde, or hidden",
+      "Abrupt onset and termination",
+      "ST depression may occur due to rate"
+    ],
+    "clinical_significance": "SVT causes significant symptoms and may cause hemodynamic compromise at very high rates. It is generally not life-threatening in structurally normal hearts. Adenosine terminates most SVTs and helps in diagnosis.",
+    "common_associations": [
+      "AVNRT",
+      "AVRT with WPW",
+      "Atrial tachycardia",
+      "Structural heart disease"
+    ],
+    "typical_patient": "Young to middle-aged adults, often without structural heart disease.",
+    "management_hints": [
+      "Vagal maneuvers",
+      "Adenosine 6-12mg IV if vagal maneuvers fail",
+      "Synchronized cardioversion if hemodynamically unstable",
+      "Beta-blocker or CCB for prevention",
+      "Electrophysiology study for ablation"
+    ],
+    "report_template": "Supraventricular tachycardia present. Vagal maneuvers or adenosine recommended if stable."
+  },
+  "TAB_": {
+    "code": "TAB_",
+    "summary": "T wave abnormality encompassing a variety of T wave changes including inversion, flattening, biphasic pattern, or peaked T waves that deviate from normal.",
+    "ecg_features": [
+      "Abnormal T wave morphology",
+      "May be inverted, flat, biphasic, or peaked",
+      "Non-specific distribution possible",
+      "Associated ST changes may be present"
+    ],
+    "clinical_significance": "T wave abnormalities are common non-specific findings. Peaked T waves may suggest hyperkalemia or early ischemia (hyperacute T waves). Inverted T waves may indicate ischemia, strain, or normal variant. Clinical context is essential.",
+    "common_associations": [
+      "Ischemia",
+      "Left ventricular hypertrophy",
+      "Electrolyte disturbances",
+      "Drug effects",
+      "Bundle branch block"
+    ],
+    "typical_patient": "Wide range; depends on type and distribution of T wave abnormality.",
+    "management_hints": [
+      "Correlate with clinical context",
+      "Check electrolytes (especially potassium)",
+      "Serial ECG",
+      "Troponin if ischemia suspected",
+      "Echocardiogram if structural disease suspected"
+    ],
+    "report_template": "T wave abnormality noted. Clinical correlation and electrolyte check recommended."
+  },
+  "TRIGU": {
+    "code": "TRIGU",
+    "summary": "Trigeminal pattern with every third beat being a premature complex (atrial or ventricular), creating a repeating triplet pattern.",
+    "ecg_features": [
+      "Every third beat is a premature complex",
+      "Regular tripling pattern",
+      "Premature beats may be atrial or ventricular",
+      "Effective heart rate may be reduced"
+    ],
+    "clinical_significance": "Trigeminy may be benign in structurally normal hearts but can indicate underlying ischemia, electrolyte disturbance, or drug toxicity. Sustained trigeminy with underlying structural disease warrants investigation.",
+    "common_associations": [
+      "Ischemic heart disease",
+      "Electrolyte disturbances",
+      "Digitalis toxicity",
+      "Left ventricular hypertrophy"
+    ],
+    "typical_patient": "Can occur at any age; significance depends on underlying structural disease.",
+    "management_hints": [
+      "Check electrolytes",
+      "Review medications",
+      "Holter monitor",
+      "Echocardiogram",
+      "Cardiology referral if symptomatic"
+    ],
+    "report_template": "Trigeminal pattern noted. Electrolyte check and clinical correlation recommended."
+  },
+  "VCLVH": {
+    "code": "VCLVH",
+    "summary": "Voltage criteria for left ventricular hypertrophy based on QRS amplitude measurements, most commonly the Sokolow-Lyon or Cornell criteria, without necessarily showing the strain pattern.",
+    "ecg_features": [
+      "Sokolow-Lyon: SV1 + RV5 or RV6 > 35mm",
+      "Cornell: SV3 + RaVL > 28mm (men) or > 20mm (women)",
+      "High precordial or limb lead voltages",
+      "Normal repolarization possible"
+    ],
+    "clinical_significance": "Voltage criteria alone have moderate sensitivity and specificity for true anatomic LVH. They are common in young thin individuals as false positives. Echocardiogram is required for confirmation and quantification of LV mass.",
+    "common_associations": [
+      "Hypertension",
+      "Aortic stenosis",
+      "Young athletic males",
+      "Hypertrophic cardiomyopathy"
+    ],
+    "typical_patient": "Hypertensive patients or young thin adults as normal variant.",
+    "management_hints": [
+      "Echocardiogram to confirm true LVH",
+      "Blood pressure assessment and control",
+      "Cardiovascular risk factor modification",
+      "Cardiology referral if confirmed LVH with symptoms"
+    ],
+    "report_template": "Voltage criteria for left ventricular hypertrophy met. Echocardiogram recommended for confirmation."
+  },
+  "WPW": {
+    "code": "WPW",
+    "summary": "Wolff-Parkinson-White syndrome is a pre-excitation syndrome caused by an accessory pathway (Bundle of Kent) bypassing the AV node, resulting in short PR interval and delta waves.",
+    "ecg_features": [
+      "Short PR interval < 120ms",
+      "Delta wave (slurred QRS upstroke)",
+      "Wide QRS complex (> 120ms)",
+      "Secondary ST-T changes",
+      "Pseudo-Q waves or pseudo-infarction pattern",
+      "Positive delta in left-sided pathway; negative in right-sided"
+    ],
+    "clinical_significance": "WPW is associated with risk of paroxysmal SVT and, critically, potentially fatal rapid pre-excited atrial fibrillation if the accessory pathway has a short refractory period. AV-nodal blocking agents (adenosine, digoxin, verapamil) are contraindicated in pre-excited AF as they may accelerate conduction over the accessory pathway.",
+    "common_associations": [
+      "AVRT (orthodromic and antidromic)",
+      "Pre-excited atrial fibrillation",
+      "Atrial fibrillation",
+      "Ebstein anomaly (right-sided accessory pathway)"
+    ],
+    "typical_patient": "Young adults, often identified incidentally or following symptomatic arrhythmia. May present at any age.",
+    "management_hints": [
+      "Electrophysiology referral for risk stratification",
+      "Avoid AV-nodal blocking agents if pre-excited AF",
+      "Catheter ablation of accessory pathway (highly effective)",
+      "Avoid competitive sports until risk assessment complete",
+      "Family screening not routinely indicated unless familial WPW"
+    ],
+    "report_template": "Wolff-Parkinson-White syndrome with short PR interval and delta waves. Electrophysiology referral recommended. Avoid AV-nodal blocking agents."
+  }
+}

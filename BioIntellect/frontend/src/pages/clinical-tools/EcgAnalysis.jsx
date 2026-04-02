@@ -21,6 +21,15 @@ export const EcgAnalysis = ({ onBack }) => {
     const [patients, setPatients] = useState([])
     const [selectedPatientId, setSelectedPatientId] = useState('')
     const [patientLoadError, setPatientLoadError] = useState('')
+    const [ecgMeta, setEcgMeta] = useState({
+        age: '',
+        sex: '',
+        height: '',
+        weight: '',
+    })
+
+    const isDatFile = (value) =>
+        typeof value === 'string' && value.toLowerCase().endsWith('.dat')
 
     useEffect(() => {
         if (userRole !== 'patient') {
@@ -52,14 +61,40 @@ export const EcgAnalysis = ({ onBack }) => {
     const handleFileUpload = (e) => {
         const uploadedFile = e.target.files[0]
         if (uploadedFile) {
+            if (!isDatFile(uploadedFile.name)) {
+                setFile(null)
+                setResult(null)
+                setError('Only .dat ECG files are supported.')
+                return
+            }
             setFile(uploadedFile)
             setResult(null)
             setError(null)
         }
     }
 
+    const handleMetaChange = (field) => (e) => {
+        setEcgMeta((prev) => ({ ...prev, [field]: e.target.value }))
+    }
+
     const runAnalysis = async () => {
         if (!file || !currentUser?.id) return
+
+        if (!isDatFile(file.name)) {
+            setError('Only .dat ECG files are supported.')
+            return
+        }
+
+        const missingFields = []
+        if (!ecgMeta.age || Number(ecgMeta.age) <= 0) missingFields.push('age')
+        if (!ecgMeta.sex) missingFields.push('sex')
+        if (!ecgMeta.height || Number(ecgMeta.height) <= 0) missingFields.push('height')
+        if (!ecgMeta.weight || Number(ecgMeta.weight) <= 0) missingFields.push('weight')
+
+        if (missingFields.length > 0) {
+            setError(`Please provide valid: ${missingFields.join(', ')} before analysis.`)
+            return
+        }
 
         setAnalyzing(true)
         setError(null)
@@ -99,7 +134,13 @@ export const EcgAnalysis = ({ onBack }) => {
                 fileId: fileRecord.id,
                 caseId: medicalCase.id,
                 patientId: patientId,
-                userId: currentUser.user_id || currentUser.id
+                userId: currentUser.user_id || currentUser.id,
+                signalInfo: {
+                    age: Number(ecgMeta.age),
+                    sex: ecgMeta.sex,
+                    height: Number(ecgMeta.height),
+                    weight: Number(ecgMeta.weight),
+                },
             })
 
             // Extract result from API response
@@ -177,6 +218,50 @@ export const EcgAnalysis = ({ onBack }) => {
                             </div>
                         )}
                         <h3>Upload ECG Data</h3>
+                        <div className={styles.metaGrid}>
+                            <label className={styles.metaField}>
+                                <span>Age</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={ecgMeta.age}
+                                    onChange={handleMetaChange('age')}
+                                    placeholder="e.g. 45"
+                                />
+                            </label>
+
+                            <label className={styles.metaField}>
+                                <span>Sex</span>
+                                <select value={ecgMeta.sex} onChange={handleMetaChange('sex')}>
+                                    <option value="">Select</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                </select>
+                            </label>
+
+                            <label className={styles.metaField}>
+                                <span>Height (cm)</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={ecgMeta.height}
+                                    onChange={handleMetaChange('height')}
+                                    placeholder="e.g. 170"
+                                />
+                            </label>
+
+                            <label className={styles.metaField}>
+                                <span>Weight (kg)</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={ecgMeta.weight}
+                                    onChange={handleMetaChange('weight')}
+                                    placeholder="e.g. 70"
+                                />
+                            </label>
+                        </div>
+
                         <div
                             className={`${styles.dropZone} ${dragging ? styles.dragActive : ''} ${file ? styles.hasFile : ''}`}
                             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -184,7 +269,17 @@ export const EcgAnalysis = ({ onBack }) => {
                             onDrop={(e) => {
                                 e.preventDefault()
                                 setDragging(false)
-                                if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0])
+                                const droppedFile = e.dataTransfer.files[0]
+                                if (droppedFile) {
+                                    if (!isDatFile(droppedFile.name)) {
+                                        setFile(null)
+                                        setResult(null)
+                                        setError('Only .dat ECG files are supported.')
+                                        return
+                                    }
+                                    setFile(droppedFile)
+                                    setError(null)
+                                }
                             }}
                         >
                             <div className={styles.uploadIcon}>📈</div>
@@ -194,9 +289,15 @@ export const EcgAnalysis = ({ onBack }) => {
                                     <span className={styles.fileSize}>{(file.size / 1024).toFixed(2)} KB</span>
                                 </div>
                             ) : (
-                                <p>Drag & drop ECG signal file (WFDB, CSV, or Raw) or <strong>Browse</strong></p>
+                                <p>Drag & drop ECG signal .dat file or <strong>Browse</strong></p>
                             )}
-                            <input type="file" onChange={handleFileUpload} className={styles.hiddenInput} id="ecgUpload" />
+                            <input
+                                type="file"
+                                accept=".dat"
+                                onChange={handleFileUpload}
+                                className={styles.hiddenInput}
+                                id="ecgUpload"
+                            />
                             <label htmlFor="ecgUpload" className={styles.browseButton}>Select File</label>
                         </div>
 

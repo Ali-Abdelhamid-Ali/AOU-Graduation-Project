@@ -41,6 +41,35 @@
     border: 1px solid var(--color-border);
 }
 
+.metaGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 1rem 0 1.25rem;
+}
+
+.metaField {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.metaField span {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+}
+
+.metaField input,
+.metaField select {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+    border-radius: 8px;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.7rem;
+}
+
 .dropZone {
     height: 300px;
     border: 2px dashed var(--color-border);
@@ -242,6 +271,10 @@
 
 @media (max-width: 900px) {
     .mainGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .metaGrid {
         grid-template-columns: 1fr;
     }
 }

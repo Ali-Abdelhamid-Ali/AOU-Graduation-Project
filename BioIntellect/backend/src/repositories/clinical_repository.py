@@ -672,7 +672,6 @@ class ClinicalRepository:
             logger.error(f"Failed to delete medical file {file_id}: {str(e)}")
             raise
 
-    # â”پâ”پâ”پâ”پ ECG SIGNALS â”پâ”پâ”پâ”پ
 
     @async_retry(max_retries=3)
     async def create_ecg_signal(

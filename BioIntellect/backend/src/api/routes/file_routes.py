@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from src.observability.logger import get_logger
 from src.repositories.clinical_repository import ClinicalRepository
 from src.repositories.storage_repository import StorageRepository
+from src.repositories.user_repository import UserRepository
 from src.security.auth_middleware import (
     Permission,
     get_current_user,
@@ -16,6 +17,7 @@ from src.security.auth_middleware import (
 from src.services.domain.file_service import (
     GENERAL_MEDICAL_FILE_TYPES,
     FileService,
+    is_supported_ecg_upload,
     is_supported_mri_upload,
     normalize_upload_content_type,
 )
@@ -36,6 +38,29 @@ router = APIRouter(
 
 def get_file_service():
     return FileService(StorageRepository(), ClinicalRepository())
+
+
+def _get_case_and_patient_repositories() -> tuple[ClinicalRepository, UserRepository]:
+    return ClinicalRepository(), UserRepository()
+
+
+async def _validate_case_and_patient(case_id: str, patient_id: str) -> None:
+    clinical_repo, user_repo = _get_case_and_patient_repositories()
+
+    case_record = await clinical_repo.get_medical_case(case_id)
+    if not case_record:
+        raise HTTPException(status_code=404, detail="Medical case not found")
+
+    patient_record = await user_repo.get_patient(patient_id)
+    if not patient_record:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    case_patient_id = str(case_record.get("patient_id") or "")
+    if case_patient_id and case_patient_id != str(patient_id):
+        raise HTTPException(
+            status_code=400,
+            detail="case_id does not belong to the provided patient_id",
+        )
 
 
 @router.post(
@@ -82,6 +107,14 @@ async def upload_file(
                     ".dcm, .jpg, .jpeg, .png"
                 ),
             )
+        if file_type == "ecg" and not is_supported_ecg_upload(filename):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid ECG file format. Supported format: .dat",
+            )
+
+        await _validate_case_and_patient(case_id, patient_id)
+
         record = await service.upload_medical_file(
             user["id"],
             patient_id,
@@ -125,19 +158,13 @@ async def upload_ecg_signal(
             )
 
         filename = file.filename or ""
-        valid_ecg_types = [
-            "application/dicom",
-            "application/octet-stream",
-            "image/jpeg",
-            "image/png",
-        ]
-        if file.content_type not in valid_ecg_types and not filename.lower().endswith(
-            (".dcm", ".jpg", ".jpeg", ".png")
-        ):
+        if not is_supported_ecg_upload(filename):
             raise HTTPException(
                 status_code=400,
-                detail="Invalid ECG file format. Must be DICOM or medical image format.",
+                detail="Invalid ECG file format. Supported format: .dat",
             )
+
+        await _validate_case_and_patient(case_id, patient_id)
 
         result = await service.upload_ecg_signal(
             user["id"],
@@ -191,6 +218,8 @@ async def upload_mri_scan(
                     ".dcm, .jpg, .jpeg, .png"
                 ),
             )
+
+        await _validate_case_and_patient(case_id, patient_id)
 
         result = await service.upload_mri_scan(
             user["id"],

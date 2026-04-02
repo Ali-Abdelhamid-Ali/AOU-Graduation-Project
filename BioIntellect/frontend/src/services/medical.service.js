@@ -143,6 +143,22 @@ export const medicalService = {
       signalPayload.quality_score = signalInfo.quality
     }
 
+    if (isDefined(signalInfo.age)) {
+      signalPayload.signal_data.age = signalInfo.age
+    }
+
+    if (isDefined(signalInfo.sex)) {
+      signalPayload.signal_data.sex = signalInfo.sex
+    }
+
+    if (isDefined(signalInfo.height)) {
+      signalPayload.signal_data.height = signalInfo.height
+    }
+
+    if (isDefined(signalInfo.weight)) {
+      signalPayload.signal_data.weight = signalInfo.weight
+    }
+
     const signal = unwrapData(
       await clinicalAPI.createEcgSignal(signalPayload),
       'Failed to create ECG signal'

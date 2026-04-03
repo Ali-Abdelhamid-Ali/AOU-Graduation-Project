@@ -16,11 +16,6 @@ class DataController(BaseController) :
                     status_code=400,
                     detail=f"File type '{file.content_type}' not allowed"
                     )
-            if file.size > self.app_settings.FILE_MAX_SIZE * self.size_scale:
-                raise HTTPException(
-                status_code=400,
-                detail=f"File size exceeds maximum allowed size of {self.app_settings.FILE_MAX_SIZE} MB"
-            )
             return True
         
 

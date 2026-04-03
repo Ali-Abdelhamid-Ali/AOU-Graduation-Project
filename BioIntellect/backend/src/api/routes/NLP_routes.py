@@ -1,6 +1,7 @@
 import asyncio
 import json
 from typing import Any
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
@@ -22,6 +23,7 @@ router=APIRouter(prefix="/nlp", tags=["nlp"])
 logger = get_logger("routes.nlp")
 
 CHAT_LLM_DEPENDENCY = Depends(require_permission(Permission.CHAT_LLM))
+UPLOAD_FILES_DEPENDENCY = Depends(require_permission(Permission.UPLOAD_FILES))
 CURRENT_USER_DEPENDENCY = Depends(get_current_user)
 
 
@@ -122,7 +124,7 @@ async def _resolve_or_create_conversation(
 		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to create conversation")
 	return conversation
 
-@router.post ("/index/push/{project_id}")
+@router.post("/index/push/{project_id}", dependencies=[UPLOAD_FILES_DEPENDENCY])
 async def index_project(request: Request, project_id: str, push_request: PushRequest):
 	if not project_id.strip():
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
@@ -190,7 +192,7 @@ async def index_project(request: Request, project_id: str, push_request: PushReq
 		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 	return {"message": f"Successfully indexed {len(chunks)} chunks into vector database for project {project_id}"}
 
-@router.get ("/index/info/{project_id}")
+@router.get("/index/info/{project_id}", dependencies=[CHAT_LLM_DEPENDENCY])
 async def get_index_info(request: Request, project_id: str):
 	if not project_id.strip():
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
@@ -214,7 +216,7 @@ async def get_index_info(request: Request, project_id: str):
 	if collection_info is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No vector database collection found for project {project_id}")
 	return {"collection_info": collection_info}
-@router.post ("/index/search/{project_id}")
+@router.post("/index/search/{project_id}", dependencies=[CHAT_LLM_DEPENDENCY])
 async def search_index(request: Request, project_id: str, search_request: SearchRequest):
 	if not project_id.strip():
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
@@ -363,6 +365,7 @@ async def answer_rag(
 	search_request: SearchRequest,
 	user: dict[str, Any] = CURRENT_USER_DEPENDENCY,
 ):
+	language = search_request.language if search_request.language is not None else "en"
 	if not project_id.strip():
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
 	if not search_request.text or not search_request.text.strip():
@@ -382,12 +385,12 @@ async def answer_rag(
 		template_parser=template_parser,
 	)
 	try:
-		answer, full_prompt, chat_history = nlp_controller.answer_rag_question(
+			answer, full_prompt, chat_history = nlp_controller.answer_rag_question(
 			project_id=project_id,
 			question=search_request.text,
 			limit=search_request.top_k,
 			chat_history=search_request.chat_history,
-			language=search_request.language,
+				language=language,
 		)
 	except ValueError as exc:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -414,7 +417,7 @@ async def answer_rag(
 			"sender_id": sender_id,
 			"message_content": search_request.text,
 			"message_type": "medical_query",
-			"metadata": {"project_id": project_id, "language": search_request.language},
+				"metadata": {"project_id": project_id, "language": language},
 		}
 	)
 	assistant_message = await repo.create_message(
@@ -423,7 +426,7 @@ async def answer_rag(
 			"sender_type": "llm",
 			"message_content": answer,
 			"message_type": "text",
-			"metadata": {"project_id": project_id, "full_prompt": full_prompt},
+				"metadata": {"project_id": project_id, "language": language, "full_prompt": full_prompt},
 		}
 	)
 

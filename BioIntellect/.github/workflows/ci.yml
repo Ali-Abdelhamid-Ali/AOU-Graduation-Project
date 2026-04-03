@@ -21,21 +21,41 @@ jobs:
         run: |
           cd backend
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio
+          pip install pytest pytest-asyncio pytest-cov bandit ruff
 
       - name: Validate Qdrant/Protobuf compatibility
         run: |
           cd backend
           python -c "import google.protobuf; from qdrant_client import QdrantClient; print('protobuf', google.protobuf.__version__)"
       
-      - name: Run Pytest
+      - name: Lint with Ruff
         run: |
           cd backend
-          pytest tests/ -v
+          ruff check src/ tests/
+      
+      - name: Security scan with Bandit
+        run: |
+          cd backend
+          bandit -r src/ -ll --skip B101,B601
+      
+      - name: Run Pytest with coverage
+        run: |
+          cd backend
+          pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ENVIRONMENT: testing
+      
+      - name: Check coverage threshold (80% minimum)
+        run: |
+          cd backend
+          python -c "import xml.etree.ElementTree as ET; 
+          tree = ET.parse('coverage.xml'); 
+          root = tree.getroot(); 
+          rate = float(root.attrib.get('line-rate', 0)) * 100; 
+          print(f'Coverage: {rate:.1f}%'); 
+          exit(0 if rate >= 80 else 1)"
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -53,6 +73,11 @@ jobs:
         run: |
           cd frontend
           npm ci
+      
+      - name: NPM audit (security)
+        run: |
+          cd frontend
+          npm audit --audit-level=moderate
           
       - name: Build Frontend
         run: |

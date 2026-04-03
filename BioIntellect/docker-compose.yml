@@ -8,11 +8,16 @@ services:
   redis:
     <<: *service-defaults
     image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes"]
+    command: 
+      - redis-server
+      - "--appendonly"
+      - "yes"
+      - "--requirepass"
+      - "${REDIS_PASSWORD:?Set REDIS_PASSWORD in BioIntellect/.env}"
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -103,10 +108,12 @@ services:
         condition: service_healthy
     ports:
       - "${PUBLIC_HTTP_PORT:-80}:80"
+      - "${PUBLIC_HTTPS_PORT:-443}:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health >/dev/null || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 5

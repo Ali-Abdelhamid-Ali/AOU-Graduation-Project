@@ -280,6 +280,16 @@ export const nlpChatAPI = {
       await apiClient.get(`/nlp/chats/${projectId}/conversations/${conversationId}/messages`, { params }),
       (payload) => normalizeList(normalizeMessage)(payload?.messages || payload)
     ),
+  sendMessage: async (projectId, conversationId, data) =>
+    normalizeEnvelope(
+      await apiClient.post(
+        `/nlp/chats/${projectId}/conversations/${conversationId}/messages`,
+        data
+      ),
+      (payload) => normalizeMessage(payload?.message || payload)
+    ),
+  // Streaming is handled separately due to SSE requirements
+  // Uses fetch to access response.body for streaming chunks
   streamAnswer: async (projectId, data, handlers = {}) => {
     const token = getAccessToken()
     const response = await fetch(`${API_BASE_URL}/nlp/index/answer-stream/${projectId}`, {

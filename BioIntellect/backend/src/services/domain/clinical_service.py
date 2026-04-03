@@ -257,6 +257,8 @@ class ClinicalService:
             "rhythm_confidence": analysis.get("confidence"),
             "ai_interpretation": analysis.get("ai_notes"),
             "detected_conditions": analysis.get("detected_conditions", []),
+            "enriched_conditions": analysis.get("enriched_conditions", []),
+            "clinical_report": analysis.get("clinical_report"),
             "ai_recommendations": analysis.get("recommendations", []),
             "heart_rate": analysis.get("heart_rate"),
             "heart_rate_variability": analysis.get("heart_rate_variability"),

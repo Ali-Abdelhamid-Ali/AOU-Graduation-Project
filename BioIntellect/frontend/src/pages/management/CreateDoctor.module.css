@@ -1,5 +1,5 @@
 .pageWrapper {
-    min-height: 100vh;
+    min-block-size: 100vh;
     background: var(--color-background);
     color: var(--color-text);
     padding: var(--spacing-3xl) var(--spacing-lg);
@@ -9,8 +9,8 @@
 }
 
 .container {
-    max-width: 900px;
-    width: 100%;
+    max-inline-size: 900px;
+    inline-size: 100%;
 }
 
 .card {
@@ -59,8 +59,8 @@
     font-size: var(--font-size-base);
     color: var(--color-text-muted);
     font-weight: var(--font-weight-medium);
-    max-width: 500px;
-    margin: 0 auto;
+    max-inline-size: 500px;
+    margin-inline: auto;
 }
 
 .form {

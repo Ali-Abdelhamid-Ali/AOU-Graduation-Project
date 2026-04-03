@@ -78,7 +78,7 @@ temp/
 *.xlsx
 *.ppt
 *.pptx
-
+.claude
 # Project-specific AI artifacts and datasets
 BioIntellect/backend/tests
 BioIntellect/AI/fintune/medmo_8B

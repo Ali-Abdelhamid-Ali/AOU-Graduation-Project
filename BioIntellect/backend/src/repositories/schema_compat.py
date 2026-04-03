@@ -163,6 +163,8 @@ _TABLE_COLUMNS: dict[str, set[str]] = {
         "rhythm_classification",
         "rhythm_confidence",
         "detected_conditions",
+        "enriched_conditions",
+        "clinical_report",
         "pr_interval",
         "qrs_duration",
         "qt_interval",
@@ -874,6 +876,8 @@ def normalize_ecg_result_record(record: Mapping[str, Any] | None) -> dict[str, A
     normalized.setdefault("confidence_score", normalized.get("rhythm_confidence"))
     normalized.setdefault("primary_diagnosis", normalized.get("rhythm_classification"))
     normalized.setdefault("details", normalized.get("raw_output") or {})
+    normalized.setdefault("enriched_conditions", normalized.get("enriched_conditions") or [])
+    normalized.setdefault("clinical_report", normalized.get("clinical_report"))
     return normalized
 
 

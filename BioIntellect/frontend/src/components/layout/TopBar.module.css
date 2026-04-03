@@ -2,11 +2,11 @@
   position: fixed;
   inset-block-start: 0;
   inset-inline: 0;
-  height: 64px;
+  block-size: 64px;
   background: var(--glass-bg);
   color: var(--color-text);
   font-family: inherit;
-  border-bottom: 1px solid var(--glass-border);
+  border-block-end: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
   z-index: var(--z-topbar);
   display: flex;
@@ -21,7 +21,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 100%;
+  block-size: 100%;
   padding: 0 var(--spacing-lg);
   max-inline-size: 1440px;
   margin: 0 auto;
@@ -37,7 +37,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-primary);
   letter-spacing: -0.2px;
@@ -95,14 +95,13 @@ html.dark .logo:active {
 }
 
 .logoIcon img {
-  height: 28px;
-  /* المعيار الذهبي للـ navbar */
-  width: auto;
+  block-size: 28px;
+  inline-size: auto;
 }
 
 .logoImage {
-  height: 40px;
-  width: auto;
+  block-size: 40px;
+  inline-size: auto;
   object-fit: contain;
   transition: transform 0.2s ease;
   display: flex;
@@ -229,12 +228,12 @@ html.dark .backButton {
 }
 
 html.dark .topbar {
-  border-bottom-color: var(--color-border);
+  border-block-end-color: var(--color-border);
 }
 
 @media (max-width: 768px) {
   .topbar {
-    height: 56px;
+    block-size: 56px;
   }
 
   .container {

@@ -17,7 +17,11 @@ class ProcessController(BaseController) :
         return os.path.splitext(file_id)[1].lower()
     def get_file_loader(self,file_id:str):
         file_ext=self.get_file_extension(file_id=file_id)
-        file_path=os.path.join(self.project_path,file_id)
+        base_dir = os.path.realpath(self.project_path)
+        file_path=os.path.realpath(os.path.join(base_dir,file_id))
+
+        if not file_path.startswith(base_dir + os.sep):
+            raise ValueError("file_id resolves outside the allowed directory")
 
         if not os.path.isfile(file_path):
             raise FileNotFoundError(f"File does not exist: {file_path}")

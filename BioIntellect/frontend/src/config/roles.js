@@ -7,6 +7,7 @@
 export const ROLES = {
     SUPER_ADMIN: 'super_admin',
     ADMIN: 'administrator', // Database standard
+    NURSE: 'nurse',
     DOCTOR: 'doctor',
     PATIENT: 'patient'
 };
@@ -16,6 +17,7 @@ export const ROLE_ALIAS_MAP = {
     'admin': ROLES.ADMIN,
     'administrator': ROLES.ADMIN,
     'super_admin': ROLES.SUPER_ADMIN,
+    'nurse': ROLES.NURSE,
     'doctor': ROLES.DOCTOR,
     'patient': ROLES.PATIENT
 };
@@ -103,6 +105,18 @@ export const ROLE_DB_CONFIG = {
             };
         }
     },
+    [ROLES.NURSE]: {
+        table: 'nurses',
+        select: 'id, first_name, last_name, user_id, hospital_id, hospitals(hospital_name_en)',
+        transform: (data) => ({
+            id: data.id,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            full_name: `${data.first_name} ${data.last_name}`,
+            user_role: ROLES.NURSE,
+            hospital_name: data.hospitals?.hospital_name_en
+        })
+    },
     [ROLES.ADMIN]: {
         table: 'administrators',
         select: 'id, first_name, last_name, user_id, hospital_id, hospitals(hospital_name_en)',
@@ -166,7 +180,7 @@ export const createAuthPayload = (input) => {
 
     // Role-Specific Fields & Hospital Logic
     const hId = input.hospitalId || input.hospital_id;
-    if ([ROLES.DOCTOR, ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(role)) {
+    if ([ROLES.DOCTOR, ROLES.NURSE, ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(role)) {
         if (hId && hId.length > 20) {
             metadata.hospital_id = hId;
             metadata.hospital_name = input.hospitalName || input.hospital_name || null;
@@ -187,6 +201,8 @@ export const createAuthPayload = (input) => {
     if (role === ROLES.DOCTOR) {
         if (!input.licenseNumber && !input.license_number) throw new Error("License Number is required for Doctors.");
         metadata.license_number = input.licenseNumber || input.license_number;
+    } else if (role === ROLES.NURSE) {
+        metadata.nurse_title = input.nurseTitle || input.nurse_title || null;
     } else if (role === ROLES.PATIENT) {
         // [SECURITY] Force mandatory password reset for patients on first enrollment
         metadata.must_reset_password = true;
@@ -268,6 +284,21 @@ export const createProfileData = (input) => {
             bio: input.bio || null,
             employee_id: input.employeeId || input.employee_id || null,
 
+            is_active: true
+        };
+    }
+
+    if (role === ROLES.NURSE) {
+        return {
+            ...common,
+            role: role,
+            gender: input.gender || null,
+            date_of_birth: input.dateOfBirth || null,
+            qualification: input.qualifications || null,
+            years_of_experience: input.yearsOfExperience ? parseInt(input.yearsOfExperience) : 0,
+            bio: input.bio || null,
+            employee_id: input.employeeId || input.employee_id || null,
+            nurse_title: input.nurseTitle || input.nurse_title || null,
             is_active: true
         };
     }

@@ -23,12 +23,34 @@ class RedactionFilter(logging.Filter):
         "access_token",
     )
 
+    def _should_redact_key(self, key: str) -> bool:
+        lowered = str(key).lower()
+        return any(pattern in lowered for pattern in self.SECRET_PATTERNS)
+
+    def _scrub_value(self, key: str, value: Any) -> Any:
+        if self._should_redact_key(key):
+            return "[REDACTED]"
+        if isinstance(value, dict):
+            return {
+                nested_key: self._scrub_value(nested_key, nested_value)
+                for nested_key, nested_value in value.items()
+            }
+        if isinstance(value, (list, tuple)):
+            return [self._scrub_value(key, item) for item in value]
+        return value
+
     def filter(self, record: logging.LogRecord) -> bool:
         message = str(record.getMessage())
         lowered = message.lower()
         if any(pattern in lowered for pattern in self.SECRET_PATTERNS):
             record.msg = "[REDACTED SENSITIVE LOG MESSAGE]"
             record.args = ()
+
+        for key, value in list(record.__dict__.items()):
+            if key.startswith("_"):
+                continue
+            if key not in {"msg", "message", "args"}:
+                record.__dict__[key] = self._scrub_value(key, value)
         return True
 
 

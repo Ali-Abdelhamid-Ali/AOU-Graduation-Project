@@ -7,6 +7,7 @@ import { TopBar } from '@/components/layout/TopBar'
 import { SelectField } from '@/components/ui/SelectField'
 import { LlmDisclaimer } from '../../components/clinical/LlmDisclaimer'
 import { PatientDisclaimer } from '../../components/clinical/PatientDisclaimer'
+import { ROLES } from '@/config/roles'
 import styles from './MedicalLlm.module.css'
 
 export const MedicalLlm = ({ onBack }) => {
@@ -21,7 +22,7 @@ export const MedicalLlm = ({ onBack }) => {
     const [error, setError] = useState(null)
     const [patientLoadError, setPatientLoadError] = useState('')
     const messagesEndRef = useRef(null)
-    const isPatient = userRole === 'patient'
+    const isPatient = userRole === ROLES.PATIENT
     const projectId = currentUser?.hospital_id || ''
 
     // Load patients for doctors
@@ -297,7 +298,7 @@ export const MedicalLlm = ({ onBack }) => {
                         )}
                     </div>
                     <div className={styles.disclaimer}>
-                        {userRole === 'patient' ? <PatientDisclaimer /> : <LlmDisclaimer />}
+                        {userRole === ROLES.PATIENT ? <PatientDisclaimer /> : <LlmDisclaimer />}
                     </div>
                 </aside>
 

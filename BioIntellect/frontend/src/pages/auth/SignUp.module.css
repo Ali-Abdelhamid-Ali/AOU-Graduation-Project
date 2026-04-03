@@ -1,20 +1,20 @@
 .pageWrapper {
-  min-height: 100vh;
+  min-block-size: 100vh;
   background: var(--color-background);
-  padding-top: 64px;
+  padding-block-start: 64px;
 }
 
 .container {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 64px);
+  min-block-size: calc(100vh - 64px);
   padding: var(--spacing-2xl);
 }
 
 .card {
-  width: 100%;
-  max-width: 500px;
+  inline-size: 100%;
+  max-inline-size: 500px;
   background: var(--gradient-card);
   border-radius: var(--radius-xl);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
@@ -144,8 +144,8 @@ html.dark .card {
 }
 
 .alertError {
-  background-color: var(--color-error-light);
-  border-left: 4px solid var(--color-error);
+  background-color: var(--color-error-bg);
+  border-inline-start: 4px solid var(--color-error);
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-lg);
@@ -180,11 +180,11 @@ html.dark .card {
 
 @media (max-width: 768px) {
   .pageWrapper {
-    padding-top: 56px;
+    padding-block-start: 56px;
   }
 
   .container {
-    min-height: calc(100vh - 56px);
+    min-block-size: calc(100vh - 56px);
     padding: var(--spacing-lg);
   }
 

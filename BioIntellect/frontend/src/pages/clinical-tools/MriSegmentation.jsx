@@ -4,6 +4,7 @@ import { useAuth } from '@/store/AuthContext'
 import { medicalService } from '@/services/medical.service'
 import { mriSegmentationService } from '@/services/clinical.service'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
+import { ROLES } from '@/config/roles'
 import { MriPatientView } from '../../components/clinical/MriPatientView'
 import { MriDoctorView } from '../../components/clinical/MriDoctorView'
 import { patientsAPI, usersAPI } from '@/services/api'
@@ -350,7 +351,7 @@ export const MriSegmentation = ({ onBack }) => {
   }, [])
 
   const selectedPatient = useMemo(() => {
-    if (userRole === 'patient') {
+    if (userRole === ROLES.PATIENT) {
       return currentUser || null
     }
 
@@ -755,7 +756,7 @@ export const MriSegmentation = ({ onBack }) => {
     )
 
     try {
-      const isPatient = userRole === 'patient'
+      const isPatient = userRole === ROLES.PATIENT
       const patientId = isPatient ? currentUser.id : selectedPatientId
 
       if (!patientId) {
@@ -837,7 +838,7 @@ export const MriSegmentation = ({ onBack }) => {
     <div className={styles.pageWrapper}>
       <TopBar
         onBack={onBack}
-        userRole={userRole === 'doctor' ? 'Neurologist' : 'Patient'}
+        userRole={userRole === ROLES.DOCTOR ? 'Neurologist' : 'Patient'}
       />
 
       <div className={styles.container}>
@@ -939,7 +940,7 @@ export const MriSegmentation = ({ onBack }) => {
                   <small>
                     {selectedPatient?.mrn
                       ? `MRN: ${selectedPatient.mrn}`
-                      : userRole === 'patient'
+                      : userRole === ROLES.PATIENT
                         ? 'Your own MRI workflow'
                         : 'Pick a patient to continue'}
                   </small>
@@ -1129,7 +1130,7 @@ export const MriSegmentation = ({ onBack }) => {
             </div>
 
             {result &&
-              (userRole === 'patient' ? (
+              (userRole === ROLES.PATIENT ? (
                 <MriPatientView result={result} />
               ) : (
                 <MriDoctorView result={result} />

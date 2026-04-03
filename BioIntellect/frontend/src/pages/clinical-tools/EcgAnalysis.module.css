@@ -1,61 +1,64 @@
 .pageWrapper {
-    min-height: 100vh;
+    min-block-size: 100vh;
     background: var(--color-background);
-    padding-bottom: 4rem;
+    padding-block-end: 3rem;
 }
 
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 6rem 2rem 2rem;
+    max-inline-size: 1100px;
+    margin-inline: auto;
+    padding: 5rem 2rem 2rem;
 }
 
 .header {
-    margin-bottom: 3rem;
+    margin-block-end: 2rem;
     text-align: left;
 }
 
 .header h1 {
-    font-size: 2rem;
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
     font-weight: 800;
     color: var(--color-primary);
-    margin-bottom: 0.5rem;
+    margin-block-end: 0.4rem;
 }
 
 .header p {
     color: var(--color-text-muted);
     font-weight: 500;
+    font-size: clamp(0.8rem, 1.2vw, 0.95rem);
 }
 
+/* ── Two-column layout: sidebar (upload) + results ── */
 .mainGrid {
     display: grid;
-    grid-template-columns: 400px 1fr;
-    gap: 2rem;
+    grid-template-columns: clamp(260px, 28vw, 340px) 1fr;
+    gap: 1.25rem;
     align-items: start;
 }
 
+/* ── Upload card ── */
 .uploadCard {
     background: var(--color-surface);
-    padding: 2rem;
-    border-radius: 20px;
+    padding: clamp(0.85rem, 1.5vw, 1.25rem);
+    border-radius: 14px;
     border: 1px solid var(--color-border);
 }
 
 .metaGrid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    margin: 1rem 0 1.25rem;
+    gap: 0.6rem;
+    margin-block: 0.75rem 1rem;
 }
 
 .metaField {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.3rem;
 }
 
 .metaField span {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 700;
     color: var(--color-text-muted);
 }
@@ -66,19 +69,21 @@
     background: var(--color-surface-subtle);
     color: var(--color-text);
     border-radius: 8px;
-    min-height: 2.5rem;
-    padding: 0.5rem 0.7rem;
+    min-block-size: 2.2rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
 }
 
+/* ── Drop zone ── */
 .dropZone {
-    height: 300px;
+    block-size: clamp(160px, 22vw, 240px);
     border: 2px dashed var(--color-border);
-    border-radius: 16px;
+    border-radius: 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    padding: 1.25rem;
     text-align: center;
     transition: all 0.3s ease;
     background: var(--color-surface-subtle);
@@ -97,8 +102,8 @@
 }
 
 .uploadIcon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    margin-block-end: 0.75rem;
 }
 
 .hiddenInput {
@@ -106,12 +111,13 @@
 }
 
 .browseButton {
-    margin-top: 1rem;
-    padding: 0.6rem 1.5rem;
+    margin-block-start: 0.75rem;
+    padding: 0.5rem 1.25rem;
     background: var(--color-primary);
     color: white;
     border-radius: 8px;
     font-weight: 600;
+    font-size: 0.85rem;
     cursor: pointer;
 }
 
@@ -122,24 +128,26 @@
 
 .fileName {
     font-weight: 700;
-    margin-bottom: 0.25rem;
+    margin-block-end: 0.2rem;
+    font-size: 0.9rem;
 }
 
 .fileSize {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--color-text-muted);
 }
 
+/* ── Results panel ── */
 .resultsArea {
     background: var(--color-surface);
-    min-height: 500px;
-    border-radius: 20px;
+    min-block-size: 380px;
+    border-radius: 14px;
     border: 1px solid var(--color-border);
-    padding: 2rem;
+    padding: clamp(0.85rem, 1.5vw, 1.25rem);
 }
 
 .emptyState {
-    height: 100%;
+    block-size: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -149,7 +157,7 @@
 }
 
 .analyzingState {
-    height: 100%;
+    block-size: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -157,81 +165,75 @@
 }
 
 .loader {
-    width: 50px;
-    height: 50px;
+    inline-size: 44px;
+    block-size: 44px;
     border: 4px solid var(--color-primary-bg);
-    border-top: 4px solid var(--color-primary);
+    border-block-start-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-bottom: 1.5rem;
+    margin-block-end: 1.25rem;
 }
 
 @keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 
 .resultCard {
-    animation: fadeIn 0.5s ease;
+    animation: fadeIn 0.4s ease;
 }
 
 .resultHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-block-end: 1.25rem;
 }
 
 .label {
     text-transform: uppercase;
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     letter-spacing: 1px;
     font-weight: 700;
     color: var(--color-text-muted);
 }
 
 .confidenceBadge {
-    padding: 0.4rem 1rem;
+    padding: 0.3rem 0.85rem;
     background: var(--color-success-bg);
     color: var(--color-success);
     border-radius: 100px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 700;
 }
 
 .pendingBadge {
-    padding: 0.4rem 1rem;
+    padding: 0.3rem 0.85rem;
     background: var(--color-warning-bg);
     color: var(--color-warning-dark);
     border-radius: 100px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 700;
 }
 
 .classification {
-    font-size: 2.25rem;
+    font-size: clamp(1.4rem, 3vw, 2rem);
     font-weight: 800;
     color: var(--color-error);
-    margin-bottom: 1.5rem;
+    margin-block-end: 1.25rem;
 }
 
 .featuresList {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
+    gap: 0.5rem;
+    margin-block-end: 1.25rem;
 }
 
 .featureTag {
     background: var(--color-surface-subtle);
-    padding: 0.5rem 1rem;
+    padding: 0.35rem 0.75rem;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     font-weight: 600;
     color: var(--color-text);
     border: 1px solid var(--color-border);
@@ -239,41 +241,197 @@
 
 .recommendation {
     background: var(--color-primary-bg);
-    padding: 1.5rem;
-    border-radius: 12px;
-    border-left: 4px solid var(--color-primary);
-    margin-bottom: 2rem;
+    padding: 1rem 1.25rem;
+    border-radius: 10px;
+    border-inline-start: 4px solid var(--color-primary);
+    margin-block-end: 1.25rem;
 }
 
 .recommendation strong {
     display: block;
-    margin-bottom: 0.5rem;
+    margin-block-end: 0.4rem;
     color: var(--color-primary-dark);
+    font-size: 0.88rem;
 }
 
-.chartPlaceholder {
-    height: 200px;
+/* ── Enriched conditions ── */
+.enrichedConditions {
+    margin-block: 1.25rem;
+}
+
+.enrichedConditions strong {
+    display: block;
+    margin-block-end: 0.6rem;
+    color: var(--color-text);
+    font-size: 0.88rem;
+}
+
+.conditionBlock {
     background: var(--color-surface-subtle);
-    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+    margin-block-end: 0.5rem;
+}
+
+.conditionHeader {
     display: flex;
     align-items: center;
-    justify-content: center;
-    text-align: center;
-    border: 1px dashed var(--color-border);
-    padding: 1.5rem;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-block-end: 0.35rem;
 }
 
-.chartPlaceholder p {
+.conditionCode {
+    font-weight: 800;
+    font-size: 0.82rem;
+    color: var(--color-primary);
+    font-family: monospace;
+}
+
+.conditionName {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--color-text);
+    flex: 1;
+}
+
+.conditionConfidence {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-success);
+    background: var(--color-success-bg);
+    padding: 0.15rem 0.5rem;
+    border-radius: 100px;
+}
+
+.conditionSummary {
+    font-size: 0.8rem;
     color: var(--color-text-muted);
-    font-size: 0.95rem;
-    margin: 0;
+    margin: 0.15rem 0 0;
+    line-height: 1.5;
 }
 
-@media (max-width: 900px) {
+.conditionMeta {
+    font-size: 0.73rem;
+    color: var(--color-text-light);
+    margin-block-start: 0.2rem;
+    display: block;
+}
+
+/* ── Clinical report ── */
+.clinicalReportSection {
+    margin-block-start: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.clinicalReportHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.7rem 1rem;
+    background: var(--color-surface-subtle);
+    border-block-end: 1px solid var(--color-border);
+}
+
+.clinicalReportHeader strong {
+    font-size: 0.88rem;
+    color: var(--color-text);
+}
+
+.printButton {
+    padding: 0.35rem 0.85rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.printButton:hover {
+    opacity: 0.85;
+}
+
+.clinicalReport {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: clamp(0.65rem, 0.9vw, 0.75rem);
+    line-height: 1.6;
+    white-space: pre;
+    overflow-x: auto;
+    padding: 1rem 1.25rem;
+    margin: 0;
+    background: var(--color-surface);
+    color: var(--color-text);
+    max-block-size: 400px;
+    overflow-y: auto;
+}
+
+/* ── Responsive breakpoints ── */
+
+/* Large screens: give more room */
+@media (min-width: 1400px) {
+    .container {
+        max-inline-size: 1200px;
+    }
+
+    .mainGrid {
+        grid-template-columns: 360px 1fr;
+    }
+}
+
+/* Medium screens: tighten sidebar */
+@media (max-width: 1100px) {
+    .container {
+        padding: 5rem 1.25rem 2rem;
+    }
+
+    .mainGrid {
+        grid-template-columns: clamp(240px, 30vw, 300px) 1fr;
+        gap: 1rem;
+    }
+}
+
+/* Tablet: stack layout */
+@media (max-width: 860px) {
     .mainGrid {
         grid-template-columns: 1fr;
     }
 
+    .dropZone {
+        block-size: 160px;
+    }
+
+    .resultsArea {
+        min-block-size: 300px;
+    }
+}
+
+/* Small screens */
+@media (max-width: 600px) {
+    .container {
+        padding: 4.5rem 1rem 1.5rem;
+    }
+
+    .metaGrid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .header h1 {
+        font-size: 1.25rem;
+    }
+
+    .classification {
+        font-size: 1.4rem;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 400px) {
     .metaGrid {
         grid-template-columns: 1fr;
     }

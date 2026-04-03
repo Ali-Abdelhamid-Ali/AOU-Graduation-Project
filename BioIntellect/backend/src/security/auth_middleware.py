@@ -195,8 +195,9 @@ async def get_current_user(
         raise
     except Exception as e:
         # Security: Do not log sensitive token information (OWASP violation)
+        token_hint = f"{token[:8]}..." if token else "missing"
         logger.error(
-            f"Auth verification failed: {str(e)} | Token provided: {token is not None}"
+            f"Auth verification failed: {str(e)} | token_hint={token_hint}"
         )
         raise HTTPException(
             status_code=401, detail="Authentication failed. Please try again."

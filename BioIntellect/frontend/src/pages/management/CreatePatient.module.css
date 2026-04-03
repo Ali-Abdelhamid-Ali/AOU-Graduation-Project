@@ -1,14 +1,14 @@
 .pageWrapper {
-    min-height: 100vh;
+    min-block-size: 100vh;
     background: var(--color-background);
     color: var(--color-text);
-    padding-top: 80px;
+    padding-block-start: 80px;
     overflow-y: auto;
 }
 
 .container {
-    max-width: 1100px;
-    margin: 0 auto;
+    max-inline-size: 1100px;
+    margin-inline: auto;
     padding: var(--spacing-3xl) var(--spacing-lg);
 }
 
@@ -96,8 +96,8 @@
 }
 
 .sectionNumber {
-    width: 32px;
-    height: 32px;
+    inline-size: 32px;
+    block-size: 32px;
     border-radius: 50%;
     background: var(--color-gray-900);
     color: white;
@@ -135,8 +135,8 @@
 
 .togglePassword {
     position: absolute;
-    right: var(--spacing-md);
-    top: 42px;
+    inset-inline-end: var(--spacing-md);
+    inset-block-start: 42px;
     background: none;
     border: none;
     color: var(--color-text-muted);
@@ -161,9 +161,9 @@
 }
 
 .checkbox {
-    width: 20px;
-    height: 20px;
-    margin-top: 4px;
+    inline-size: 20px;
+    block-size: 20px;
+    margin-block-start: 4px;
     cursor: pointer;
 }
 
@@ -186,7 +186,7 @@
 }
 
 .submitButton {
-    height: 72px;
+    block-size: 72px;
     font-size: var(--font-size-xl);
     font-weight: var(--font-weight-black);
     border-radius: var(--radius-xl);
@@ -230,7 +230,7 @@
     border-radius: var(--radius-xs);
     font-family: var(--font-family-mono);
     font-weight: var(--font-weight-bold);
-    margin-left: var(--spacing-xs);
+    margin-inline-start: var(--spacing-xs);
 }
 
 /* Responsive */
@@ -250,7 +250,7 @@
     }
 
     .submitButton {
-        height: 60px;
+        block-size: 60px;
         font-size: var(--font-size-lg);
     }
 }

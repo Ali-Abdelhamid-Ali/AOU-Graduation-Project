@@ -32,7 +32,7 @@ export const schemas = {
 // 2. XSS PROTECTION
 const sanitizerConfig = {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'span', 'ul', 'ol', 'li'],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
 };
 
 /**
@@ -51,6 +51,10 @@ const ALLOWED_DOMAINS = [
     'biointellect.com',
 ];
 
+const isAllowedHostname = (hostname) => ALLOWED_DOMAINS.some((domain) => (
+    hostname === domain || hostname.endsWith(`.${domain}`)
+));
+
 /**
  * Validates a URL to prevent Open Redirect attacks.
  * @param {string} url - The URL to validate.
@@ -66,7 +70,7 @@ export const validateRedirect = (url) => {
         }
 
         const urlObj = new URL(url);
-        if (ALLOWED_DOMAINS.some(domain => urlObj.hostname.endsWith(domain))) {
+        if (isAllowedHostname(urlObj.hostname)) {
             return url;
         }
 

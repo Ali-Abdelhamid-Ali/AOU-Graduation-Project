@@ -63,9 +63,9 @@ class Settings(BaseSettings):
         default=300, alias="MRI_SEGMENTATION_TIMEOUT_SECONDS"
     )
 
-    # ── CORS / trusted hosts ──────────────────────────────────────────────
-    cors_origins:  str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
-    trusted_hosts: str = Field(default="localhost,127.0.0.1",   alias="TRUSTED_HOSTS")
+    # ── CORS / trusted hosts (HTTPS defaults) ────────────────────────────
+    cors_origins:  str = Field(default="https://app.biointellect.example,https://localhost:3000", alias="CORS_ORIGINS")
+    trusted_hosts: str = Field(default="app.biointellect.example,localhost,127.0.0.1",   alias="TRUSTED_HOSTS")
 
 
 

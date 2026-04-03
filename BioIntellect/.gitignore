@@ -7,3 +7,25 @@ AI/fintune/fine-tuning data/
 AI/fintune/fintuned_chating_model/
 AI/fintune/fintuned_QA_model/
 
+# Environment secrets - NEVER commit
+.env
+.env.local
+.env.*.local
+*.env.local
+
+# IDE and build artifacts
+.idea/
+node_modules/
+dist/
+build/
+*.pyc
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+

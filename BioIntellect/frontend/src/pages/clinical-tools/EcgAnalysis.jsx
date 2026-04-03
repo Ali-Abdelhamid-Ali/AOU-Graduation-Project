@@ -4,6 +4,7 @@ import { useAuth } from '@/store/AuthContext'
 import { patientsAPI } from '@/services/api'
 import { medicalService } from '@/services/medical.service'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
+import { ROLES } from '@/config/roles'
 import { TopBar } from '@/components/layout/TopBar'
 import { SelectField } from '@/components/ui/SelectField'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
@@ -32,7 +33,7 @@ export const EcgAnalysis = ({ onBack }) => {
         typeof value === 'string' && value.toLowerCase().endsWith('.dat')
 
     useEffect(() => {
-        if (userRole !== 'patient') {
+        if (userRole !== ROLES.PATIENT) {
             const loadPatients = async () => {
                 try {
                     const response = await patientsAPI.list({ is_active: true, limit: 100 })
@@ -100,7 +101,7 @@ export const EcgAnalysis = ({ onBack }) => {
         setError(null)
         try {
             // 1. Determine Patient and Doctor IDs
-            const isPatient = userRole === 'patient'
+            const isPatient = userRole === ROLES.PATIENT
             const patientId = isPatient ? currentUser.id : selectedPatientId
 
             if (!patientId) {
@@ -169,6 +170,15 @@ export const EcgAnalysis = ({ onBack }) => {
                         ? aiResult.ai_interpretation.trim()
                         : null,
                 features,
+                enrichedConditions: Array.isArray(aiResult.enriched_conditions)
+                    ? aiResult.enriched_conditions
+                    : [],
+                clinicalReport: typeof aiResult.clinical_report === 'string'
+                    ? aiResult.clinical_report
+                    : null,
+                recommendations: Array.isArray(aiResult.ai_recommendations)
+                    ? aiResult.ai_recommendations
+                    : [],
                 isComplete: Boolean(classification) && confidence !== null,
             })
         } catch (err) {
@@ -183,7 +193,7 @@ export const EcgAnalysis = ({ onBack }) => {
         <div className={styles.pageWrapper}>
             <TopBar
                 onBack={onBack}
-                userRole={userRole === 'doctor' ? 'Cardiologist' : userRole === 'patient' ? 'Patient' : 'Clinical Staff'}
+                userRole={userRole === ROLES.DOCTOR ? 'Cardiologist' : userRole === ROLES.PATIENT ? 'Patient' : 'Clinical Staff'}
             />
 
             <div className={styles.container}>
@@ -192,11 +202,11 @@ export const EcgAnalysis = ({ onBack }) => {
                     <p>Powered by BioIntellect CNN-Transformer Architecture</p>
                 </header>
 
-                {userRole === 'patient' ? <PatientDisclaimer /> : <EcgDisclaimer />}
+                {userRole === ROLES.PATIENT ? <PatientDisclaimer /> : <EcgDisclaimer />}
 
                 <div className={styles.mainGrid}>
                     <section className={styles.uploadCard}>
-                        {userRole !== 'patient' && (
+                        {userRole !== ROLES.PATIENT && (
                             <div className={styles.patientSelector}>
                                 <SelectField
                                     label="Select Patient"
@@ -363,9 +373,51 @@ export const EcgAnalysis = ({ onBack }) => {
                                     </p>
                                 </div>
 
-                                <div className={styles.chartPlaceholder}>
-                                    <p>Waveform preview is not available in this interface.</p>
-                                </div>
+                                {result.enrichedConditions && result.enrichedConditions.length > 0 && (
+                                    <div className={styles.enrichedConditions}>
+                                        <strong>Detected Conditions:</strong>
+                                        {result.enrichedConditions.map((cond, idx) => (
+                                            <div key={idx} className={styles.conditionBlock}>
+                                                <div className={styles.conditionHeader}>
+                                                    <span className={styles.conditionCode}>{cond.code}</span>
+                                                    <span className={styles.conditionName}>{cond.name}</span>
+                                                    <span className={styles.conditionConfidence}>{cond.confidence}%</span>
+                                                </div>
+                                                {cond.summary && (
+                                                    <p className={styles.conditionSummary}>{cond.summary}</p>
+                                                )}
+                                                {cond.superclass && (
+                                                    <span className={styles.conditionMeta}>
+                                                        {cond.superclass}{cond.category ? ` · ${cond.category}` : ''}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {result.clinicalReport && (
+                                    <div className={styles.clinicalReportSection}>
+                                        <div className={styles.clinicalReportHeader}>
+                                            <strong>Clinical Report</strong>
+                                            <button
+                                                className={styles.printButton}
+                                                onClick={() => {
+                                                    const blob = new Blob(
+                                                        [`<pre style="font-family:monospace;white-space:pre;padding:2rem">${result.clinicalReport}</pre>`],
+                                                        { type: 'text/html' }
+                                                    )
+                                                    const url = URL.createObjectURL(blob)
+                                                    const win = window.open(url, '_blank')
+                                                    win?.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url) })
+                                                }}
+                                            >
+                                                Print / Export
+                                            </button>
+                                        </div>
+                                        <pre className={styles.clinicalReport}>{result.clinicalReport}</pre>
+                                    </div>
+                                )}
                             </motion.div>
                         ) : (
                             <div className={styles.emptyState}>

@@ -29,6 +29,7 @@ from src.validators.medical_dto import (
     UserProfileResponseDTO,
     UserProfileUpdateDTO,
 )
+from src.validators.response_dto import ListResponse, PaginationResponse
 from src.security.auth_middleware import (
     get_current_user,
     require_permission,
@@ -69,6 +70,19 @@ def _enforce_user_detail_access(user: dict[str, Any], target_id: str) -> None:
         return
 
     raise HTTPException(status_code=403, detail="Access denied")
+
+
+def _build_pagination(total: int, limit: int, offset: int) -> PaginationResponse:
+    page = (offset // limit) + 1 if limit > 0 else 1
+    has_prev = offset > 0
+    has_next = (offset + limit) < total
+    return PaginationResponse(
+        total=total,
+        page=page,
+        limit=limit,
+        has_next=has_next,
+        has_prev=has_prev,
+    )
 
 
 # â”پâ”پâ”پâ”پ USER ROLES â”پâ”پâ”پâ”پ
@@ -221,6 +235,39 @@ async def list_doctors(
         return doctors
     except Exception as e:
         logger.error(f"Failed to list doctors: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve doctors")
+
+
+@router.get(
+    "/doctors/paged",
+    response_model=ListResponse,
+    dependencies=[Depends(require_permission(Permission.LIST_USERS))],
+)
+async def list_doctors_paged(
+    hospital_id: Optional[str] = Query(None, description="Filter by hospital ID"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    repo: UserRepository = Depends(UserRepository),
+):
+    """List doctors with pagination metadata."""
+    try:
+        filters: dict[str, Any] = {}
+        if hospital_id:
+            filters["hospital_id"] = hospital_id
+        if is_active is not None:
+            filters["is_active"] = is_active
+
+        doctors = await repo.list_doctors(filters, limit, offset)
+        total = await repo.count_doctors(filters)
+        return ListResponse(
+            success=True,
+            data=doctors,
+            pagination=_build_pagination(total=total, limit=limit, offset=offset),
+            message="Doctors retrieved successfully",
+        )
+    except Exception as e:
+        logger.error(f"Failed to list doctors (paged): {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to retrieve doctors")
 
 
@@ -569,6 +616,39 @@ async def list_administrators(
         raise HTTPException(status_code=500, detail="Failed to retrieve administrators")
 
 
+@router.get(
+    "/administrators/paged",
+    response_model=ListResponse,
+    dependencies=[Depends(require_permission(Permission.LIST_USERS))],
+)
+async def list_administrators_paged(
+    hospital_id: Optional[str] = Query(None, description="Filter by hospital ID"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    repo: UserRepository = Depends(UserRepository),
+):
+    """List administrators with pagination metadata."""
+    try:
+        filters: dict[str, Any] = {}
+        if hospital_id:
+            filters["hospital_id"] = hospital_id
+        if is_active is not None:
+            filters["is_active"] = is_active
+
+        admins = await repo.list_administrators(filters, limit, offset)
+        total = await repo.count_administrators(filters)
+        return ListResponse(
+            success=True,
+            data=admins,
+            pagination=_build_pagination(total=total, limit=limit, offset=offset),
+            message="Administrators retrieved successfully",
+        )
+    except Exception as e:
+        logger.error(f"Failed to list administrators (paged): {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve administrators")
+
+
 @router.get("/administrators/{admin_id}", response_model=AdministratorResponseDTO)
 async def get_administrator(
     admin_id: str,
@@ -710,6 +790,42 @@ async def list_patients(
         return patients
     except Exception as e:
         logger.error(f"Failed to list patients: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve patients")
+
+
+@router.get(
+    "/patients/paged",
+    response_model=ListResponse,
+    dependencies=[Depends(require_permission(Permission.LIST_USERS))],
+)
+async def list_patients_paged(
+    hospital_id: Optional[str] = Query(None, description="Filter by hospital ID"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    search: Optional[str] = Query(None, description="Search by name or MRN"),
+    limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    repo: UserRepository = Depends(UserRepository),
+):
+    """List patients with pagination metadata."""
+    try:
+        filters: dict[str, Any] = {}
+        if hospital_id:
+            filters["hospital_id"] = hospital_id
+        if is_active is not None:
+            filters["is_active"] = is_active
+        if search:
+            filters["search"] = search
+
+        patients = await repo.list_patients(filters, limit, offset)
+        total = await repo.count_patients(filters)
+        return ListResponse(
+            success=True,
+            data=patients,
+            pagination=_build_pagination(total=total, limit=limit, offset=offset),
+            message="Patients retrieved successfully",
+        )
+    except Exception as e:
+        logger.error(f"Failed to list patients (paged): {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to retrieve patients")
 
 
@@ -933,6 +1049,15 @@ async def upload_avatar(
             )
 
         if not (profile_updated or metadata_updated):
+            try:
+                await storage_repo.delete_file(path, bucket_name="avatars")
+                logger.info(
+                    f"Rolled back orphaned avatar file for user {user['id']}: {path}"
+                )
+            except Exception as cleanup_error:
+                logger.warning(
+                    f"Failed to rollback avatar file for user {user['id']}: {cleanup_error}"
+                )
             raise HTTPException(
                 status_code=500,
                 detail="Failed to persist profile photo",

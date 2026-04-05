@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { dashboardAPI } from '@/services/api'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { EmptyPanel, SectionLoading, ErrorBanner, HeroSection } from './SharedPanels'
-import styles from '../DoctorDashboard.module.css'
+import styles from './DoctorPanels.module.css'
 
 const renderSummaryText = (value) => {
   if (typeof value === 'string') {
@@ -118,3 +118,4 @@ export const DoctorResults = () => {
 }
 
 export default DoctorResults
+

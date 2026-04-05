@@ -1,4 +1,4 @@
-import styles from '../AdminOperationsDashboard.module.css'
+import styles from './AdminPanels.module.css'
 
 const toneClassMap = {
   info: styles.toneInfo,
@@ -134,3 +134,4 @@ export const formatCapabilityLabel = (value = '') =>
     .replace(/\b\w/g, (character) => character.toUpperCase())
 
 export { toneClassMap }
+

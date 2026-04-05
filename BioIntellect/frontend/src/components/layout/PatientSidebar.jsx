@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
 
 import { useAuth } from '@/store/AuthContext'
+import { useTheme } from '@/hooks/useTheme'
 import { AnimatedButton } from '@/components/ui/AnimatedButton'
-import { getThemeStorageKey, readThemePreference, writeThemePreference } from '@/utils/themeMode'
 import styles from './PatientSidebar.module.css'
 
 const menuItems = [
@@ -18,19 +17,7 @@ const menuItems = [
 export const PatientSidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { currentUser, signOut } = useAuth()
   const location = useLocation()
-  const themeStorageKey = getThemeStorageKey(currentUser)
-  const [isDark, setIsDark] = useState(() => {
-    return readThemePreference(themeStorageKey)
-  })
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark)
-    writeThemePreference(themeStorageKey, isDark)
-  }, [isDark, themeStorageKey])
-
-  useEffect(() => {
-    setIsDark(readThemePreference(themeStorageKey))
-  }, [themeStorageKey])
+  const { isDark, toggle: toggleTheme } = useTheme()
 
   const displayName =
     currentUser?.full_name ||
@@ -74,8 +61,8 @@ export const PatientSidebar = ({ isCollapsed, setIsCollapsed }) => {
 
       <div className={styles.profileSection}>
         <div className={styles.avatarWrapper}>
-          {currentUser?.photo_url ? (
-            <img src={currentUser.photo_url} alt={displayName} className={styles.avatar} />
+          {currentUser?.avatar_url || currentUser?.photo_url ? (
+            <img src={currentUser.avatar_url || currentUser.photo_url} alt={displayName} className={styles.avatar} />
           ) : (
             <div className={styles.avatarFallback}>{profileInitials}</div>
           )}
@@ -113,7 +100,7 @@ export const PatientSidebar = ({ isCollapsed, setIsCollapsed }) => {
             variant="primary"
             size="large"
             fullWidth={!isCollapsed}
-            onClick={() => setIsDark((previous) => !previous)}
+            onClick={toggleTheme}
             className={`${styles.themeToggleButton} ${isCollapsed ? styles.themeToggleButtonCollapsed : ''}`}
           >
             <span className={styles.themeToggleIcon}>{isDark ? '🌙' : '☀️'}</span>

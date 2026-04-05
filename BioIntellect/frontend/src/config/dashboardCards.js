@@ -1,4 +1,3 @@
-import analyticsIcon from '@/assets/images/icons/analytics.png'
 import securityIcon from '@/assets/images/icons/security.png'
 import insightsIcon from '@/assets/images/icons/insights.png'
 import cardioIcon from '@/assets/images/icons/cardio.png'

@@ -1,10 +1,31 @@
 from .BaseController import BaseController
 
-import os 
+import os
 from .ProjectController import projectController
 from langchain_community.document_loaders import TextLoader
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+
+
+class _DocxLoader:
+    """Minimal loader for .docx files using python-docx."""
+
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+
+    def load(self) -> list:
+        try:
+            import docx  # python-docx
+        except ImportError as exc:
+            raise ImportError(
+                "python-docx is required to load .docx files. "
+                "Install it with: pip install python-docx"
+            ) from exc
+
+        doc = docx.Document(self.file_path)
+        text = "\n".join(paragraph.text for paragraph in doc.paragraphs if paragraph.text.strip())
+        return [Document(page_content=text, metadata={"source": self.file_path})]
 
 
 class ProcessController(BaseController) :
@@ -30,6 +51,8 @@ class ProcessController(BaseController) :
             return TextLoader(file_path,encoding="utf-8",autodetect_encoding=True)
         elif file_ext==".pdf":
             return PyPDFLoader(file_path)
+        elif file_ext==".docx":
+            return _DocxLoader(file_path)
         else:
             raise ValueError(f"unsupported file type: {file_ext}")
         
@@ -39,7 +62,7 @@ class ProcessController(BaseController) :
         loader=self.get_file_loader(file_id=file_id)
         return loader.load()
     
-    def process_file_content(self,file_content:list , file_id:str,chunk_size:int=100,overlap_size:int=20):
+    def process_file_content(self,file_content:list , file_id:str,chunk_size:int=1000,overlap_size:int=200):
         text_splitter=RecursiveCharacterTextSplitter(chunk_size=chunk_size,
                                                      chunk_overlap=overlap_size,
                                                      length_function=len)

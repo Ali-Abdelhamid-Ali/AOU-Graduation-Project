@@ -51,9 +51,31 @@ const ALLOWED_DOMAINS = [
     'biointellect.com',
 ];
 
-const isAllowedHostname = (hostname) => ALLOWED_DOMAINS.some((domain) => (
-    hostname === domain || hostname.endsWith(`.${domain}`)
-));
+const normalizeHostname = (hostname) =>
+    String(hostname || '').trim().toLowerCase().replace(/\.$/, '');
+
+const isAllowedHostname = (hostname) => {
+    const normalizedHost = normalizeHostname(hostname);
+    if (!normalizedHost) return false;
+
+    return ALLOWED_DOMAINS.some((domain) => {
+        const normalizedDomain = normalizeHostname(domain);
+        if (!normalizedDomain) return false;
+
+        if (normalizedHost === normalizedDomain) {
+            return true;
+        }
+
+        const suffix = `.${normalizedDomain}`;
+        if (!normalizedHost.endsWith(suffix)) {
+            return false;
+        }
+
+        // Avoid abusive deep subdomain chains.
+        const labelDepth = normalizedHost.split('.').length - normalizedDomain.split('.').length;
+        return labelDepth > 0 && labelDepth <= 4;
+    });
+};
 
 /**
  * Validates a URL to prevent Open Redirect attacks.
@@ -64,8 +86,14 @@ export const validateRedirect = (url) => {
     try {
         if (!url) return '/';
 
+        // Block protocol-relative redirects like //attacker.com
+        if (url.startsWith('//')) {
+            console.warn('🚨 [SECURITY]: Blocked protocol-relative redirect:', url);
+            return '/';
+        }
+
         // Relative URLs are always allowed
-        if (url.startsWith('/') && !url.startsWith('//')) {
+        if (url.startsWith('/')) {
             return url;
         }
 

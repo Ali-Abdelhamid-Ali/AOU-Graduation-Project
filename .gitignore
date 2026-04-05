@@ -50,7 +50,6 @@ temp/
 *.crdownload
 
 # ML / data artifacts
-*.ipynb
 *.npy
 *.npz
 *.h5

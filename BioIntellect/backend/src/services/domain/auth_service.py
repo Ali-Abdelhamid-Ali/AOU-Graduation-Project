@@ -1,8 +1,8 @@
 """Auth Service - Business Logic for Authentication."""
 
-import random
 from datetime import datetime
 from typing import Any, Dict, Optional
+from uuid import uuid4
 
 from src.observability.audit import AuditAction, log_audit
 from src.observability.logger import get_logger
@@ -77,11 +77,11 @@ class AuthService:
 
     def _generate_mrn(self, hospital_id: Optional[str] = None) -> str:
         """Generates a unique Medical Record Number."""
-        # Simplified: In production, this would query a sequence or hospital-specific logic
+        # UUID-derived suffix minimizes collision risk without relying on DB-side sequences.
         hospital_code = "GEN"  # Fallback
         year = datetime.now().strftime("%y")
-        seq = str(random.randint(1, 999999)).zfill(6)
-        return f"{hospital_code}{year}{seq}"
+        unique_suffix = uuid4().hex[:8].upper()
+        return f"{hospital_code}{year}{unique_suffix}"
 
     async def sign_up(self, data: SignUpDTO) -> Dict[str, Any]:
         """
@@ -311,9 +311,27 @@ class AuthService:
                 raise Exception("Invalid credentials")
 
             user = auth_response.user
-            user_payload = await self._build_user_payload(user)
+            try:
+                user_payload = await self._build_user_payload(user)
+            except Exception as payload_error:
+                logger.warning(
+                    f"Login succeeded but profile enrichment failed for {data.email}: {payload_error}"
+                )
+                user_metadata = getattr(user, "user_metadata", None) or {}
+                fallback_role = str(user_metadata.get("role") or "patient").strip().lower() or "patient"
+                user_payload = {
+                    "id": user.id,
+                    "email": user.email,
+                    "role": fallback_role,
+                    "profile": {},
+                }
 
-            log_audit(AuditAction.LOGIN, user_id=user.id, email=data.email)
+            try:
+                log_audit(AuditAction.LOGIN, user_id=user.id, email=data.email)
+            except Exception as audit_error:
+                logger.warning(
+                    f"Login audit logging failed for {data.email}: {audit_error}"
+                )
 
             return {
                 "user": user_payload,
@@ -321,7 +339,12 @@ class AuthService:
             }
         except Exception as e:
             logger.error(f"Signin failed for {data.email}: {str(e)}")
-            await self.record_failed_attempt(data.email)
+            try:
+                await self.record_failed_attempt(data.email)
+            except Exception as attempt_error:
+                logger.warning(
+                    f"Failed attempt tracking failed for {data.email}: {attempt_error}"
+                )
             log_audit(AuditAction.LOGIN, email=data.email, success=False)
             raise e
 

@@ -3,8 +3,8 @@ FROM node:20-alpine AS build_frontend
 WORKDIR /app
 
 # Install the dependencies needed to compile the Vite app.
-COPY package.json ./
-RUN npm install --silent --no-audit --no-fund
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Copy the source only after dependency installation to keep cache hits stable.
 COPY . .

@@ -5,14 +5,15 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Optional
 
-import httpx
 from fastapi import UploadFile
 
 from src.config.settings import settings
 from src.security.config import security_config
 from src.services.ai.ecg_inference import ECGInferenceEngine
+from src.services.ai.mri_inference import MRIInferenceEngine
 
 
 MRI_CLASS_COLORS: dict[int, list[int]] = {
@@ -33,9 +34,8 @@ class AIService:
         self.api_key = os.getenv("AI_PROVIDER_API_KEY")
         self.logger = logging.getLogger("service.ai")
         self.is_enabled = bool(self.api_key)
-        self.mri_service_url = settings.mri_segmentation_service_url.rstrip("/")
-        self.mri_timeout_seconds = max(30, settings.mri_segmentation_timeout_seconds)
         self.ecg_inference = ECGInferenceEngine()
+        self.mri_inference = MRIInferenceEngine()
 
     def get_model_info(self, modality: str = "mri") -> Dict[str, str]:
         """Return stable metadata for the model exposed to the frontend."""
@@ -78,23 +78,16 @@ class AIService:
         return analysis
 
     async def analyze_mri(self, scan_data: dict) -> Dict[str, Any]:
-        """Legacy MRI analysis path kept for older scan-only flows."""
-        _ = scan_data
-        return {
-            "prediction": "MRI segmentation flow only",
-            "confidence": 0.0,
-            "segmented_regions": [],
-            "ai_notes": "Use /mri/segment for the real MRI segmentation workflow.",
-            "severity_score": 0.0,
-            "tumor_detected": False,
-            "total_volume_cm3": 0.0,
-            "measurements": {},
-            "recommendations": [
-                "Use the MRI segmentation endpoint for actual model-based analysis.",
-            ],
-            "abnormalities": [],
-            "model_info": self.get_model_info("mri"),
-        }
+        """Legacy MRI analysis path — no longer supported.
+
+        Use ``segment_mri_modalities()`` with the four NIfTI modality files
+        (T1, T1ce, T2, FLAIR) via ``POST /clinical/mri/segment`` instead.
+        """
+        raise NotImplementedError(
+            "Legacy single-scan MRI analysis is retired. "
+            "Use POST /clinical/mri/segment with the four NIfTI modality "
+            "files (T1, T1ce, T2, FLAIR) for real model inference."
+        )
 
     async def segment_mri_modalities(
         self,
@@ -102,8 +95,8 @@ class AIService:
         patient_id: Optional[str] = None,
         gt_file: Optional[UploadFile] = None,
     ) -> Dict[str, Any]:
-        """Proxy the 4-modality segmentation request to the MRI AI service."""
-        request_files: dict[str, tuple[str, bytes, str]] = {}
+        """Run 4-modality MRI segmentation using the local 3D U-Net model."""
+        modality_bytes: Dict[str, bytes] = {}
         for modality, upload in files.items():
             if upload is None:
                 raise ValueError(f"Missing required modality: {modality}")
@@ -111,168 +104,27 @@ class AIService:
             await upload.seek(0)
             if not content:
                 raise ValueError(f"Uploaded {modality} file is empty.")
-            request_files[modality] = (
-                upload.filename or f"{modality}.nii.gz",
-                content,
-                upload.content_type or "application/octet-stream",
-            )
+            modality_bytes[modality] = content
 
+        gt_bytes: Optional[bytes] = None
         if gt_file is not None:
-            gt_content = await gt_file.read()
+            gt_bytes = await gt_file.read()
             await gt_file.seek(0)
-            if gt_content:
-                request_files["gt"] = (
-                    gt_file.filename or "gt.nii.gz",
-                    gt_content,
-                    gt_file.content_type or "application/octet-stream",
-                )
+            if not gt_bytes:
+                gt_bytes = None
 
-        timeout = httpx.Timeout(float(self.mri_timeout_seconds), connect=15.0)
-
-        try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.post(
-                    f"{self.mri_service_url}/predict",
-                    files=request_files,
-                )
-        except httpx.TimeoutException:
-            self.logger.warning(
-                "MRI segmentation service timed out; using offline fallback."
-            )
-            return await self._build_offline_segmentation_response(
-                files=files,
-                patient_id=patient_id,
-                reason="MRI segmentation service timed out.",
-            )
-        except httpx.HTTPError:
-            self.logger.warning(
-                "MRI segmentation service is unavailable; using offline fallback."
-            )
-            return await self._build_offline_segmentation_response(
-                files=files,
-                patient_id=patient_id,
-                reason="MRI segmentation service is unavailable.",
-            )
-
-        try:
-            payload = response.json()
-        except ValueError:
-            self.logger.warning(
-                "MRI segmentation service returned invalid JSON; using offline fallback."
-            )
-            return await self._build_offline_segmentation_response(
-                files=files,
-                patient_id=patient_id,
-                reason="MRI segmentation service returned invalid JSON.",
-            )
-
-        if response.status_code == 400:
-            raise ValueError(payload.get("error") or payload.get("detail") or "Invalid MRI input.")
-        if response.status_code >= 500:
-            self.logger.warning(
-                "MRI segmentation service returned an error response; using offline fallback."
-            )
-            return await self._build_offline_segmentation_response(
-                files=files,
-                patient_id=patient_id,
-                reason=payload.get("error") or payload.get("detail") or "MRI segmentation failed.",
-            )
-        if not payload.get("ok", True):
-            self.logger.warning(
-                "MRI segmentation service returned a non-ok payload; using offline fallback."
-            )
-            return await self._build_offline_segmentation_response(
-                files=files,
-                patient_id=patient_id,
-                reason=payload.get("error") or "MRI segmentation failed.",
-            )
+        payload = await self.mri_inference.predict(
+            modality_bytes=modality_bytes,
+            patient_id=patient_id or "uploaded",
+            gt_bytes=gt_bytes,
+        )
 
         return self._normalize_segmentation_response(payload, patient_id=patient_id)
-
-    async def _build_offline_segmentation_response(
-        self,
-        files: Dict[str, UploadFile],
-        patient_id: Optional[str] = None,
-        reason: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        first_file = next(iter(files.values()), None)
-        filename = getattr(first_file, "filename", None) or "unknown_mri.nii.gz"
-        scan_stub = {"file_name": filename}
-        analysis = await self.analyze_mri(scan_stub)
-
-        case_id = f"offline-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
-        regions = []
-        for idx, region in enumerate(analysis.get("segmented_regions") or [], start=1):
-            volume_cm3 = float(region.get("volume_ml") or 0.0)
-            regions.append(
-                {
-                    "class_id": idx,
-                    "class_name": region.get("region", f"Region {idx}"),
-                    "present": volume_cm3 > 0,
-                    "volume_voxels": int(volume_cm3 * 1000),
-                    "voxel_count": int(volume_cm3 * 1000),
-                    "volume_mm3": volume_cm3 * 1000.0,
-                    "volume_cm3": volume_cm3,
-                    "percentage": 0.0,
-                    "color": MRI_CLASS_COLORS.get(idx, [255, 255, 255]),
-                }
-            )
-
-        total_volume = float(analysis.get("total_volume_cm3") or 0.0)
-        if not regions and total_volume <= 0:
-            regions = [
-                {
-                    "class_id": 0,
-                    "class_name": "No abnormality detected",
-                    "present": False,
-                    "volume_voxels": 0,
-                    "voxel_count": 0,
-                    "volume_mm3": 0.0,
-                    "volume_cm3": 0.0,
-                    "percentage": 0.0,
-                    "color": [255, 255, 255],
-                }
-            ]
-
-        return {
-            "case_id": case_id,
-            "patient_id": patient_id,
-            "inference_timestamp": datetime.now(timezone.utc).isoformat(),
-            "model_info": analysis.get("model_info") or self.get_model_info("mri"),
-            "tumor_detected": bool(analysis.get("tumor_detected")),
-            "prediction_confidence": {
-                "overall": float(analysis.get("confidence") or 0.0),
-                "tumor_presence": float(analysis.get("confidence") or 0.0),
-                "segmentation_quality": 0.0,
-            },
-            "regions": regions,
-            "total_volume_cm3": total_volume,
-            "measurements": analysis.get("measurements") or {},
-            "processing_metadata": {
-                "offline_fallback": True,
-                "reason": reason or "MRI segmentation service unavailable.",
-                "source_file": filename,
-            },
-            "shape": [1, 1, 1, 1],
-            "image_filename": None,
-            "labels_filename": None,
-            "requires_review": bool(analysis.get("tumor_detected")),
-            "disclaimer": (
-                "MRI segmentation service is unavailable locally; showing offline fallback analysis."
-            ),
-            "ai_interpretation": analysis.get("ai_notes"),
-            "ai_recommendations": analysis.get("recommendations") or [],
-            "metrics": {"offline_fallback": True},
-            "raw_response": {
-                "offline_fallback": True,
-                "reason": reason or "MRI segmentation service unavailable.",
-            },
-        }
 
     async def fetch_mri_visualization_artifact(
         self, case_id: str, artifact_kind: str
     ) -> dict[str, Any]:
-        """Fetch a generated NPY artifact from the MRI AI service."""
+        """Read a generated NPY artifact from the local outputs directory."""
         suffix_map = {
             "image": "image_data.npy",
             "labels": "labels.npy",
@@ -281,29 +133,15 @@ class AIService:
             raise ValueError("Unsupported MRI visualization artifact requested.")
 
         filename = f"{case_id}_{suffix_map[artifact_kind]}"
-        timeout = httpx.Timeout(float(self.mri_timeout_seconds), connect=10.0)
+        filepath = self.mri_inference.outputs_dir / filename
 
-        try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.get(
-                    f"{self.mri_service_url}/outputs/{filename}",
-                )
-        except httpx.TimeoutException as exc:
-            raise RuntimeError("MRI visualization artifact request timed out.") from exc
-        except httpx.HTTPError as exc:
-            raise RuntimeError("MRI visualization artifact service is unavailable.") from exc
-
-        if response.status_code == 404:
+        if not filepath.exists():
             raise FileNotFoundError(f"MRI visualization artifact not found: {filename}")
-        if response.status_code >= 400:
-            raise RuntimeError("Failed to download MRI visualization artifact.")
 
         return {
-            "content": response.content,
+            "content": filepath.read_bytes(),
             "filename": filename,
-            "content_type": response.headers.get(
-                "content-type", "application/octet-stream"
-            ),
+            "content_type": "application/octet-stream",
         }
 
     def _normalize_segmentation_response(
@@ -412,26 +250,15 @@ class AIService:
     async def chat_medical_llm(
         self, prompt: str, context: Optional[str] = None
     ) -> str:
-        """Simulates medical AI chat with context awareness."""
+        """Route medical chat to the configured LLM provider."""
         if not self.is_enabled:
-            return "Medical AI is currently offline. Please consult a human doctor."
-
-        p_lower = prompt.lower()
-        if "heart" in p_lower or "ecg" in p_lower:
             return (
-                "Based on the provided context, I can see the ECG history. "
-                "Our CNN-Transformer models analyze lead II data for arrhythmias. "
-                "For accurate evaluation, please review the latest Lead II segment."
-            )
-        if "brain" in p_lower or "mri" in p_lower:
-            return (
-                "The 3D U-Net segmentation provides volumetric data for tumors and edema. "
-                "The current results indicate interest in the right frontal lobe region. "
-                "I suggest clinical correlation with DICOM metadata."
+                "Medical AI chat is not available. "
+                "No LLM provider is currently configured. "
+                "Please consult a qualified clinician."
             )
 
-        return (
-            "As an AI Medical Assistant, I can interpret your records and provide "
-            "clinical context. Please remember I do not replace professional diagnosis. "
-            "How can I help with your medical history?"
+        raise NotImplementedError(
+            "Medical LLM chat requires a configured LLM provider. "
+            "Connect an LLM backend in settings to enable this feature."
         )

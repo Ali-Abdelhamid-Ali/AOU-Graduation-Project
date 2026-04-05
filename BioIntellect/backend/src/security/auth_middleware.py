@@ -1,5 +1,7 @@
 ﻿"""Security Middleware - Authentication, Authorization, and Tracing."""
 
+import hashlib
+
 import uuid
 from typing import Annotated, Any
 
@@ -195,7 +197,9 @@ async def get_current_user(
         raise
     except Exception as e:
         # Security: Do not log sensitive token information (OWASP violation)
-        token_hint = f"{token[:8]}..." if token else "missing"
+        token_hint = (
+            hashlib.sha256(token.encode()).hexdigest()[:16] if token else "missing"
+        )
         logger.error(
             f"Auth verification failed: {str(e)} | token_hint={token_hint}"
         )

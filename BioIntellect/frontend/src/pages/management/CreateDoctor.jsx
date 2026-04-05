@@ -11,6 +11,9 @@ import { specialtyOptions, genderOptions } from '@/config/options'
 import { validateStrongPassword } from '@/utils/userFormUtils'
 import styles from './CreateDoctor.module.css'
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const LICENSE_REGEX = /^[A-Za-z0-9-]{4,30}$/
+
 const CreateDoctor = ({ onBack, userRole }) => {
     const { registerDoctor, isLoading, error, clearError } = useAuth()
     const {
@@ -93,8 +96,12 @@ const CreateDoctor = ({ onBack, userRole }) => {
         if (!formData.firstName.trim()) errors.firstName = 'First name is required'
         if (!formData.lastName.trim()) errors.lastName = 'Last name is required'
         if (!formData.email.trim()) errors.email = 'Email is required'
+        else if (!EMAIL_REGEX.test(formData.email.trim())) errors.email = 'Please enter a valid email address'
         if (!formData.specialty) errors.specialty = 'Specialty selection is required'
         if (!formData.licenseNumber.trim()) errors.licenseNumber = 'License number is required'
+        else if (!LICENSE_REGEX.test(formData.licenseNumber.trim())) {
+            errors.licenseNumber = 'License number must be 4-30 chars (letters, numbers, -)'
+        }
         if (!formData.hospitalId) errors.hospitalId = 'Hospital selection is required'
         if (!formData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required'
         if (!formData.gender) errors.gender = 'Gender is required'

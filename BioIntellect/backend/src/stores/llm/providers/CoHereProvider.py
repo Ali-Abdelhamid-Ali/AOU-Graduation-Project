@@ -1,3 +1,5 @@
+from typing import Optional
+
 import cohere
 
 from src.observability.logger import get_logger
@@ -15,27 +17,27 @@ class CoHereProvider(LLMInterface):
         self.default_input_max_characters = default_input_max_characters
         self.default_output_max_tokens = default_output_max_tokens
         self.default_temp = default_temp
-        self.generation_model_id = None
-        self.embedding_model_id = None
-        self.embedding_size = None
+        self.generation_model_id: Optional[str] = None
+        self.embedding_model_id: Optional[str] = None
+        self.embedding_size: Optional[int] = None
         self.logger = get_logger("provider.CohereProvider")
         self.Enums = CohereEnums
         self.client = cohere.Client(api_key=self.api_key)
 
     def set_generation_model(self, model_id: str ) -> str:
         self.generation_model_id = model_id
-        return self.generation_model_id
+        return model_id
 
     def set_embedding_model(self, model_id: str, embedding_size:int) -> str:
         self.embedding_model_id = model_id
         self.embedding_size = embedding_size
-        return self.embedding_model_id
+        return model_id
 
     def process_text(self, text: str) -> str:
         return text[:self.default_input_max_characters].strip()
 
-    def generate_text(self, prompt: str, chat_history: list = None, max_output_tokens: int = None,
-                    temp: float = None) -> str:
+    def generate_text(self, prompt: str, chat_history: Optional[list] = None, max_output_tokens: Optional[int] = None,
+                    temp: Optional[float] = None) -> Optional[str]:
         if not self.client:
             self.logger.error("Cohere client is not initialized.")
             return None
@@ -58,22 +60,30 @@ class CoHereProvider(LLMInterface):
             if role_str == "Assistant":
                 role_str = "Chatbot"
 
+            message_text = msg.get("message")
+            if message_text is None:
+                message_text = msg.get("content", "")
+
             if role_str == "System":          
-                preamble = msg.get("message", "")
+                preamble = message_text
             else:
                 sanitized_history.append({
                     "role": role_str,
-                    "message": msg.get("message", "")
+                    "message": message_text,
                 })
 
-        response = self.client.chat(
-            model=self.generation_model_id,
-            message=prompt,
-            chat_history=sanitized_history,  
-            preamble=preamble,                
-            max_tokens=max_output_tokens or self.default_output_max_tokens,
-            temperature=temp if temp is not None else self.default_temp,
-        )
+        try:
+            response = self.client.chat(
+                model=self.generation_model_id,
+                message=prompt,
+                chat_history=sanitized_history,
+                preamble=preamble,
+                max_tokens=max_output_tokens or self.default_output_max_tokens,
+                temperature=temp if temp is not None else self.default_temp,
+            )
+        except Exception as exc:
+            self.logger.error(f"Cohere generation failed: {exc}")
+            raise ValueError(f"Cohere generation failed: {exc}") from exc
 
         if not response or not response.text:
             self.logger.error("No response returned from Cohere.")
@@ -81,7 +91,7 @@ class CoHereProvider(LLMInterface):
 
         return response.text
 
-    def embed_text(self, text: str | list[str], document_type: str = None):
+    def embed_text(self, text: str | list[str], document_type: Optional[str] = None):
         if not self.client:
             self.logger.error("Cohere client is not initialized.")
             return None

@@ -205,6 +205,8 @@ export const AuthProvider = ({ children }) => {
   }, [handleLogoutCleanup])
 
   useEffect(() => {
+    let isMounted = true
+
     const initAuth = async () => {
       try {
         let userPayload = null
@@ -226,20 +228,29 @@ export const AuthProvider = ({ children }) => {
           userPayload = response.data
         }
 
+        if (!isMounted) return
+
         if (userPayload) {
           await handleUserLoad(userPayload)
         } else {
           throw new Error('Authenticated session did not include a user payload')
         }
       } catch (err) {
+        if (!isMounted) return
         console.error('Auth session initialization failed:', err)
         handleLogoutCleanup()
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
     initAuth()
+
+    return () => {
+      isMounted = false
+    }
   }, [applySessionPayload, handleLogoutCleanup, handleUserLoad])
 
   const selectRole = useCallback((role) => {

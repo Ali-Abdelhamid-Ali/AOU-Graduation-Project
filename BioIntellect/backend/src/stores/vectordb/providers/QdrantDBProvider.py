@@ -80,8 +80,17 @@ class QdrantDBProvider(VectorDBInterface):
             batch_vectors = vectors[i:i + batch_size]
             batch_metadatas = metadatas[i:i + batch_size]
             batch_record_id = record_id[i:i + batch_size]
+            if not (
+                len(batch_record_id) == len(batch_vectors) == len(batch_text) == len(batch_metadatas)
+            ):
+                self.logger.error(
+                    "Batch insert aborted due to mismatched lengths: "
+                    f"ids={len(batch_record_id)}, vectors={len(batch_vectors)}, "
+                    f"texts={len(batch_text)}, metadatas={len(batch_metadatas)}"
+                )
+                return False
             batch_records = [models.PointStruct(id=rid, vector=vec, payload={"text": t, "metadata": m})
-                       for rid, vec, t, m in zip(batch_record_id, batch_vectors, batch_text, batch_metadatas, strict=False)]
+                       for rid, vec, t, m in zip(batch_record_id, batch_vectors, batch_text, batch_metadatas, strict=True)]
             try:
                 self.client.upsert(collection_name, batch_records, wait=True)
             except Exception as e:

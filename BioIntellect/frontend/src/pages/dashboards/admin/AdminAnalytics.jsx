@@ -10,7 +10,7 @@ import {
   ErrorBanner,
   formatCapabilityLabel,
 } from './SharedPanels'
-import styles from '../AdminOperationsDashboard.module.css'
+import styles from './AdminPanels.module.css'
 
 export const AdminAnalytics = () => {
   const navigate = useNavigate()
@@ -103,3 +103,4 @@ export const AdminAnalytics = () => {
 }
 
 export default AdminAnalytics
+

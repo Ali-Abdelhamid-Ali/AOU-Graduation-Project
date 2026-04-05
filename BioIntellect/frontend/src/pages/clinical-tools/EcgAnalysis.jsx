@@ -12,6 +12,8 @@ import { EcgDisclaimer } from '../../components/clinical/EcgDisclaimer'
 import { PatientDisclaimer } from '../../components/clinical/PatientDisclaimer'
 import styles from './EcgAnalysis.module.css'
 
+const MAX_ECG_FILE_SIZE = 50 * 1024 * 1024
+
 export const EcgAnalysis = ({ onBack }) => {
     const { currentUser, userRole } = useAuth()
     const [dragging, setDragging] = useState(false)
@@ -34,11 +36,14 @@ export const EcgAnalysis = ({ onBack }) => {
 
     useEffect(() => {
         if (userRole !== ROLES.PATIENT) {
+            let cancelled = false
+
             const loadPatients = async () => {
                 try {
                     const response = await patientsAPI.list({ is_active: true, limit: 100 })
                     if (response.success) {
                         const loadedPatients = response.data || []
+                        if (cancelled) return
                         setPatients(loadedPatients)
                         setSelectedPatientId((current) => current || loadedPatients[0]?.id || '')
                         setPatientLoadError(
@@ -49,6 +54,7 @@ export const EcgAnalysis = ({ onBack }) => {
                     }
                 } catch (err) {
                     console.error('Failed to load patients:', err)
+                    if (cancelled) return
                     setPatients([])
                     setPatientLoadError(
                         getApiErrorMessage(err, 'Failed to load the patient list.')
@@ -56,7 +62,13 @@ export const EcgAnalysis = ({ onBack }) => {
                 }
             }
             loadPatients()
+
+            return () => {
+                cancelled = true
+            }
         }
+
+        return undefined
     }, [userRole])
 
     const handleFileUpload = (e) => {
@@ -66,6 +78,12 @@ export const EcgAnalysis = ({ onBack }) => {
                 setFile(null)
                 setResult(null)
                 setError('Only .dat ECG files are supported.')
+                return
+            }
+            if (uploadedFile.size > MAX_ECG_FILE_SIZE) {
+                setFile(null)
+                setResult(null)
+                setError('File too large. Maximum allowed ECG file size is 50MB.')
                 return
             }
             setFile(uploadedFile)
@@ -79,6 +97,7 @@ export const EcgAnalysis = ({ onBack }) => {
     }
 
     const runAnalysis = async () => {
+        if (analyzing) return
         if (!file || !currentUser?.id) return
 
         if (!isDatFile(file.name)) {

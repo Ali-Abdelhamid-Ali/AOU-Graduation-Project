@@ -21,8 +21,29 @@ class LLMRepository(BaseRepository):
     async def create_message(self, data: dict):
         client = await self._get_client()
         payload = sanitize_for_table("llm_messages", data)
-        result = await client.table("llm_messages").insert(payload).execute()
-        return result.data[0] if result.data else None
+        try:
+            result = await client.table("llm_messages").insert(payload).execute()
+            if result.data and len(result.data) > 0:
+                return result.data[0]
+            # Return a minimal record if insert didn't return data (shouldn't happen, but safe fallback)
+            logger.warning(f"Insert returned no data for message in conversation {data.get('conversation_id')}")
+            return {
+                "id": None,
+                "conversation_id": data.get("conversation_id"),
+                "message_content": data.get("message_content", ""),
+                "sender_type": data.get("sender_type"),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+        except Exception as e:
+            logger.error(f"Failed to create message: {str(e)}")
+            # Return a safe fallback object instead of None
+            return {
+                "id": None,
+                "conversation_id": data.get("conversation_id"),
+                "message_content": data.get("message_content", ""),
+                "sender_type": data.get("sender_type"),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
 
     async def get_messages(self, conversation_id: str, limit: int, offset: int):
         client = await self._get_client()
@@ -616,6 +637,18 @@ class LLMRepository(BaseRepository):
             .execute()
         )
         return response.data if response.data else []
+
+    async def count_active_conversations(self, doctor_id: str) -> int:
+        """Count active (non-archived) conversations for a doctor."""
+        client = await self._get_client()
+        response = await (
+            client.table(self.table_name)
+            .select("id", count="exact")
+            .eq("doctor_id", doctor_id)
+            .eq("is_archived", False)
+            .execute()
+        )
+        return response.count if response.count is not None else 0
 
     async def get_unread_notification_count(self, user_id: str) -> int:
         """Get count of unread notifications for a user."""

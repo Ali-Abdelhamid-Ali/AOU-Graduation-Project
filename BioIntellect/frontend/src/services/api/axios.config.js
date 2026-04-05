@@ -10,7 +10,7 @@ import { normalizeApiErrorPayload } from '@/utils/apiErrorUtils'
 import { API_BASE_URL } from './baseUrl'
 
 const LOOPBACK_BASE_PATTERN = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i
-const DEFAULT_API_TIMEOUT_MS = 15000
+const DEFAULT_API_TIMEOUT_MS = 60000 // Increased from 15s to 60s for LLM generation
 const API_TIMEOUT_MS = Number(
   import.meta.env.VITE_API_TIMEOUT_MS || DEFAULT_API_TIMEOUT_MS
 )

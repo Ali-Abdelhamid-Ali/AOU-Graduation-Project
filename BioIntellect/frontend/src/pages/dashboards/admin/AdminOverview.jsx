@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { brandingConfig } from '@/config/brandingConfig'
 import { ROLES } from '@/config/roles'
-import { dashboardAPI, usersAPI, patientsAPI } from '@/services/api'
+import { dashboardAPI, usersAPI } from '@/services/api'
 import { useAuth } from '@/store/AuthContext'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import {
@@ -16,7 +16,7 @@ import {
   formatCapabilityLabel,
   toneClassMap,
 } from './SharedPanels'
-import styles from '../AdminOperationsDashboard.module.css'
+import styles from './AdminPanels.module.css'
 
 const unwrapList = (response) => {
   if (Array.isArray(response)) return response
@@ -37,7 +37,7 @@ const normalizeUserRecord = (type, item = {}) => {
     item.email ||
     'Unnamed user'
   const secondary =
-    item.specialty || item.department || item.mrn || item.medical_record_number || item.license_number || 'Profile details unavailable'
+    item.specialty || item.department || item.mrn || item.license_number || 'Profile details unavailable'
   const contact = [item.email, item.phone].filter(Boolean).join(' | ') || 'No contact details'
 
   return {
@@ -91,24 +91,31 @@ export const AdminOverview = () => {
     let cancelled = false
     const load = async () => {
       setUsersData(prev => ({ ...prev, loading: true, error: '' }))
-      try {
-        const [patients, doctors, administrators] = await Promise.all([
-          usersAPI.list('patients', { limit: 10 }),
-          usersAPI.list('doctors', { limit: 10 }),
-          usersAPI.list('administrators', { limit: 10 }),
-        ])
-        if (!cancelled) {
-          const rows = [
-            ...unwrapList(administrators).map((i) => normalizeUserRecord('administrators', i)),
-            ...unwrapList(doctors).map((i) => normalizeUserRecord('doctors', i)),
-            ...unwrapList(patients).map((i) => normalizeUserRecord('patients', i)),
-          ]
-          setUsersData({ loading: false, error: '', data: rows })
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setUsersData({ loading: false, error: getApiErrorMessage(err, 'Failed to load users.'), data: [] })
-        }
+      const [patients, doctors, administrators] = await Promise.allSettled([
+        usersAPI.list('patients', { limit: 10 }),
+        usersAPI.list('doctors', { limit: 10 }),
+        usersAPI.list('administrators', { limit: 10 }),
+      ])
+
+      if (!cancelled) {
+        const rows = [
+          ...(administrators.status === 'fulfilled'
+            ? unwrapList(administrators.value).map((i) => normalizeUserRecord('administrators', i))
+            : []),
+          ...(doctors.status === 'fulfilled'
+            ? unwrapList(doctors.value).map((i) => normalizeUserRecord('doctors', i))
+            : []),
+          ...(patients.status === 'fulfilled'
+            ? unwrapList(patients.value).map((i) => normalizeUserRecord('patients', i))
+            : []),
+        ]
+
+        const hasFailure = [patients, doctors, administrators].some((result) => result.status === 'rejected')
+        setUsersData({
+          loading: false,
+          error: hasFailure && rows.length === 0 ? 'Failed to load users.' : hasFailure ? 'Some user groups are temporarily unavailable.' : '',
+          data: rows,
+        })
       }
     }
     load()
@@ -306,3 +313,4 @@ export const AdminOverview = () => {
 }
 
 export default AdminOverview
+

@@ -33,7 +33,7 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
         if (location.pathname !== fallbackPath) {
             return <Navigate to={fallbackPath} replace />;
         } else {
-            return <Navigate to="/" replace />;
+            return <Navigate to="/login" replace />;
         }
     }
 

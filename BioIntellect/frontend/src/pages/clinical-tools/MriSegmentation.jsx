@@ -273,6 +273,8 @@ export const MriSegmentation = ({ onBack }) => {
 
   useEffect(() => {
     if (userRole !== 'patient') {
+      let cancelled = false
+
       const loadPatients = async () => {
         const scopedParams = {
           limit: 100,
@@ -294,25 +296,27 @@ export const MriSegmentation = ({ onBack }) => {
           loadedPatients = extractPatientRows(response)
         } catch (loadError) {
           lastError = loadError
-        }
 
-        if (!loadedPatients.length) {
+          // Fallbacks are attempted only on actual errors, not on empty results.
           try {
             const response = await patientsAPI.list(fallbackParams)
             loadedPatients = extractPatientRows(response)
-          } catch (loadError) {
-            lastError = loadError
+            lastError = null
+          } catch (fallbackError) {
+            lastError = fallbackError
+          }
+
+          if (!loadedPatients.length) {
+            try {
+              const response = await usersAPI.list('patients', scopedParams)
+              loadedPatients = extractPatientRows(response)
+            } catch (usersLoadError) {
+              lastError = usersLoadError
+            }
           }
         }
 
-        if (!loadedPatients.length) {
-          try {
-            const response = await usersAPI.list('patients', scopedParams)
-            loadedPatients = extractPatientRows(response)
-          } catch (loadError) {
-            lastError = loadError
-          }
-        }
+        if (cancelled) return
 
         if (loadedPatients.length) {
           setPatients(loadedPatients)
@@ -334,13 +338,22 @@ export const MriSegmentation = ({ onBack }) => {
       }
 
       loadPatients()
+
+      return () => {
+        cancelled = true
+      }
     }
+
+    return undefined
   }, [currentUser?.hospital_id, userRole])
 
   useEffect(() => {
+    let cancelled = false
+
     const loadModelInfo = async () => {
       try {
         const info = await mriSegmentationService.getModelInfo()
+        if (cancelled) return
         setModelInfo(info)
       } catch (loadError) {
         console.warn('Could not fetch model info:', loadError)
@@ -348,6 +361,10 @@ export const MriSegmentation = ({ onBack }) => {
     }
 
     loadModelInfo()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const selectedPatient = useMemo(() => {

@@ -113,7 +113,7 @@ class BaseRepository(Generic[T]):
 
             if result.data:
                 # Plan Section 5.A: Invalidate list cache on write
-                await global_cache.clear()  # Simple approach for Phase 1
+                await global_cache.invalidate_prefix(f"{self.table_name}:")
                 return result.data[0]
 
             return None
@@ -139,7 +139,7 @@ class BaseRepository(Generic[T]):
         result = await self._execute_with_retry(_update, is_idempotent=True)
 
         if result.data:
-            await global_cache.clear()
+            await global_cache.invalidate_prefix(f"{self.table_name}:")
             return result.data[0]
 
         return None
@@ -157,7 +157,7 @@ class BaseRepository(Generic[T]):
         result = await self._execute_with_retry(_delete, is_idempotent=True)
 
         if len(result.data) > 0:
-            await global_cache.clear()
+            await global_cache.invalidate_prefix(f"{self.table_name}:")
             return True
 
         return False

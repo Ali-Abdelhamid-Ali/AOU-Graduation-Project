@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { dashboardAPI } from '@/services/api'
-import { useAuth } from '@/store/AuthContext'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { MetricCard, EmptyPanel, SectionLoading, ErrorBanner, HeroSection, toneClassMap } from './SharedPanels'
-import styles from '../DoctorDashboard.module.css'
+import styles from './DoctorPanels.module.css'
 
 const renderSummaryText = (value) => {
   if (typeof value === 'string') {
@@ -27,7 +26,6 @@ const renderSummaryText = (value) => {
 
 export const DoctorOverview = () => {
   const navigate = useNavigate()
-  const { currentUser } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [overview, setOverview] = useState(null)
@@ -48,10 +46,18 @@ export const DoctorOverview = () => {
     return () => { cancelled = true }
   }, [])
 
-  const quickActions = [
-    { title: 'Open ECG Workspace', description: 'Shared intake for ECG studies.', action: () => navigate('/ecg-analysis') },
-    { title: 'Open MRI Workspace', description: 'Shared intake for MRI studies.', action: () => navigate('/mri-analysis') },
-  ]
+  const quickActions = useMemo(
+    () => [
+      { title: 'Open ECG Workspace', description: 'Shared intake for ECG studies.', action: () => navigate('/ecg-analysis') },
+      { title: 'Open MRI Workspace', description: 'Shared intake for MRI studies.', action: () => navigate('/mri-analysis') },
+    ],
+    [navigate]
+  )
+
+  const recentPatientsPreview = useMemo(
+    () => (overview?.recent_patients || []).slice(0, 5),
+    [overview?.recent_patients]
+  )
 
   if (loading) return <SectionLoading />
 
@@ -95,9 +101,9 @@ export const DoctorOverview = () => {
           <div className={styles.panelHeading}>
             <div><h3>Recent Patients</h3><p>Most recent patients associated with your active cases.</p></div>
           </div>
-          {overview?.recent_patients?.length ? (
+          {recentPatientsPreview.length ? (
             <div className={styles.patientList}>
-              {overview.recent_patients.slice(0, 5).map((item) => (
+              {recentPatientsPreview.map((item) => (
                 <div key={item.id} className={styles.patientCard}>
                   <strong>{item.name}</strong>
                   <span>{item.mrn || 'MRN unavailable'}</span>
@@ -170,3 +176,4 @@ export const DoctorOverview = () => {
 }
 
 export default DoctorOverview
+

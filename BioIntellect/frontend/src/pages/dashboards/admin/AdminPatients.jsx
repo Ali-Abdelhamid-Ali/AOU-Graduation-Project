@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { patientsAPI } from '@/services/api'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { EmptyPanel, SectionLoading, ErrorBanner } from './SharedPanels'
-import styles from '../AdminOperationsDashboard.module.css'
+import styles from './AdminPanels.module.css'
 
 const unwrapList = (response) => {
   if (Array.isArray(response)) return response
@@ -14,9 +14,9 @@ const unwrapList = (response) => {
 }
 
 const normalizePatientRecord = (item = {}) => ({
-  id: item.id || item.user_id || item.mrn || item.medical_record_number,
+  id: item.id || item.user_id || item.mrn,
   name: item.full_name || [item.first_name, item.last_name].filter(Boolean).join(' ') || 'Unnamed patient',
-  mrn: item.mrn || item.medical_record_number || 'MRN unavailable',
+  mrn: item.mrn || 'MRN unavailable',
   phone: item.phone || 'No phone on record',
   hospital: item.hospital_name || item.hospital_id || 'Unassigned facility',
   gender: item.gender || 'Unspecified',
@@ -25,27 +25,33 @@ const normalizePatientRecord = (item = {}) => ({
 
 export const AdminPatients = () => {
   const navigate = useNavigate()
+  const pageSize = 10
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [patients, setPatients] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     const activeParam = statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined
+    const offset = (page - 1) * pageSize
 
     const load = async () => {
       setLoading(true)
       setError('')
       try {
-        const response = await patientsAPI.list({
-          limit: 100,
+        const response = await patientsAPI.listPaged({
+          limit: pageSize,
+          offset,
+          ...(searchQuery.trim() ? { search: searchQuery.trim() } : {}),
           ...(activeParam !== undefined ? { is_active: activeParam } : {}),
         })
         if (!cancelled) {
           setPatients(unwrapList(response).map(normalizePatientRecord))
+          setTotal(Number(response?.pagination?.total || 0))
           setLoading(false)
         }
       } catch (err) {
@@ -57,28 +63,14 @@ export const AdminPatients = () => {
     }
     load()
     return () => { cancelled = true }
-  }, [statusFilter])
+  }, [statusFilter, page, searchQuery])
 
   useEffect(() => {
     setPage(1)
   }, [searchQuery, statusFilter])
 
-  const filteredPatients = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    return patients.filter((p) => {
-      if (!q) return true
-      return [p.name, p.mrn, p.phone, p.hospital, p.gender]
-        .filter(Boolean)
-        .some((v) => v.toLowerCase().includes(q))
-    })
-  }, [patients, searchQuery])
-
-  const pageSize = 10
-  const totalPages = Math.max(1, Math.ceil(filteredPatients.length / pageSize))
-  const paginatedPatients = useMemo(() => {
-    const start = (page - 1) * pageSize
-    return filteredPatients.slice(start, start + pageSize)
-  }, [filteredPatients, page])
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const paginatedPatients = useMemo(() => patients, [patients])
 
   if (loading) return <SectionLoading />
 
@@ -124,7 +116,7 @@ export const AdminPatients = () => {
             </select>
           </label>
           <div className={styles.tableSummary}>
-            <strong>{filteredPatients.length}</strong>
+            <strong>{total}</strong>
             <span>patients in scope</span>
           </div>
         </div>
@@ -132,14 +124,14 @@ export const AdminPatients = () => {
         {paginatedPatients.length ? (
           <>
             <div className={styles.tableWrap}>
-              <table className={styles.table}>
+              <table className={styles.table} role="table" aria-label="Admin patients table">
                 <thead>
                   <tr>
-                    <th>Patient</th>
-                    <th>MRN</th>
-                    <th>Contact</th>
-                    <th>Facility</th>
-                    <th>Status</th>
+                    <th scope="col">Patient</th>
+                    <th scope="col">MRN</th>
+                    <th scope="col">Contact</th>
+                    <th scope="col">Facility</th>
+                    <th scope="col">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -194,3 +186,4 @@ export const AdminPatients = () => {
 }
 
 export default AdminPatients
+

@@ -150,6 +150,25 @@ class GlobalMemoryCache:
             if key in self._memory_cache:
                 del self._memory_cache[key]
 
+    async def invalidate_prefix(self, prefix: str) -> None:
+        """Delete all keys matching a prefix (targeted invalidation)."""
+        if self._redis_ready():
+            try:
+                cursor = 0
+                while True:
+                    cursor, keys = await self._redis.scan(cursor, match=f"{prefix}*", count=100)
+                    if keys:
+                        await self._redis.delete(*keys)
+                    if cursor == 0:
+                        break
+            except Exception as e:
+                self._handle_redis_error("invalidate_prefix", prefix, e)
+
+        with self._lock:
+            to_delete = [k for k in self._memory_cache if k.startswith(prefix)]
+            for k in to_delete:
+                del self._memory_cache[k]
+
     async def clear(self) -> None:
         """Clear all keys."""
         if self._redis_ready():

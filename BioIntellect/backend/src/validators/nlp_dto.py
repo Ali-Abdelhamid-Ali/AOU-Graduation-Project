@@ -13,9 +13,10 @@ class PushRequest(BaseModel):
         description="Optional metadata that may include file_id",
     )
     chunk_size: int = Field(
-        default=100,
+        default=500,
         gt=0,
-        description="Chunk size for text splitting",
+        le=2000,
+        description="Chunk size for text splitting (in tokens)",
     )
     overlap_size: int = Field(
         default=20,
@@ -39,6 +40,10 @@ class SearchRequest(BaseModel):
     top_k: int = Field(default=3, gt=0, le=5)
     chat_history: list[dict[str, Any]] = Field(default_factory=list, max_length=100, description="Optional chat history for context")
     language: Optional[str] = Field(default="en", description="Response language: 'en' or 'ar'")
+    model_backend: Optional[str] = Field(
+        default=None,
+        description="Optional generation backend override. Supported: cohere, openai, medmo, phi_qa",
+    )
     conversation_id: Optional[str] = Field(
         default=None,
         description="Optional conversation identifier for persisted chat history",
@@ -51,4 +56,14 @@ class SearchRequest(BaseModel):
         default=None,
         max_length=255,
         description="Optional conversation title for newly created persisted conversations",
+    )
+    context_file_ids: list[str] = Field(
+        default_factory=list,
+        max_length=20,
+        description="Optional document file IDs to bind to the message context",
+    )
+    image_file_ids: list[str] = Field(
+        default_factory=list,
+        max_length=20,
+        description="Optional image file IDs to bind to the message context",
     )

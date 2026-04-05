@@ -51,15 +51,27 @@ const normalizeConversation = (conversation = {}) => ({
   title: conversation.title ?? 'Medical Consultation',
 })
 
-const normalizeMessage = (message = {}) => ({
-  ...message,
-  id: message.id,
-  message_content: message.message_content ?? message.content ?? '',
-  sender_type: message.sender_type ?? message.role ?? 'llm',
-})
+const normalizeMessage = (message = {}) => {
+  // Handle null/undefined gracefully
+  if (!message || typeof message !== 'object') {
+    return {
+      id: null,
+      message_content: '',
+      sender_type: 'llm',
+    }
+  }
+  
+  return {
+    ...message,
+    id: message.id ?? null,
+    message_content: message.message_content ?? message.content ?? '',
+    sender_type: message.sender_type ?? message.role ?? 'llm',
+  }
+}
 
 const parseSseChunk = (chunk, handlers) => {
-  const blocks = chunk.split('\n\n')
+  const normalizedChunk = String(chunk || '').replace(/\r\n/g, '\n')
+  const blocks = normalizedChunk.split('\n\n')
 
   blocks.forEach((block) => {
     if (!block.trim()) {
@@ -233,6 +245,11 @@ export const geographyAPI = {
 
 export const usersAPI = {
   list: (type, params) => apiClient.get(`/users/${type}`, { params }),
+  listPaged: async (type, params) =>
+    normalizeEnvelope(
+      await apiClient.get(`/users/${type}/paged`, { params }),
+      normalizeList((value) => value)
+    ),
   createPatient: async (data) =>
     normalizeUserMutation(await apiClient.post('/users/patients', data), normalizePatient),
   createDoctor: async (data) =>
@@ -257,6 +274,11 @@ export const patientsAPI = {
       await apiClient.get('/users/patients', { params }),
       normalizeList(normalizePatient)
     ),
+  listPaged: async (params) =>
+    normalizeEnvelope(
+      await apiClient.get('/users/patients/paged', { params }),
+      normalizeList(normalizePatient)
+    ),
   update: async (id, data) =>
     normalizeEnvelope(
       await apiClient.put(`/users/patients/${id}`, data),
@@ -265,10 +287,23 @@ export const patientsAPI = {
 }
 
 export const nlpChatAPI = {
+  listModels: async () =>
+    normalizeEnvelope(
+      await apiClient.get('/nlp/models'),
+      (payload) => payload || {}
+    ),
   createConversation: async (projectId, data) =>
     normalizeEnvelope(
       await apiClient.post(`/nlp/chats/${projectId}/conversations`, data),
       (payload) => payload?.conversation || payload
+    ),
+  uploadAttachments: async (projectId, formData) =>
+    normalizeEnvelope(
+      await apiClient.post(`/nlp/chats/${projectId}/attachments`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 180000,
+      }),
+      (payload) => payload || {}
     ),
   listConversations: async (projectId, params) =>
     normalizeEnvelope(
@@ -288,9 +323,37 @@ export const nlpChatAPI = {
       ),
       (payload) => normalizeMessage(payload?.message || payload)
     ),
-  // Streaming is handled separately due to SSE requirements
+  // Non-streaming answer endpoint (recommended for stable UX)
+  // Returns full response immediately without SSE
+  answerQuestion: async (projectId, data) =>
+    normalizeEnvelope(
+      await apiClient.post(`/nlp/index/answer/${projectId}`, data),
+      (payload) => ({
+        conversation_id: payload?.conversation_id,
+        answer: payload?.answer,
+        full_prompt: payload?.full_prompt,
+        chat_history: payload?.chat_history,
+        user_message: payload?.user_message,
+        assistant_message: normalizeMessage(payload?.assistant_message),
+      })
+    ),
+  listConversationCount: async () =>
+    normalizeEnvelope(
+      await apiClient.get('/nlp/conversations/count'),
+      (payload) => payload || {}
+    ),
+  archiveConversation: async (projectId, conversationId, reason) =>
+    normalizeEnvelope(
+      await apiClient.patch(
+        `/nlp/chats/${projectId}/conversations/${conversationId}/archive`,
+        null,
+        { params: reason ? { reason } : undefined }
+      ),
+      (payload) => payload || {}
+    ),
+  // Legacy: Streaming is handled separately due to SSE requirements
   // Uses fetch to access response.body for streaming chunks
-  streamAnswer: async (projectId, data, handlers = {}) => {
+  streamAnswer: async (projectId, data, handlers = {}, signal) => {
     const token = getAccessToken()
     const response = await fetch(`${API_BASE_URL}/nlp/index/answer-stream/${projectId}`, {
       method: 'POST',
@@ -300,6 +363,7 @@ export const nlpChatAPI = {
       },
       credentials: 'include',
       body: JSON.stringify(data),
+      ...(signal ? { signal } : {}),
     })
 
     if (!response.ok) {
@@ -321,13 +385,15 @@ export const nlpChatAPI = {
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
 
-    while (true) {
+    let isReading = true
+    while (isReading) {
       const { value, done } = await reader.read()
       if (done) {
         if (buffer.trim()) {
           parseSseChunk(buffer, handlers)
         }
-        break
+        isReading = false
+        continue
       }
 
       buffer += decoder.decode(value, { stream: true })

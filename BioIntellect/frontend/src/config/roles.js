@@ -36,7 +36,7 @@ export const ROLE_DB_CONFIG = {
         select: `
             id, first_name, last_name, first_name_ar, last_name_ar,
             user_id, hospital_id, hospitals(hospital_name_en), 
-            medical_record_number, photo_url, date_of_birth, gender, phone, 
+            mrn, avatar_url, date_of_birth, gender, phone, 
             address, city, country_id, region_id,
             blood_type, national_id, passport_number,
             insurance_provider, insurance_number,
@@ -53,8 +53,9 @@ export const ROLE_DB_CONFIG = {
             user_role: ROLES.PATIENT,
             hospital_id: data.hospital_id,
             hospital_name: data.hospitals?.hospital_name_en,
-            mrn: data.medical_record_number,
-            photo_url: data.photo_url,
+            mrn: data.mrn || data.medical_record_number,
+            photo_url: data.photo_url || data.avatar_url,
+            avatar_url: data.avatar_url || data.photo_url,
             date_of_birth: data.date_of_birth,
             gender: data.gender,
             phone: data.phone,
@@ -152,6 +153,10 @@ export const normalizeRole = (role) => {
     return normalized;
 };
 
+const isValidUUID = (str) =>
+    typeof str === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
+
 /**
  * Constructs the standardized user_metadata payload for Supabase Auth.
  * Handles data normalization, validation, and role-specific requirements.
@@ -181,7 +186,7 @@ export const createAuthPayload = (input) => {
     // Role-Specific Fields & Hospital Logic
     const hId = input.hospitalId || input.hospital_id;
     if ([ROLES.DOCTOR, ROLES.NURSE, ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(role)) {
-        if (hId && hId.length > 20) {
+        if (isValidUUID(hId)) {
             metadata.hospital_id = hId;
             metadata.hospital_name = input.hospitalName || input.hospital_name || null;
         } else {
@@ -190,7 +195,7 @@ export const createAuthPayload = (input) => {
             metadata.hospital_name = input.hospitalName || input.hospital_name || 'BioIntellect Medical Center';
         }
     } else if (role === ROLES.PATIENT) {
-        if (hId && hId.length > 20) {
+        if (isValidUUID(hId)) {
             metadata.hospital_id = hId;
         } else {
             metadata.hospital_id = null;

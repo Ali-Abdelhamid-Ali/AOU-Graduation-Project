@@ -1,5 +1,9 @@
+import inspect
+from typing import Any, Optional
+
 from src.api.controllers.BaseController import BaseController
 from src.stores.llm.LLMEnums import DocumentTypeEnums
+from src.config.settings import get_settings
 
 
 class NLPController(BaseController):
@@ -16,12 +20,12 @@ class NLPController(BaseController):
         collection_name = self.create_collection_name(project_id=project_id)
         if self.vectorDB_client.is_collection_exists(collection_name):
             return self.vectorDB_client.delete_collection(collection_name)
-    def get_vector_db_collection_info(self, project_id: str) -> dict:
+    def get_vector_db_collection_info(self, project_id: str) -> Any:
         collection_name = self.create_collection_name(project_id=project_id)
         if self.vectorDB_client.is_collection_exists(collection_name):
             collection_info = self.vectorDB_client.get_collection_info(collection_name=collection_name)
             return collection_info
-        return None
+        return {}
 
     def index_into_vector_db(self, project_id: str, texts:list, vectors:list, metadata: list, record_id: list|None=None, do_reset: bool = False):
         collection_name = self.create_collection_name(project_id=project_id)
@@ -60,10 +64,21 @@ class NLPController(BaseController):
         if not results:
             raise ValueError("No results returned from vector database search")
         return results
-    def answer_rag_question(self, project_id: str, question: str, limit: int, chat_history: list = None, language: str = "en") -> tuple:
-        retrieved_documents = self.search_vector_db_collection(project_id=project_id, text=question, limit=limit)
-        if not retrieved_documents or len(retrieved_documents) == 0:
-            raise ValueError("No relevant documents found in vector database for the given question")
+
+    def answer_rag_question(
+        self,
+        project_id: str,
+        question: str,
+        limit: int,
+        chat_history = None,
+        language: str = "en",
+        image_path: str | None = None,
+    ) -> tuple:
+        try:
+            retrieved_documents = self.search_vector_db_collection(project_id=project_id, text=question, limit=limit)
+        except ValueError:
+            retrieved_documents = []
+
         if self.generation_client is None:
             raise ValueError("Generation client is not initialized")
 
@@ -71,36 +86,52 @@ class NLPController(BaseController):
             chat_history = []
 
         self.template_parser.set_language(language)
-
         system_prompt = self.template_parser.get("rag", "system_prompt", vars={})
 
-        document_prompts = "\n".join([
-            self.template_parser.get("rag", "document_prompt", vars={
-                "doc_no": idx + 1,
-                "doc_content": doc.text
-            })
-            for idx, doc in enumerate(retrieved_documents)
-        ])
+        if retrieved_documents:
+            document_prompts = "\n".join([
+                self.template_parser.get("rag", "document_prompt", vars={
+                    "doc_no": idx + 1,
+                    "doc_content": doc.text,
+                })
+                for idx, doc in enumerate(retrieved_documents)
+            ])
+        else:
+            document_prompts = (
+                "No indexed documents were found for this project and question. "
+                "Answer based on your general medical knowledge, and clearly indicate uncertainty when applicable. Clearly state that this answer is based on general knowledge and not from the patient's uploaded documents."
+            )
 
         footer_prompt = self.template_parser.get("rag", "footer_prompt", vars={})
         question_label = "Question" if language != "ar" else "السؤال"
         answer_label = "Answer" if language != "ar" else "الإجابة"
         full_prompt = f"{document_prompts}\n{footer_prompt}\n{question_label}: {question}\n{answer_label}:"
 
+        settings = get_settings()
+        history_limit = settings.CHAT_HISTORY_MAX_MESSAGES
+        max_tokens = settings.CHAT_MAX_OUTPUT_TOKENS
+
         clean_history = [
             msg for msg in chat_history
             if isinstance(msg, dict) and str(msg.get("role", "")).capitalize() != "System"
-        ][-100:]
-
+        ][-history_limit:]
         model_history = [{"role": "System", "message": system_prompt}, *clean_history]
 
-        answer = self.generation_client.generate_text(
-            prompt=full_prompt,
-            chat_history=model_history,
-            max_output_tokens=500
-        )
+        generate_kwargs = {
+            "prompt": full_prompt,
+            "chat_history": model_history,
+            "max_output_tokens": max_tokens,
+        }
+        if image_path and "image_path" in inspect.signature(self.generation_client.generate_text).parameters:
+            generate_kwargs["image_path"] = image_path
+
+        answer = self.generation_client.generate_text(**generate_kwargs)
+        answer = answer.strip() if isinstance(answer, str) else ""
         if not answer:
-            raise ValueError("Failed to generate answer from generation client")
+            answer = (
+                "I couldn't generate a model response for this request right now. "
+                "Please try another model or check the local model configuration."
+            )
 
         chat_history.append(
             self.generation_client.construct_prompt(
@@ -110,11 +141,10 @@ class NLPController(BaseController):
         )
         chat_history.append(
             self.generation_client.construct_prompt(
-                query=answer.strip(),
-
+                query=answer,
                 role=self.generation_client.Enums.assistant.value,
             )
         )
 
-        return answer.strip(), full_prompt.strip(), chat_history
+        return answer, full_prompt.strip(), chat_history
     

@@ -31,6 +31,7 @@ class LLMProviderFactory:
                     default_output_max_tokens=self.settings.INPUT_DEFAULT_MAX_TOKENS,
                     default_temp=self.settings.INPUT_DEFAULT_TEMPERATURE,
                     offload_folder=self.settings.MEDMO_OFFLOAD_FOLDER,
+                    force_cpu_only=self.settings.FORCE_CPU_ONLY,
                                         )
             elif backend == "phi_qa":
                 from .providers.PhiQAProvider import PhiQAProvider
@@ -40,6 +41,7 @@ class LLMProviderFactory:
                     default_input_max_characters=self.settings.INPUT_DEFAULT_MAX_CHARACTERS,
                     default_output_max_tokens=self.settings.INPUT_DEFAULT_MAX_TOKENS,
                     default_temp=self.settings.INPUT_DEFAULT_TEMPERATURE,
+                    force_cpu_only=self.settings.FORCE_CPU_ONLY,
                                         )
             else:
                 raise ValueError(f"Unsupported backend: {backend}")

@@ -72,6 +72,13 @@ const AdminProvisioning = lazy(() =>
   }))
 )
 
+// ──────────────────────────── Super Admin Dashboard (separate route tree) ────────────────────────────
+const SuperAdminLayout = lazy(() =>
+  import('@/pages/dashboards/super-admin/SuperAdminLayout').then((m) => ({
+    default: m.SuperAdminLayout || m.default,
+  }))
+)
+
 // ──────────────────────────── Doctor Dashboard (split routes) ────────────────────────────
 const DoctorLayout = lazy(() =>
   import('@/pages/dashboards/doctor/DoctorLayout').then((m) => ({
@@ -298,6 +305,22 @@ export function AppRoutes() {
           />
         </Route>
 
+        {/* ──── Super Admin Dashboard (SEPARATE ROUTE TREE) ──── */}
+        <Route
+          element={
+            <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+              <SuperAdminLayout onLogout={signOut} />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/super-admin" element={<AdminOverview />} />
+          <Route path="/super-admin/analytics" element={<AdminAnalytics />} />
+          <Route path="/super-admin/alerts" element={<AdminAlerts />} />
+          <Route path="/super-admin/users" element={<AdminUsers />} />
+          <Route path="/super-admin/patients" element={<AdminPatients />} />
+          <Route path="/super-admin/provisioning" element={<AdminProvisioning />} />
+        </Route>
+
         {/* ──── Doctor Dashboard (NESTED ROUTES — each section is its own component) ──── */}
         <Route
           element={
@@ -384,7 +407,7 @@ export function AppRoutes() {
         <Route
           path="/medical-llm"
           element={
-            <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR]}>
+            <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.DOCTOR, ROLES.PATIENT]}>
               <MedicalLlm onBack={handleBack} />
             </ProtectedRoute>
           }

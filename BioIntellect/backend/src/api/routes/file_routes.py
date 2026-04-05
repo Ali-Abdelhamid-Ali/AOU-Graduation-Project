@@ -24,6 +24,8 @@ from src.services.domain.file_service import (
 
 logger = get_logger("routes.file")
 
+READ_CHUNK_SIZE = 1024 * 1024
+
 router = APIRouter(
     prefix="/files",
     tags=["files"],
@@ -42,6 +44,31 @@ def get_file_service():
 
 def _get_case_and_patient_repositories() -> tuple[ClinicalRepository, UserRepository]:
     return ClinicalRepository(), UserRepository()
+
+
+async def _read_upload_with_size_limit(
+    file: UploadFile, max_size: int, error_message: str
+) -> bytes:
+    declared_size = file.headers.get("content-length") if file.headers else None
+    if declared_size:
+        try:
+            if int(declared_size) > max_size:
+                raise HTTPException(status_code=413, detail=error_message)
+        except ValueError:
+            pass
+
+    total_size = 0
+    chunks: list[bytes] = []
+    while True:
+        chunk = await file.read(READ_CHUNK_SIZE)
+        if not chunk:
+            break
+        total_size += len(chunk)
+        if total_size > max_size:
+            raise HTTPException(status_code=413, detail=error_message)
+        chunks.append(chunk)
+
+    return b"".join(chunks)
 
 
 async def _validate_case_and_patient(case_id: str, patient_id: str) -> None:
@@ -77,12 +104,11 @@ async def upload_file(
 ):
     """Upload a general medical file."""
     try:
-        content = await file.read()
-
-        if len(content) > 50 * 1024 * 1024:
-            raise HTTPException(
-                status_code=413, detail="File too large. Maximum size is 50MB."
-            )
+        content = await _read_upload_with_size_limit(
+            file,
+            max_size=50 * 1024 * 1024,
+            error_message="File too large. Maximum size is 50MB.",
+        )
 
         if file_type not in GENERAL_MEDICAL_FILE_TYPES:
             raise HTTPException(
@@ -150,12 +176,11 @@ async def upload_ecg_signal(
 ):
     """Upload an ECG signal file and create corresponding signal record."""
     try:
-        content = await file.read()
-
-        if len(content) > 10 * 1024 * 1024:
-            raise HTTPException(
-                status_code=413, detail="ECG file too large. Maximum size is 10MB."
-            )
+        content = await _read_upload_with_size_limit(
+            file,
+            max_size=10 * 1024 * 1024,
+            error_message="ECG file too large. Maximum size is 10MB.",
+        )
 
         filename = file.filename or ""
         if not is_supported_ecg_upload(filename):
@@ -199,12 +224,11 @@ async def upload_mri_scan(
 ):
     """Upload an MRI scan file and create corresponding scan record."""
     try:
-        content = await file.read()
-
-        if len(content) > 100 * 1024 * 1024:
-            raise HTTPException(
-                status_code=413, detail="MRI file too large. Maximum size is 100MB."
-            )
+        content = await _read_upload_with_size_limit(
+            file,
+            max_size=100 * 1024 * 1024,
+            error_message="MRI file too large. Maximum size is 100MB.",
+        )
 
         filename = file.filename or ""
         normalized_content_type = normalize_upload_content_type(

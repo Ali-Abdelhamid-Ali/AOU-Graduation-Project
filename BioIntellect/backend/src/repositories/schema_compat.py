@@ -602,7 +602,9 @@ def map_notification_type(value: str | None) -> str:
         return "system_alert"
     if hasattr(value, "value"):
         value = value.value
-    return _NOTIFICATION_TYPE_TO_SCHEMA.get(value, "system_alert")
+    if not value:
+        return "system_alert"
+    return _NOTIFICATION_TYPE_TO_SCHEMA.get(str(value), "system_alert")
 
 
 def normalize_audit_log(record: Mapping[str, Any] | None) -> dict[str, Any]:

@@ -286,26 +286,28 @@ export const medicalService = {
       throw new Error('projectId is required')
     }
 
-    let latestAssistantMessage = null
-    await nlpChatAPI.streamAnswer(
-      projectId,
-      {
-        text: content,
-        conversation_id: conversationId,
-        patient_id: patientId,
-        top_k: 3,
-      },
-      {
-        onDone: (payload) => {
-          latestAssistantMessage = payload?.assistant_message || null
-        },
-        onError: (payload) => {
-          throw new Error(payload?.message || 'Failed to send message')
-        },
-      }
-    )
+    // Detect language from message content
+    const detectLanguage = (text) => {
+      if (!text) return 'en'
+      const arabicRegex = /[\u0600-\u06FF]/g
+      const arabicChars = text.match(arabicRegex) || []
+      const arabicRatio = arabicChars.length / text.length
+      return arabicRatio > 0.3 ? 'ar' : 'en'
+    }
 
-    return latestAssistantMessage
+    const response = await nlpChatAPI.answerQuestion(projectId, {
+      text: content,
+      conversation_id: conversationId,
+      patient_id: patientId,
+      top_k: 3,
+      language: detectLanguage(content),
+    })
+
+    if (!response.success) {
+      throw new Error(response.data?.message || 'Failed to send message')
+    }
+
+    return response.data?.assistant_message || null
   },
 
   async getMessages(projectId, conversationId) {

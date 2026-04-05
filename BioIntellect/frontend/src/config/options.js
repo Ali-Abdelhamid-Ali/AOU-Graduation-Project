@@ -28,7 +28,8 @@ export const specialtyOptions = [
 ];
 
 export const adminOptions = [
-    { value: 'administrator', label: 'Admin' }
+    { value: 'administrator', label: 'Admin' },
+    { value: 'super_admin', label: 'Super Admin' }
 ];
 
 export const genderOptions = [

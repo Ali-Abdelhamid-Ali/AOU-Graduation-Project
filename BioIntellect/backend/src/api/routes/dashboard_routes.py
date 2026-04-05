@@ -1134,8 +1134,6 @@ async def get_super_admin_system_config(
         config_data = {
             "global_settings": settings,
             "active_models": active_models,
-            "feature_toggles": {},  # TODO: Implement feature toggle system
-            "rate_limits": {},  # TODO: Get from rate limiting middleware
         }
 
         return {

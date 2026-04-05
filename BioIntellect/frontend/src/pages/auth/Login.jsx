@@ -11,7 +11,6 @@ import styles from './Login.module.css'
 
 export const Login = ({
   onLoginSuccess,
-  onSignUpClick,
   onForgotPasswordClick,
   onBack,
 }) => {
@@ -68,6 +67,8 @@ export const Login = ({
 
     if (!formData.password) {
       errors.password = 'Password is required'
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters'
     }
 
     return errors

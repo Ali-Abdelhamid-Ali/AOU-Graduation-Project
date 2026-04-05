@@ -9,13 +9,15 @@ export const normalizeDashboardRole = (role) => {
 export const getDashboardHomeRoute = (role) => {
   const normalizedRole = normalizeDashboardRole(role)
 
+  if (normalizedRole === ROLES.SUPER_ADMIN) {
+    return '/super-admin'
+  }
+
   if (normalizedRole === ROLES.DOCTOR) {
     return '/doctor-dashboard'
   }
 
-  if (
-    [ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(normalizedRole)
-  ) {
+  if (normalizedRole === ROLES.ADMIN) {
     return '/admin-dashboard'
   }
 

@@ -555,10 +555,16 @@ export const MriVolumeViewer = ({ result, isLoading = false }) => {
   }
 
   if (!result?.visualization?.image_url || !result?.visualization?.labels_url) {
+    const unavailableReason =
+      result?.processingMetadata?.reason ||
+      result?.rawOutput?.processing_metadata?.reason ||
+      result?.disclaimer ||
+      'Segmentation response did not include visualization artifacts (image/labels).'
+
     return (
       <div className={styles.stateContainer}>
         <p className={styles.stateText}>
-          Run segmentation to load the MRI volume and label map.
+          {`MRI visualization is not available: ${unavailableReason}`}
         </p>
       </div>
     )

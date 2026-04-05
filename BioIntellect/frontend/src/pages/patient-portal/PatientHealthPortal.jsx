@@ -152,6 +152,22 @@ export const PatientHealthPortal = () => {
       return
     }
 
+    if (!file.type.startsWith('image/')) {
+      showTimedMessage({ type: 'error', text: 'Only image files are allowed for avatars.' })
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showTimedMessage({ type: 'error', text: 'Avatar size must be smaller than 5MB.' })
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+
     const reader = new FileReader()
     reader.onloadend = () => setPhotoPreview(reader.result)
     reader.readAsDataURL(file)

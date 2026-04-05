@@ -11,7 +11,7 @@ import {
   ErrorBanner,
   toneClassMap,
 } from './SharedPanels'
-import styles from '../AdminOperationsDashboard.module.css'
+import styles from './AdminPanels.module.css'
 
 export const AdminAlerts = () => {
   const { currentUser } = useAuth()
@@ -139,3 +139,4 @@ export const AdminAlerts = () => {
 }
 
 export default AdminAlerts
+

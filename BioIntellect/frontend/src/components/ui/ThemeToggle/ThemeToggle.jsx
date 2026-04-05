@@ -1,36 +1,10 @@
 "use client"
 
-import { useContext, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import AuthContext from '@/store/AuthContext'
-import { getThemeStorageKey, readThemePreference, writeThemePreference } from '@/utils/themeMode'
+import { useTheme } from '@/hooks/useTheme'
 
 export default function ThemeToggle() {
-  const authContext = useContext(AuthContext)
-  const currentUser = authContext?.currentUser || null
-  const userRole = authContext?.userRole || null
-  const storageKey = useMemo(() => getThemeStorageKey(currentUser, userRole), [
-    currentUser?.auth_user_id,
-    currentUser?.user_id,
-    currentUser?.profile_id,
-    currentUser?.id,
-    currentUser?.user_role,
-    currentUser?.role,
-    userRole,
-  ])
-
-  const [isDark, setIsDark] = useState(() => readThemePreference(storageKey))
-
-  useEffect(() => {
-    setIsDark(readThemePreference(storageKey))
-  }, [storageKey])
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark)
-    writeThemePreference(storageKey, isDark)
-  }, [isDark, storageKey])
-
-  const toggle = () => setIsDark(prev => !prev)
+  const { isDark, toggle } = useTheme()
 
   return (
     <motion.button
@@ -59,7 +33,6 @@ export default function ThemeToggle() {
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       className="theme-toggle-button"
     >
-      {/* Emoji - يتغير حسب المود */}
       <motion.span
         style={{
           fontSize: 22,
@@ -78,7 +51,6 @@ export default function ThemeToggle() {
         {isDark ? '🌙' : '☀️'}
       </motion.span>
 
-      {/* Handle/Dot - عكس اتجاه الايموجي */}
       <motion.div
         style={{
           inlineSize: 38,

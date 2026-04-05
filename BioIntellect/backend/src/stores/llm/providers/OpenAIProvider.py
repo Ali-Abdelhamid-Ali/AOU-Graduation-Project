@@ -51,6 +51,7 @@ class OpenAIProvider(LLMInterface):
             messages=chat_history,
             max_tokens=max_output_tokens or self.default_output_max_tokens,
             temperature=temp if temp is not None else self.default_temp,
+            timeout=30.0,
         )
 
 

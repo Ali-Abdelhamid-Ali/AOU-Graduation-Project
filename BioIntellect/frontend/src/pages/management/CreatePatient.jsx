@@ -14,6 +14,10 @@ import {
 } from '@/utils/userFormUtils'
 import styles from './CreatePatient.module.css'
 
+const NATIONAL_ID_REGEX = /^\d{10,20}$/
+const PHONE_REGEX = /^\+?[\d\s()-]{7,20}$/
+const PASSPORT_REGEX = /^[A-Za-z0-9]{6,20}$/
+
 const CreatePatient = ({ onBack, userRole }) => {
     const { registerPatient, isLoading: authLoading } = useAuth()
     const {
@@ -120,6 +124,21 @@ const CreatePatient = ({ onBack, userRole }) => {
 
         if (!formData.hospitalId) {
             setError("Hospital selection is required.")
+            return
+        }
+
+        if (formData.nationalId && !NATIONAL_ID_REGEX.test(formData.nationalId.trim())) {
+            setError('National ID format is invalid.')
+            return
+        }
+
+        if (formData.phone && !PHONE_REGEX.test(formData.phone.trim())) {
+            setError('Phone number format is invalid.')
+            return
+        }
+
+        if (formData.passportNumber && !PASSPORT_REGEX.test(formData.passportNumber.trim())) {
+            setError('Passport number format is invalid.')
             return
         }
 

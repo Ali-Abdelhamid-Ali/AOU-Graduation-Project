@@ -1,4 +1,4 @@
-import styles from '../DoctorDashboard.module.css'
+import styles from './DoctorPanels.module.css'
 
 const toneClassMap = {
   info: styles.toneInfo,
@@ -64,3 +64,4 @@ export const HeroSection = ({ kicker, heading, body, capabilities }) => (
 )
 
 export { toneClassMap }
+

@@ -7,11 +7,12 @@ from src.observability.logger import get_logger
 
 
 class PhiQAProvider(LLMInterface):
-    def __init__(self,model_path: str,default_input_max_characters: int = 1000,default_output_max_tokens: int = 512,default_temp: float = 0.1):
+    def __init__(self,model_path: str,default_input_max_characters: int = 1000,default_output_max_tokens: int = 512,default_temp: float = 0.1,force_cpu_only: bool = False):
         self.model_path = model_path
         self.default_input_max_characters = default_input_max_characters
         self.default_output_max_tokens = default_output_max_tokens
         self.default_temp = default_temp
+        self.force_cpu_only = force_cpu_only
         self.Enums = PhiQAEnums
         self.generation_model_id = model_path
         self.embedding_model_id = None
@@ -21,16 +22,19 @@ class PhiQAProvider(LLMInterface):
 
         self.logger.info(f"Loading PhiQA model from: {self.model_path}")
         try:
+            model_device_map = "cpu" if self.force_cpu_only else "auto"
+            model_dtype = torch.float32 if self.force_cpu_only else torch.float16
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_path,trust_remote_code=True,)
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_path,
-                torch_dtype=torch.float16,
-                device_map="auto",
+                torch_dtype=model_dtype,
+                device_map=model_device_map,
                 low_cpu_mem_usage=True,
                 trust_remote_code=True,
             )
+            
             self.model.eval()
-            self.logger.info("PhiQA model loaded successfully.")
+            self.logger.info(f"PhiQA model loaded successfully (force_cpu_only={self.force_cpu_only}).")
         except Exception as e:
             self.logger.error(f"Failed to load PhiQA model: {e}")
             self.model = None

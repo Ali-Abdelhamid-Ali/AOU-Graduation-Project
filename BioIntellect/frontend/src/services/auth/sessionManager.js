@@ -90,7 +90,11 @@ export const refreshAccessToken = async () => {
     .post('/auth/refresh')
     .then(({ data }) => applyRefreshResponse(data))
     .catch(async (error) => {
-      await handleSessionExpiry()
+      try {
+        await handleSessionExpiry()
+      } catch (sessionExpiryError) {
+        console.error('Session expiry handler failed:', sessionExpiryError)
+      }
       throw toNormalizedSessionError(error)
     })
     .finally(() => {

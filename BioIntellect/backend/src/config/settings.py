@@ -1,5 +1,6 @@
 from functools import lru_cache
 import os
+import re
 from typing import List, Optional
 
 from pydantic import Field, field_validator, model_validator
@@ -22,6 +23,10 @@ class Settings(BaseSettings):
     # ── Generation / embedding config ────────────────────────────────────
     GENERATION_BACKEND:   str
     GENERATION_MODEL_ID:  Optional[str] = None
+    OPENAI_GENERATION_MODEL_ID: Optional[str] = None
+    COHERE_GENERATION_MODEL_ID: Optional[str] = None
+    MEDMO_GENERATION_MODEL_ID: Optional[str] = None
+    PHI_QA_GENERATION_MODEL_ID: Optional[str] = None
     EMBEDDING_BACKEND:    Optional[str] = None
     EMBEDDING_MODEL_ID:   Optional[str] = None
     EMBEDDING_MODEL_SIZE: Optional[int] = None
@@ -30,7 +35,12 @@ class Settings(BaseSettings):
     INPUT_DEFAULT_MAX_TOKENS:     Optional[int]   = None
     INPUT_DEFAULT_TEMPERATURE:    Optional[float] = None
 
-    # ── vecrotDb config  ────────────────────────────────────────────────
+    # ── Chat / RAG config ────────────────────────────────────────────────
+    CHAT_HISTORY_MAX_MESSAGES: int = 50
+    CHAT_MAX_OUTPUT_TOKENS:    int = 1024
+    MAX_CONVERSATIONS_PER_DOCTOR: int = 30
+
+    # ── VectorDB config  ────────────────────────────────────────────────
     VECTOR_DB_BACKEND: str
     VECTOR_DB_PATH: str 
     VECTOR_DB_DISTANCE_METHOD: str = None
@@ -39,6 +49,7 @@ class Settings(BaseSettings):
     MEDMO_MODEL_PATH:     Optional[str] = None
     MEDMO_OFFLOAD_FOLDER: str           = "./offload"
     PHI_QA_MODEL_PATH:    Optional[str] = None
+    FORCE_CPU_ONLY:       bool          = Field(default=True, alias="FORCE_CPU_ONLY")
 
     # ── File handling ────────────────────────────────────────────────────
     FILE_MAX_SIZE:           int
@@ -55,13 +66,17 @@ class Settings(BaseSettings):
     supabase_anon_key:         str = Field(default="", alias="SUPABASE_ANON_KEY")
     supabase_service_role_key: str = Field(default="", alias="SUPABASE_SERVICE_ROLE_KEY")
 
-    # ── MRI segmentation service ──────────────────────────────────────────
+    # ── MRI segmentation service (legacy – kept for reference) ───────────
     mri_segmentation_service_url: str = Field(
         default="http://127.0.0.1:7860", alias="MRI_SEGMENTATION_SERVICE_URL"
     )
     mri_segmentation_timeout_seconds: int = Field(
         default=300, alias="MRI_SEGMENTATION_TIMEOUT_SECONDS"
     )
+
+    # ── MRI local model paths ─────────────────────────────────────────────
+    mri_model_path: Optional[str] = Field(default=None, alias="MRI_MODEL_PATH")
+    mri_outputs_dir: Optional[str] = Field(default=None, alias="MRI_OUTPUTS_DIR")
 
     # ── CORS / trusted hosts (HTTPS defaults) ────────────────────────────
     cors_origins:  str = Field(default="https://app.biointellect.example,https://localhost:3000", alias="CORS_ORIGINS")
@@ -94,12 +109,33 @@ class Settings(BaseSettings):
         supported_backends = {"cohere", "openai", "medmo", "phi_qa"}
 
         def _normalize_existing_dir(value: Optional[str], env_name: str) -> str:
-            resolved = os.path.abspath(
-                os.path.expanduser(os.path.expandvars((value or "").strip()))
-            )
+            raw_value = os.path.expanduser(os.path.expandvars((value or "").strip()))
+            candidates = [raw_value]
+
+            # Accept WSL-style mounts on Windows hosts.
+            wsl_match = re.match(r"^/mnt/([a-zA-Z])/(.*)$", raw_value)
+            if os.name == "nt" and wsl_match:
+                drive = wsl_match.group(1).upper()
+                tail = wsl_match.group(2).replace("/", "\\")
+                candidates.append(f"{drive}:\\{tail}")
+
+            # Accept Windows-style drive paths on POSIX/WSL hosts.
+            win_match = re.match(r"^([a-zA-Z]):[\\/](.*)$", raw_value)
+            if os.name != "nt" and win_match:
+                drive = win_match.group(1).lower()
+                tail = win_match.group(2).replace("\\", "/")
+                candidates.append(f"/mnt/{drive}/{tail}")
+
+            resolved = ""
+            for candidate in candidates:
+                normalized = os.path.abspath(candidate)
+                if normalized and os.path.isdir(normalized):
+                    resolved = normalized
+                    break
+
             if not resolved or not os.path.isdir(resolved):
                 raise ValueError(
-                    f"{env_name} must point to an existing directory. Resolved path: '{resolved or value}'."
+                    f"{env_name} must point to an existing directory. Resolved path: '{resolved or raw_value}'."
                 )
             return resolved
 

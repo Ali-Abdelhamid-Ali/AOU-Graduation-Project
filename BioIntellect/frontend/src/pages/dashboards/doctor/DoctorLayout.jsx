@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 
 import StaffDashboardShell from '@/components/layout/StaffDashboardShell'
@@ -29,38 +28,36 @@ const getViewMeta = (pathname) => {
   return viewMeta['/doctor-dashboard']
 }
 
+const NAV_SECTIONS = [
+  {
+    title: 'Clinical workflow',
+    items: [
+      { key: 'overview', label: 'Dashboard', description: 'Today, queue, and results', glyph: 'DB', route: '/doctor-dashboard' },
+      { key: 'patients', label: 'My Patients', description: 'Assigned patients and directory access', glyph: 'PT', route: '/doctor-dashboard/patients' },
+    ],
+  },
+  {
+    title: 'Clinical tools',
+    items: [
+      { key: 'results', label: 'Results Inbox', description: 'Pending ECG and MRI reviews', glyph: 'RS', route: '/doctor-dashboard/results' },
+      { key: 'chat', label: 'Medical Advisor Chat', description: 'AI-powered clinical decision support', glyph: 'AI', route: '/medical-llm' },
+      { key: 'ecg', label: 'ECG Workspace', description: 'Doctor-only intake for ECG uploads', glyph: 'EC', route: '/ecg-analysis' },
+      { key: 'mri', label: 'MRI Workspace', description: 'Doctor-only intake for MRI uploads', glyph: 'MR', route: '/mri-analysis' },
+    ],
+  },
+]
+
 export const DoctorLayout = ({ onLogout }) => {
   const { currentUser } = useAuth()
   const location = useLocation()
 
-  const currentMeta = useMemo(() => getViewMeta(location.pathname), [location.pathname])
-
-  const navSections = useMemo(
-    () => [
-      {
-        title: 'Clinical workflow',
-        items: [
-          { key: 'overview', label: 'Dashboard', description: 'Today, queue, and results', glyph: 'DB', route: '/doctor-dashboard' },
-          { key: 'patients', label: 'My Patients', description: 'Assigned patients and directory access', glyph: 'PT', route: '/doctor-dashboard/patients' },
-        ],
-      },
-      {
-        title: 'Clinical tools',
-        items: [
-          { key: 'results', label: 'Results Inbox', description: 'Pending ECG and MRI reviews', glyph: 'RS', route: '/doctor-dashboard/results' },
-          { key: 'ecg', label: 'ECG Workspace', description: 'Doctor-only intake for ECG uploads', glyph: 'EC', route: '/ecg-analysis' },
-          { key: 'mri', label: 'MRI Workspace', description: 'Doctor-only intake for MRI uploads', glyph: 'MR', route: '/mri-analysis' },
-        ],
-      },
-    ],
-    []
-  )
+  const currentMeta = getViewMeta(location.pathname)
 
   return (
     <StaffDashboardShell
       currentUser={currentUser}
       roleLabel="Doctor Workspace"
-      navSections={navSections}
+      navSections={NAV_SECTIONS}
       onLogout={onLogout}
       headerTitle={currentMeta.title}
       headerSubtitle={currentMeta.subtitle}

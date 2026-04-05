@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 
@@ -68,6 +68,8 @@ export const PatientResults = () => {
   const [loading, setLoading] = useState(true)
   const [results, setResults] = useState([])
   const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const pageSize = 12
 
   useEffect(() => {
     const fetchRealResults = async () => {
@@ -124,6 +126,16 @@ export const PatientResults = () => {
     fetchRealResults()
   }, [currentUser])
 
+  useEffect(() => {
+    setPage(1)
+  }, [results.length])
+
+  const totalPages = Math.max(1, Math.ceil(results.length / pageSize))
+  const paginatedResults = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return results.slice(start, start + pageSize)
+  }, [page, results])
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Reviewed':
@@ -176,7 +188,7 @@ export const PatientResults = () => {
       </div>
 
       <div className={styles.resultsGrid}>
-        {results.map((result) => {
+        {paginatedResults.map((result) => {
           const statusColor = getStatusColor(result.status)
 
           return (
@@ -211,6 +223,30 @@ export const PatientResults = () => {
           )
         })}
       </div>
+
+      {results.length > pageSize && (
+        <div className={styles.paginationRow}>
+          <button
+            type="button"
+            className={styles.viewDetails}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </button>
+          <span>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            type="button"
+            className={styles.viewDetails}
+            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {results.length === 0 && (
         <div className={styles.emptyState}>

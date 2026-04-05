@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { usersAPI } from '@/services/api'
 import { getApiErrorMessage } from '@/utils/apiErrorUtils'
 import { EmptyPanel, SectionLoading, ErrorBanner } from './SharedPanels'
-import styles from '../AdminOperationsDashboard.module.css'
+import styles from './AdminPanels.module.css'
 
 const unwrapList = (response) => {
   if (Array.isArray(response)) return response
@@ -15,7 +15,7 @@ const unwrapList = (response) => {
 const normalizeUserRecord = (type, item = {}) => {
   const roleMap = { administrators: 'Administrator', doctors: 'Doctor', patients: 'Patient' }
   const name = item.full_name || [item.first_name, item.last_name].filter(Boolean).join(' ') || item.email || 'Unnamed user'
-  const secondary = item.specialty || item.department || item.mrn || item.medical_record_number || item.license_number || 'Profile details unavailable'
+  const secondary = item.specialty || item.department || item.mrn || item.license_number || 'Profile details unavailable'
   const contact = [item.email, item.phone].filter(Boolean).join(' | ') || 'No contact details'
 
   return {
@@ -30,6 +30,7 @@ const normalizeUserRecord = (type, item = {}) => {
 }
 
 export const AdminUsers = () => {
+  const pageSize = 10
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [users, setUsers] = useState([])
@@ -37,28 +38,65 @@ export const AdminUsers = () => {
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     const activeParam = statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined
-    const params = { limit: 50, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }
-
-    const listByType = async (type) => {
-      try {
-        const response = await usersAPI.list(type, params)
-        return { type, data: unwrapList(response), error: '' }
-      } catch (err) {
-        return { type, data: [], error: getApiErrorMessage(err, `Failed to load ${type}.`) }
-      }
-    }
+    const offset = (page - 1) * pageSize
+    const params = { limit: pageSize, offset, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }
 
     const load = async () => {
       setLoading(true)
       setError('')
+
+      if (roleFilter !== 'all') {
+        const routeType = roleFilter === 'administrator' ? 'administrators' : `${roleFilter}s`
+        try {
+          const response = await usersAPI.listPaged(routeType, params)
+          if (!cancelled) {
+            const rows = unwrapList(response).map((item) => normalizeUserRecord(routeType, item))
+            setUsers(rows)
+            setTotal(Number(response?.pagination?.total || 0))
+            setLoading(false)
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setUsers([])
+            setTotal(0)
+            setError(getApiErrorMessage(err, `Failed to load ${routeType}.`))
+            setLoading(false)
+          }
+        }
+        return
+      }
+
+      const allParams = { limit: 50, ...(activeParam !== undefined ? { is_active: activeParam } : {}) }
       const [patients, doctors, administrators] = await Promise.all([
-        listByType('patients'),
-        listByType('doctors'),
-        listByType('administrators'),
+        (async () => {
+          try {
+            const response = await usersAPI.list('patients', allParams)
+            return { type: 'patients', data: unwrapList(response), error: '' }
+          } catch (err) {
+            return { type: 'patients', data: [], error: getApiErrorMessage(err, 'Failed to load patients.') }
+          }
+        })(),
+        (async () => {
+          try {
+            const response = await usersAPI.list('doctors', allParams)
+            return { type: 'doctors', data: unwrapList(response), error: '' }
+          } catch (err) {
+            return { type: 'doctors', data: [], error: getApiErrorMessage(err, 'Failed to load doctors.') }
+          }
+        })(),
+        (async () => {
+          try {
+            const response = await usersAPI.list('administrators', allParams)
+            return { type: 'administrators', data: unwrapList(response), error: '' }
+          } catch (err) {
+            return { type: 'administrators', data: [], error: getApiErrorMessage(err, 'Failed to load administrators.') }
+          }
+        })(),
       ])
 
       if (!cancelled) {
@@ -70,13 +108,14 @@ export const AdminUsers = () => {
 
         const errors = [patients.error, doctors.error, administrators.error].filter(Boolean)
         setUsers(rows)
+        setTotal(rows.length)
         setError(rows.length ? '' : errors[0] || 'Failed to load user table.')
         setLoading(false)
       }
     }
     load()
     return () => { cancelled = true }
-  }, [statusFilter])
+  }, [statusFilter, roleFilter, page])
 
   useEffect(() => {
     setPage(1)
@@ -93,12 +132,15 @@ export const AdminUsers = () => {
     })
   }, [roleFilter, searchQuery, users])
 
-  const pageSize = 10
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize))
+  const isServerPagedView = roleFilter !== 'all' && !searchQuery.trim()
+  const totalPages = Math.max(1, Math.ceil((isServerPagedView ? total : filteredUsers.length) / pageSize))
   const paginatedUsers = useMemo(() => {
+    if (isServerPagedView) {
+      return users
+    }
     const start = (page - 1) * pageSize
     return filteredUsers.slice(start, start + pageSize)
-  }, [filteredUsers, page])
+  }, [filteredUsers, isServerPagedView, page, users])
 
   if (loading) return <SectionLoading />
 
@@ -153,7 +195,7 @@ export const AdminUsers = () => {
             </select>
           </label>
           <div className={styles.tableSummary}>
-            <strong>{filteredUsers.length}</strong>
+            <strong>{isServerPagedView ? total : filteredUsers.length}</strong>
             <span>matching records</span>
           </div>
         </div>
@@ -161,14 +203,14 @@ export const AdminUsers = () => {
         {paginatedUsers.length ? (
           <>
             <div className={styles.tableWrap}>
-              <table className={styles.table}>
+              <table className={styles.table} role="table" aria-label="Admin users table">
                 <thead>
                   <tr>
-                    <th>User</th>
-                    <th>Role</th>
-                    <th>Context</th>
-                    <th>Contact</th>
-                    <th>Status</th>
+                    <th scope="col">User</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Context</th>
+                    <th scope="col">Contact</th>
+                    <th scope="col">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -206,3 +248,4 @@ export const AdminUsers = () => {
 }
 
 export default AdminUsers
+

@@ -448,6 +448,12 @@ input::placeholder {
   font-size: var(--font-size-base);
 }
 
+textarea::placeholder {
+  color: var(--color-text-light);
+  font-size: var(--font-size-base);
+  opacity: 1;
+}
+
 input:disabled,
 textarea:disabled,
 select:disabled {

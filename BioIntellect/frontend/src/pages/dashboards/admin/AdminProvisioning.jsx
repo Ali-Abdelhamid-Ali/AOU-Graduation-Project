@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { ROLES } from '@/config/roles'
 import { useAuth } from '@/store/AuthContext'
-import { toneClassMap } from './SharedPanels'
-import styles from '../AdminOperationsDashboard.module.css'
+import styles from './AdminPanels.module.css'
 
 export const AdminProvisioning = () => {
   const navigate = useNavigate()
@@ -16,6 +15,7 @@ export const AdminProvisioning = () => {
   const quickActions = useMemo(() => {
     if (isSuperAdmin) {
       return [
+        { title: 'Add Super Admin', description: 'Provision another root-level operator with full governance permissions.', action: () => navigate('/create-admin') },
         { title: 'Add Administrator', description: 'Provision another administrative operator with scoped access.', action: () => navigate('/create-admin') },
         { title: 'Add Doctor', description: 'Create a clinician profile and assign medical metadata.', action: () => navigate('/create-doctor') },
         { title: 'Add Patient', description: 'Register a patient identity and baseline demographics.', action: () => navigate('/create-patient') },
@@ -69,6 +69,13 @@ export const AdminProvisioning = () => {
           </div>
           <div className={styles.healthGrid}>
             <div className={styles.healthMetric}>
+              <span>Super Admin Creation</span>
+              <strong>{isSuperAdmin ? 'Enabled' : 'Restricted'}</strong>
+              <span className={`${styles.badge} ${isSuperAdmin ? styles.toneSuccess : styles.toneWarning}`}>
+                {isSuperAdmin ? 'allowed' : 'guarded'}
+              </span>
+            </div>
+            <div className={styles.healthMetric}>
               <span>Administrator Creation</span>
               <strong>{isSuperAdmin ? 'Enabled' : 'Restricted'}</strong>
               <span className={`${styles.badge} ${isSuperAdmin ? styles.toneSuccess : styles.toneWarning}`}>
@@ -93,3 +100,4 @@ export const AdminProvisioning = () => {
 }
 
 export default AdminProvisioning
+

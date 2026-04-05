@@ -108,16 +108,15 @@ class UserRepository:
         self, client: Any, table: str, user_id: str
     ) -> Optional[Dict[str, Any]]:
         """Read profiles using user_id first, then legacy rows keyed by id."""
-        for key in ("user_id", "id"):
-            result = (
-                await client.table(table)
-                .select("*")
-                .eq(key, user_id)
-                .limit(1)
-                .execute()
-            )
-            if result.data:
-                return result.data[0]
+        result = (
+            await client.table(table)
+            .select("*")
+            .or_(f"user_id.eq.{user_id},id.eq.{user_id}")
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            return result.data[0]
         return None
 
     async def _resolve_profile_lookup_key(
@@ -247,6 +246,24 @@ class UserRepository:
             return result.data or []
         except Exception as e:
             logger.error(f"Failed to list doctors: {str(e)}")
+            raise
+
+    async def count_doctors(
+        self, filters: Dict[str, Any | None] | None = None
+    ) -> int:
+        """Count doctors with optional filtering."""
+        client = await self._get_client()
+        try:
+            query = client.table("doctors").select("id", count="exact", head=True)
+            if filters:
+                for key, val in filters.items():
+                    if val is not None:
+                        query = query.eq(key, val)
+
+            result = await query.execute()
+            return int(result.count or 0)
+        except Exception as e:
+            logger.error(f"Failed to count doctors: {str(e)}")
             raise
 
     async def get_doctor(self, doctor_id: str) -> Optional[Dict[str, Any]]:
@@ -508,6 +525,24 @@ class UserRepository:
             logger.error(f"Failed to list administrators: {str(e)}")
             raise
 
+    async def count_administrators(
+        self, filters: Dict[str, Any | None] | None = None
+    ) -> int:
+        """Count administrators with optional filtering."""
+        client = await self._get_client()
+        try:
+            query = client.table("administrators").select("id", count="exact", head=True)
+            if filters:
+                for key, val in filters.items():
+                    if val is not None:
+                        query = query.eq(key, val)
+
+            result = await query.execute()
+            return int(result.count or 0)
+        except Exception as e:
+            logger.error(f"Failed to count administrators: {str(e)}")
+            raise
+
     async def get_administrator(self, admin_id: str) -> Optional[Dict[str, Any]]:
         """Get a specific administrator by ID or User ID."""
         client = await self._get_client()
@@ -603,7 +638,8 @@ class UserRepository:
                                 search_term = search_term.replace(unsafe, "")
                             query = query.or_(
                                 "first_name.ilike.%{0}%,last_name.ilike.%{0}%,"
-                                "phone.ilike.%{0}%".format(search_term)
+                                "phone.ilike.%{0}%,mrn.ilike.%{0}%,"
+                                "medical_record_number.ilike.%{0}%".format(search_term)
                             )
                         else:
                             query = query.eq(key, val)
@@ -614,6 +650,35 @@ class UserRepository:
             return _normalize_patient_records(result.data)
         except Exception as e:
             logger.error(f"Failed to list patients: {str(e)}")
+            raise
+
+    async def count_patients(
+        self, filters: Dict[str, Any | None] | None = None
+    ) -> int:
+        """Count patients with optional filtering."""
+        client = await self._get_client()
+        try:
+            query = client.table("patients").select("id", count="exact", head=True)
+
+            if filters:
+                for key, val in filters.items():
+                    if val is not None:
+                        if key == "search":
+                            search_term = str(val)
+                            for unsafe in ("%", "_", ",", "(", ")", "{", "}"):
+                                search_term = search_term.replace(unsafe, "")
+                            query = query.or_(
+                                "first_name.ilike.%{0}%,last_name.ilike.%{0}%,"
+                                "phone.ilike.%{0}%,mrn.ilike.%{0}%,"
+                                "medical_record_number.ilike.%{0}%".format(search_term)
+                            )
+                        else:
+                            query = query.eq(key, val)
+
+            result = await query.execute()
+            return int(result.count or 0)
+        except Exception as e:
+            logger.error(f"Failed to count patients: {str(e)}")
             raise
 
     async def get_patient(self, patient_id: str) -> Optional[Dict[str, Any]]:

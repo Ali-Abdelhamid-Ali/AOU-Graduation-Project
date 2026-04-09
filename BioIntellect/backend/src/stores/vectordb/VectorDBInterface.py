@@ -30,5 +30,5 @@ class VectorDBInterface(ABC):
     def insert_many(self, collection_name: str, text:list , vectors: list, metadatas: list, record_id:list|None=None, batch_size: int = 100):
         pass
     @abstractmethod
-    def search_py_vector(self, collection_name: str, vector: list, limit: int = 10) -> list[RetrievedItem]:
+    def search_py_vector(self, collection_name: str, vector: list, limit: int = 10, filter_file_ids: list[str] | None = None) -> list[RetrievedItem]:
         pass

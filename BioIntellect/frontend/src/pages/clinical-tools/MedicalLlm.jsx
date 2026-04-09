@@ -53,6 +53,9 @@ export const MedicalLlm = ({ onBack }) => {
     const [isLoading, setIsLoading] = useState(false)
     const [conversations, setConversations] = useState([])
     const [currentConversation, setCurrentConversation] = useState(null)
+    // Per-conversation isolated project_id for scoped vector storage.
+    // Set when a conversation is created or loaded, used for all uploads/queries.
+    const [conversationProjectId, setConversationProjectId] = useState(null)
 
     const [patients, setPatients] = useState([])
     const [selectedPatientId, setSelectedPatientId] = useState(null)
@@ -63,12 +66,15 @@ export const MedicalLlm = ({ onBack }) => {
     const [availableImageFiles, setAvailableImageFiles] = useState([])
     const [selectedContextFileIds, setSelectedContextFileIds] = useState([])
     const [selectedImageFileIds, setSelectedImageFileIds] = useState([])
+    // IDs of files the doctor uploaded in this session — always injected into
+    // every query regardless of the checkbox selection above.
+    const [uploadedDocIds, setUploadedDocIds] = useState([])
+    const [uploadedImageIds, setUploadedImageIds] = useState([])
 
     const [modelOptions, setModelOptions] = useState(DEFAULT_MODEL_OPTIONS)
     const [selectedModelBackend, setSelectedModelBackend] = useState(DEFAULT_MODEL_OPTIONS[0].value)
 
     const [isUploadingAttachments, setIsUploadingAttachments] = useState(false)
-    const [uploadNotice, setUploadNotice] = useState('')
     const [error, setError] = useState(null)
     const [conversationOffset, setConversationOffset] = useState(0)
     const [hasMoreConversations, setHasMoreConversations] = useState(true)
@@ -77,13 +83,20 @@ export const MedicalLlm = ({ onBack }) => {
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null })
 
     const messagesEndRef = useRef(null)
-    const fileUploadInputRef = useRef(null)
-    const folderUploadInputRef = useRef(null)
     const composerUploadInputRef = useRef(null)
     const messageCacheRef = useRef(new Map())
 
+    // medmo: inline file content injected silently into the next prompt
+    const [medmoInlineContent, setMedmoInlineContent] = useState([])
+
     const isPatient = userRole === ROLES.PATIENT
     const projectId = currentUser?.hospital_id || ''
+
+    // Extract the per-conversation project_id from a conversation object
+    const getConvProjectId = (conv) =>
+        conv?.conversation_project_id ||
+        conv?.metadata?.conversation_project_id ||
+        null
 
     const filteredPatients = useMemo(() => {
         const query = patientSearchTerm.trim().toLowerCase()
@@ -127,15 +140,6 @@ export const MedicalLlm = ({ onBack }) => {
     }, [messages])
 
     useEffect(() => {
-        const input = folderUploadInputRef.current
-        if (!input) {
-            return
-        }
-        input.setAttribute('webkitdirectory', '')
-        input.setAttribute('directory', '')
-    }, [])
-
-    useEffect(() => {
         if (!isPatient) {
             const loadPatients = async () => {
                 try {
@@ -143,7 +147,7 @@ export const MedicalLlm = ({ onBack }) => {
                     if (response.success) {
                         const loadedPatients = response.data || []
                         setPatients(loadedPatients)
-                        setSelectedPatientId((prev) => prev || loadedPatients[0]?.id || null)
+                        setSelectedPatientId(null)
                         setPatientLoadError(
                             loadedPatients.length
                                 ? ''
@@ -330,6 +334,12 @@ export const MedicalLlm = ({ onBack }) => {
     const loadConversation = async (conversation) => {
         setError(null)
         setCurrentConversation(conversation)
+        setConversationProjectId(getConvProjectId(conversation))
+        // Sync the patient selector to match the conversation's patient so the
+        // context injected into subsequent messages is always consistent.
+        if (!isPatient && conversation?.patient_id) {
+            setSelectedPatientId(conversation.patient_id)
+        }
 
         const cached = messageCacheRef.current.get(conversation.id)
         if (cached) {
@@ -374,9 +384,12 @@ export const MedicalLlm = ({ onBack }) => {
 
             if (response.success) {
                 setCurrentConversation(response.data)
+                setConversationProjectId(getConvProjectId(response.data))
                 setMessages([])
                 setSelectedContextFileIds([])
                 setSelectedImageFileIds([])
+                setUploadedDocIds([])
+                setUploadedImageIds([])
                 setConversations((prev) => [response.data, ...prev.filter((item) => item.id !== response.data.id)])
                 setConversationCount((prev) => prev + 1)
             }
@@ -399,6 +412,7 @@ export const MedicalLlm = ({ onBack }) => {
                         setConversationCount((prev) => Math.max(0, prev - 1))
                         if (currentConversation?.id === conversation.id) {
                             setCurrentConversation(null)
+                            setConversationProjectId(null)
                             setMessages([])
                         }
                         toast.success('Conversation archived.')
@@ -412,32 +426,52 @@ export const MedicalLlm = ({ onBack }) => {
 
     const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50 MB
 
+    // Read a file as plain text (best-effort; binary files return empty string)
+    const _readFileAsText = (file) =>
+        new Promise((resolve) => {
+            const reader = new FileReader()
+            reader.onload = (e) => resolve(e.target?.result || '')
+            reader.onerror = () => resolve('')
+            reader.readAsText(file)
+        })
+
     const handleFileInputChange = async (event) => {
         const files = Array.from(event.target.files || [])
         event.target.value = ''
 
-        if (!files.length) {
-            return
-        }
+        if (!files.length) return
         if (!projectId) {
             setError('Hospital project is not available for this account')
             return
         }
-
         const patientId = isPatient ? currentUser?.id : selectedPatientId
         if (!patientId) {
             setError('Please select a patient before uploading attachments')
             return
         }
-
         const oversized = files.filter((f) => f.size > MAX_FILE_SIZE)
         if (oversized.length > 0) {
             setError(`${oversized.length} file(s) exceed the 50 MB limit: ${oversized.map((f) => f.name).join(', ')}`)
             return
         }
 
+        // ── MedMo: silent direct injection — read files as text, no upload, no UI feedback ──
+        if (selectedModelBackend === 'medmo') {
+            const chunks = await Promise.all(
+                files.map(async (file) => {
+                    const text = await _readFileAsText(file)
+                    return text ? `[File: ${file.name}]\n${text}` : null
+                })
+            )
+            const valid = chunks.filter(Boolean)
+            if (valid.length) {
+                setMedmoInlineContent((prev) => [...prev, ...valid])
+            }
+            return
+        }
+
+        // ── All other models: normal RAG upload pipeline ──
         setIsUploadingAttachments(true)
-        setUploadNotice('')
         setError(null)
 
         try {
@@ -446,51 +480,52 @@ export const MedicalLlm = ({ onBack }) => {
             if (!isPatient && patientId) {
                 formData.append('patient_id', String(patientId))
             }
+            if (conversationProjectId) {
+                formData.append('conversation_project_id', conversationProjectId)
+            }
 
             const response = await nlpChatAPI.uploadAttachments(projectId, formData)
             if (!response.success) {
-                setUploadNotice('Upload completed with warnings.')
+                toast.error('Upload completed with warnings.')
                 return
             }
 
             const payload = response.data || {}
+            // Only treat files as indexed if they appear in documents/images — NOT in rejected.
+            // A file in rejected was NOT embedded in the vector DB and must not be sent as a filter.
             const docs = Array.isArray(payload.documents) ? payload.documents : []
             const images = Array.isArray(payload.images) ? payload.images : []
             const rejected = Array.isArray(payload.rejected) ? payload.rejected : []
 
-            const localContext = []
-            const localImages = []
+            if (rejected.length && !docs.length && !images.length) {
+                // Everything was rejected — surface the reason to the doctor
+                const reasons = rejected.map((r) => `${r.file}: ${r.reason}`).join('\n')
+                toast.error(`File upload failed:\n${reasons}`)
+                setError(`Upload failed — ${rejected[0]?.reason || 'indexing error'}`)
+                return
+            }
 
-            files.forEach((file) => {
-                if (isImageFile(file.name)) {
-                    localImages.push({
-                        id: `local-image::${Date.now()}::${file.name}`,
-                        label: `${file.name} • local`,
-                    })
-                } else {
-                    localContext.push({
-                        id: `local-doc::${Date.now()}::${file.name}`,
-                        label: `${file.name} • local`,
-                    })
-                }
-            })
+            setAvailableContextFiles((prev) => mergeUniqueById(prev, docs))
+            setAvailableImageFiles((prev) => mergeUniqueById(prev, images))
 
-            setAvailableContextFiles((prev) => mergeUniqueById(prev, [...docs, ...localContext]))
-            setAvailableImageFiles((prev) => mergeUniqueById(prev, [...images, ...localImages]))
+            if (docs.length) {
+                const docIds = docs.map((d) => d.id)
+                setSelectedContextFileIds((prev) => [...new Set([...prev, ...docIds])])
+                // Track uploaded IDs separately so they are always sent to the
+                // backend even if the user unchecks them in the sidebar.
+                setUploadedDocIds((prev) => [...new Set([...prev, ...docIds])])
+            }
+            if (images.length) {
+                const imgIds = images.map((img) => img.id)
+                setSelectedImageFileIds((prev) => [...new Set([...prev, ...imgIds])])
+                setUploadedImageIds((prev) => [...new Set([...prev, ...imgIds])])
+            }
 
             const noticeParts = []
-            if (docs.length || localContext.length) {
-                noticeParts.push(`${docs.length + localContext.length} document(s)`)
-            }
-            if (images.length || localImages.length) {
-                noticeParts.push(`${images.length + localImages.length} image(s)`)
-            }
-            if (rejected.length) {
-                noticeParts.push(`${rejected.length} rejected`)
-            }
-            const noticeText = noticeParts.length ? `Uploaded: ${noticeParts.join(', ')}` : 'Upload completed.'
-            setUploadNotice(noticeText)
-            toast.success('File processed and indexed')
+            if (docs.length) noticeParts.push(`${docs.length} document(s) indexed`)
+            if (images.length) noticeParts.push(`${images.length} image(s) ready`)
+            if (rejected.length) noticeParts.push(`${rejected.length} rejected`)
+            toast.success(noticeParts.length ? `Uploaded: ${noticeParts.join(', ')}` : 'Upload completed.')
         } catch (err) {
             const reason = getApiErrorMessage(err, 'Upload failed')
             toast.error(`Upload failed: ${reason}`)
@@ -513,18 +548,55 @@ export const MedicalLlm = ({ onBack }) => {
         if (!inputValue.trim() || isLoading) {
             return
         }
-        if (!currentConversation) {
-            setError('Please start a new conversation first')
-            return
-        }
         if (!projectId) {
             setError('Hospital project is not available for this account')
             return
         }
 
+        // Auto-create conversation if none exists; keep local ref for the closure below
+        let activeConversation = currentConversation
+        if (!activeConversation) {
+            const patientId = isPatient ? currentUser?.id : selectedPatientId
+            if (!patientId) {
+                setError('Please select a patient first')
+                return
+            }
+            try {
+                const convResponse = await nlpChatAPI.createConversation(projectId, {
+                    conversation_type: isPatient ? 'patient_llm' : 'doctor_llm',
+                    patient_id: patientId,
+                    doctor_id: isPatient ? null : currentUser?.id,
+                    hospital_id: currentUser?.hospital_id,
+                    title: 'Medical Consultation',
+                })
+                if (!convResponse.success) {
+                    setError('Failed to start conversation')
+                    return
+                }
+                activeConversation = convResponse.data
+                setCurrentConversation(activeConversation)
+                setConversationProjectId(getConvProjectId(activeConversation))
+                setConversations((prev) => [activeConversation, ...prev.filter((item) => item.id !== activeConversation.id)])
+                setConversationCount((prev) => prev + 1)
+            } catch (err) {
+                setError(getApiErrorMessage(err, 'Failed to start conversation.'))
+                return
+            }
+        }
+
         const outgoingMessage = inputValue
         const assistantMessageId = `assistant-${Date.now()}`
         const detectedLanguage = detectLanguage(outgoingMessage)
+
+        // MedMo: prepend any silently-injected file content to the prompt sent to the backend.
+        // The visible message in the chat stays as the user typed it — only the API payload changes.
+        const medmoPrefix =
+            selectedModelBackend === 'medmo' && medmoInlineContent.length
+                ? medmoInlineContent.join('\n\n') + '\n\n'
+                : ''
+        const promptForApi = medmoPrefix ? `${medmoPrefix}${outgoingMessage}` : outgoingMessage
+        // Clear consumed inline content so it isn't re-sent on the next turn
+        if (medmoPrefix) setMedmoInlineContent([])
 
         const userMessage = {
             id: Date.now(),
@@ -553,20 +625,27 @@ export const MedicalLlm = ({ onBack }) => {
         setError(null)
 
         try {
+            // Always include uploaded file IDs so the retrieval filter finds the
+            // doctor's uploaded documents even if they were unchecked in the sidebar.
+            const effectiveContextIds = [...new Set([...selectedContextFileIds, ...uploadedDocIds])]
+            const effectiveImageIds = [...new Set([...selectedImageFileIds, ...uploadedImageIds])]
+
+            const activeConvProjectId = getConvProjectId(activeConversation) || conversationProjectId || undefined
             const response = await nlpChatAPI.answerQuestion(projectId, {
-                text: outgoingMessage,
+                text: promptForApi,
                 top_k: 3,
-                conversation_id: currentConversation.id,
+                conversation_id: activeConversation.id,
                 patient_id: isPatient ? undefined : selectedPatientId,
                 language: detectedLanguage,
                 chat_history: chatHistoryPayload,
                 model_backend: selectedModelBackend,
-                context_file_ids: selectedContextFileIds,
-                image_file_ids: selectedImageFileIds,
+                context_file_ids: effectiveContextIds,
+                image_file_ids: effectiveImageIds,
+                conversation_project_id: activeConvProjectId,
             })
 
             if (response.success && response.data) {
-                const { conversation_id, answer, assistant_message } = response.data
+                const { answer, assistant_message, sources } = response.data
 
                 setMessages((prev) => {
                     const updated = prev.map((item) =>
@@ -575,25 +654,22 @@ export const MedicalLlm = ({ onBack }) => {
                                   ...item,
                                   id: assistant_message?.id || item.id,
                                   content: answer || 'No response received.',
+                                  sources: sources || assistant_message?.metadata?.sources || [],
                                   timestamp: new Date(),
                               }
                             : item
                     )
-                    if (currentConversation?.id) {
-                        messageCacheRef.current.set(currentConversation.id, updated)
+                    if (activeConversation?.id) {
+                        messageCacheRef.current.set(activeConversation.id, updated)
                     }
                     return updated
                 })
-
-                if (conversation_id && !currentConversation?.id) {
-                    setCurrentConversation({ id: conversation_id, title: 'Medical Consultation' })
-                }
             } else if (response) {
                 // Handle case where response doesn't have success wrapper
                 // but still contains data (direct response from API)
-                const { conversation_id, answer, assistant_message } = response.data || response
+                const { answer, assistant_message, sources } = response.data || response
                 const finalAnswer = answer || 'No response received.'
-                
+
                 if (finalAnswer) {
                     setMessages((prev) => {
                         const updated = prev.map((item) =>
@@ -602,19 +678,16 @@ export const MedicalLlm = ({ onBack }) => {
                                       ...item,
                                       id: assistant_message?.id || item.id,
                                       content: finalAnswer,
+                                      sources: sources || assistant_message?.metadata?.sources || [],
                                       timestamp: new Date(),
                                   }
                                 : item
                         )
-                        if (currentConversation?.id) {
-                            messageCacheRef.current.set(currentConversation.id, updated)
+                        if (activeConversation?.id) {
+                            messageCacheRef.current.set(activeConversation.id, updated)
                         }
                         return updated
                     })
-                }
-
-                if (conversation_id && !currentConversation?.id) {
-                    setCurrentConversation({ id: conversation_id, title: 'Medical Consultation' })
                 }
             }
         } catch (err) {
@@ -679,8 +752,22 @@ export const MedicalLlm = ({ onBack }) => {
                                 />
                                 <SelectField
                                     label="Select Patient"
-                                    value={selectedPatientId}
-                                    onChange={(e) => setSelectedPatientId(e.target.value || null)}
+                                    value={selectedPatientId ?? ''}
+                                    onChange={(e) => {
+                                        const newId = e.target.value || null
+                                        setSelectedPatientId(newId)
+                                        // Clear the active conversation when the patient changes
+                                        // so the next message always belongs to the correct patient.
+                                        if (newId !== selectedPatientId) {
+                                            setCurrentConversation(null)
+                                            setConversationProjectId(null)
+                                            setMessages([])
+                                            setSelectedContextFileIds([])
+                                            setSelectedImageFileIds([])
+                                            setUploadedDocIds([])
+                                            setUploadedImageIds([])
+                                        }
+                                    }}
                                     options={filteredPatients.map((p) => ({
                                         value: p.id,
                                         label: `${p.first_name} ${p.last_name}${p.mrn ? ` • ${p.mrn}` : ''}`,
@@ -706,6 +793,8 @@ export const MedicalLlm = ({ onBack }) => {
                                     onChange={(event) => {
                                         const newBackend = event.target.value
                                         setSelectedModelBackend(newBackend)
+                                        // Clear MedMo inline buffer when switching away from MedMo
+                                        if (newBackend !== 'medmo') setMedmoInlineContent([])
                                         const label = modelOptions.find((m) => m.value === newBackend)?.label || newBackend
                                         toast.info(`Switched to ${label}`)
                                     }}
@@ -713,43 +802,6 @@ export const MedicalLlm = ({ onBack }) => {
                                     placeholder="Select model"
                                     helperText="Doctor can switch between available clinical models per conversation."
                                 />
-                            </div>
-
-                            <div className={styles.contextItem}>
-                                <strong>Attach Sources</strong>
-                                <div className={styles.attachmentActions}>
-                                    <button
-                                        type="button"
-                                        className={styles.attachmentButton}
-                                        onClick={() => fileUploadInputRef.current?.click()}
-                                        disabled={isUploadingAttachments}
-                                    >
-                                        {isUploadingAttachments ? 'Uploading...' : 'Add Files/Images'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={styles.attachmentButton}
-                                        onClick={() => folderUploadInputRef.current?.click()}
-                                        disabled={isUploadingAttachments}
-                                    >
-                                        {isUploadingAttachments ? 'Uploading...' : 'Add Folder'}
-                                    </button>
-                                </div>
-                                <input
-                                    ref={fileUploadInputRef}
-                                    type="file"
-                                    multiple
-                                    onChange={handleFileInputChange}
-                                    className={styles.hiddenInput}
-                                />
-                                <input
-                                    ref={folderUploadInputRef}
-                                    type="file"
-                                    multiple
-                                    onChange={handleFileInputChange}
-                                    className={styles.hiddenInput}
-                                />
-                                {uploadNotice ? <p className={styles.uploadNotice}>{uploadNotice}</p> : null}
                             </div>
 
                             <div className={`${styles.contextItem} ${styles.contextGroup}`}>
@@ -940,6 +992,46 @@ export const MedicalLlm = ({ onBack }) => {
                                             ) : (
                                                 <p className={styles.messageText}>{message.content}</p>
                                             )}
+                                            {message.role === 'assistant' &&
+                                                Array.isArray(message.sources) &&
+                                                message.sources.length > 0 && (
+                                                    <div className={styles.messageSources}>
+                                                        <div className={styles.messageSourcesTitle}>
+                                                            Sources
+                                                        </div>
+                                                        <ul className={styles.messageSourcesList}>
+                                                            {message.sources.map((src) => (
+                                                                <li
+                                                                    key={`${message.id}-src-${src.doc_no}`}
+                                                                    className={styles.messageSourceItem}
+                                                                    title={src.preview || ''}
+                                                                >
+                                                                    <span className={styles.messageSourceBadge}>
+                                                                        {src.doc_no}
+                                                                    </span>
+                                                                    <span className={styles.messageSourceName}>
+                                                                        {src.file_name || 'unknown document'}
+                                                                    </span>
+                                                                    {src.chunk_index !== undefined &&
+                                                                        src.chunk_index !== null && (
+                                                                            <span
+                                                                                className={styles.messageSourceMeta}
+                                                                            >
+                                                                                chunk #{src.chunk_index}
+                                                                            </span>
+                                                                        )}
+                                                                    {typeof src.score === 'number' && (
+                                                                        <span
+                                                                            className={styles.messageSourceMeta}
+                                                                        >
+                                                                            score {src.score.toFixed(2)}
+                                                                        </span>
+                                                                    )}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
                                             <span className={styles.messageTime}>
                                                 {message.timestamp.toLocaleTimeString([], {
                                                     hour: '2-digit',
@@ -962,11 +1054,11 @@ export const MedicalLlm = ({ onBack }) => {
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyPress}
                                 placeholder={
-                                    currentConversation
-                                        ? 'Type your medical question...'
-                                        : 'Start a new conversation to begin chatting...'
+                                    !isPatient && !selectedPatientId
+                                        ? 'Select a patient to begin chatting...'
+                                        : 'Type your medical question...'
                                 }
-                                disabled={!currentConversation || isLoading}
+                                disabled={(!isPatient && !selectedPatientId) || isLoading}
                                 rows={2}
                             />
                             <div className={styles.composerHintRow}>
@@ -988,7 +1080,7 @@ export const MedicalLlm = ({ onBack }) => {
                         </button>
                         <button
                             onClick={sendMessage}
-                            disabled={!inputValue.trim() || isLoading || !currentConversation}
+                            disabled={!inputValue.trim() || isLoading || (!isPatient && !selectedPatientId)}
                             className={styles.sendButton}
                         >
                             Send

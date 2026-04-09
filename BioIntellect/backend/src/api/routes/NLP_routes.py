@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import uuid
 from typing import Any
@@ -16,8 +15,6 @@ from fastapi import (
 	UploadFile,
 	status,
 )
-from fastapi.responses import StreamingResponse
-
 from src.api.controllers.NLPController import NLPController
 from src.api.controllers.ProcessController import ProcessController
 from src.config.settings import get_settings
@@ -45,7 +42,7 @@ CURRENT_USER_DEPENDENCY = Depends(get_current_user)
 SUPPORTED_MODEL_BACKENDS = {"cohere", "openai", "medmo", "phi_qa"}
 CHAT_UPLOAD_PREFIX = "chat_upload::"
 CHAT_UPLOAD_DIR = os.path.join("chat_uploads", "attachments")
-DOCUMENT_EXTENSIONS = {".txt", ".md", ".pdf", ".docx"}
+DOCUMENT_EXTENSIONS = {".txt", ".md", ".pdf", ".docx", ".csv", ".json"}
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".dcm", ".nii", ".nii.gz"}
 ATTACHMENT_FILES_FORM = File(...)
 PROJECT_ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", ".."))
@@ -127,15 +124,26 @@ def _resolve_backend_model_id(settings, backend: str) -> str | None:
 	return settings.GENERATION_MODEL_ID
 
 
+def _local_model_has_weights(model_dir: str | None) -> bool:
+	"""Return True only if the directory contains actual model weight files."""
+	if not model_dir or not os.path.isdir(model_dir):
+		return False
+	for fname in os.listdir(model_dir):
+		lower = fname.lower()
+		if lower.endswith((".bin", ".safetensors", ".pt", ".pth", ".gguf")):
+			return True
+	return False
+
+
 def _is_backend_enabled(settings, backend: str) -> bool:
 	if backend == "openai":
 		return bool(settings.OPENAI_API_KEY)
 	if backend == "cohere":
 		return bool(settings.COHERE_API_KEY)
 	if backend == "medmo":
-		return bool(_detect_local_model_path(settings, "medmo"))
+		return _local_model_has_weights(_detect_local_model_path(settings, "medmo"))
 	if backend == "phi_qa":
-		return bool(_detect_local_model_path(settings, "phi_qa"))
+		return _local_model_has_weights(_detect_local_model_path(settings, "phi_qa"))
 	return False
 
 
@@ -193,7 +201,7 @@ def _resolve_generation_client(request: Request, requested_backend: str | None):
 		default_output_max_tokens = cast(int, settings.INPUT_DEFAULT_MAX_TOKENS or 1000)
 		default_temp = cast(float, settings.INPUT_DEFAULT_TEMPERATURE or 0.1)
 		try:
-			if backend == "medmo" and local_model_path and not settings.MEDMO_MODEL_PATH:
+			if backend == "medmo" and local_model_path:
 				from src.stores.llm.providers.MedMOProvider import MedMOProvider
 
 				client = MedMOProvider(
@@ -202,8 +210,11 @@ def _resolve_generation_client(request: Request, requested_backend: str | None):
 					default_output_max_tokens=default_output_max_tokens,
 					default_temp=default_temp,
 					offload_folder=settings.MEDMO_OFFLOAD_FOLDER,
+					force_cpu_only=settings.FORCE_CPU_ONLY,
 				)
-			elif backend == "phi_qa" and local_model_path and not settings.PHI_QA_MODEL_PATH:
+				if client.model is None:
+					raise RuntimeError(f"MedMO model failed to load from '{local_model_path}'")
+			elif backend == "phi_qa" and local_model_path:
 				from src.stores.llm.providers.PhiQAProvider import PhiQAProvider
 
 				client = PhiQAProvider(
@@ -211,10 +222,15 @@ def _resolve_generation_client(request: Request, requested_backend: str | None):
 					default_input_max_characters=default_input_max_characters,
 					default_output_max_tokens=default_output_max_tokens,
 					default_temp=default_temp,
+					force_cpu_only=settings.FORCE_CPU_ONLY,
 				)
+				if client.model is None:
+					raise RuntimeError(f"PhiQA model failed to load from '{local_model_path}'")
 			else:
 				factory = LLMProviderFactory(settings)
 				client = factory.create(backend=backend)
+		except HTTPException:
+			raise
 		except Exception as exc:
 			raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Failed to initialize backend '{backend}': {str(exc)}") from exc
 		cache[backend] = client
@@ -263,12 +279,78 @@ def _sender_type_for_role(user: dict[str, Any]) -> str:
 	return "patient" if role == "patient" else "doctor"
 
 
+def _is_valid_uuid(value: str | None) -> bool:
+	cleaned = str(value or "").strip()
+	if not cleaned:
+		return False
+	try:
+		uuid.UUID(cleaned)
+		return True
+	except Exception:
+		return False
+
+
+def _resolve_rag_project_id(
+	*,
+	url_project_id: str,
+	conversation_project_id: str | None,
+) -> str:
+	"""Pick the effective project_id to use for vector storage.
+
+	Prefers the per-conversation isolated UUID when provided. Falls back to the
+	URL path project_id only when it is itself a valid UUID. Raises a 400 with a
+	clear message when neither option is valid — this prevents opaque
+	"project_id must be a valid UUID" errors from ProcessController deep in the
+	stack and tells the caller exactly what to send.
+	"""
+	conv_pid = str(conversation_project_id or "").strip()
+	if conv_pid:
+		if not _is_valid_uuid(conv_pid):
+			raise HTTPException(
+				status_code=status.HTTP_400_BAD_REQUEST,
+				detail="conversation_project_id must be a valid UUID",
+			)
+		return conv_pid
+
+	url_pid = str(url_project_id or "").strip()
+	if not _is_valid_uuid(url_pid):
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail=(
+				"project_id in the URL must be a valid UUID, or pass a valid "
+				"conversation_project_id to scope the request to a conversation"
+			),
+		)
+	return url_pid
+
+
 def _conversation_project_id(conversation: dict[str, Any]) -> str | None:
 	metadata = conversation.get("metadata") or {}
 	if isinstance(metadata, dict):
 		value = metadata.get("project_id")
 		return str(value) if value is not None else None
 	return None
+
+
+def _get_conversation_project_id(conversation: dict[str, Any]) -> str | None:
+	"""Return the per-conversation isolated project_id stored in metadata."""
+	if conversation.get("conversation_project_id"):
+		return str(conversation["conversation_project_id"])
+	metadata = conversation.get("metadata") or {}
+	if isinstance(metadata, dict):
+		value = metadata.get("conversation_project_id")
+		return str(value) if value is not None else None
+	return None
+
+
+def _enrich_conversation(conversation: dict[str, Any]) -> dict[str, Any]:
+	"""Ensure conversation_project_id is surfaced at top level."""
+	result = dict(conversation)
+	if not result.get("conversation_project_id"):
+		cpid = _get_conversation_project_id(result)
+		if cpid:
+			result["conversation_project_id"] = cpid
+	return result
 
 
 async def _build_patient_context(patient_id: str) -> dict[str, Any] | None:
@@ -330,32 +412,70 @@ def _build_message_metadata(
 	return metadata
 
 
+def _summarize_finding(item: dict[str, Any]) -> str:
+	"""Reduce an ECG/MRI record to a short natural-language line."""
+	if not isinstance(item, dict):
+		return ""
+	parts: list[str] = []
+	for key in ("finding", "diagnosis", "result", "classification", "label", "interpretation"):
+		value = item.get(key)
+		if value:
+			parts.append(str(value))
+			break
+	for key in ("severity", "severity_level", "priority"):
+		value = item.get(key)
+		if value:
+			parts.append(f"severity={value}")
+			break
+	for key in ("largest_diameter_mm", "tumor_volume_cm3", "ejection_fraction"):
+		value = item.get(key)
+		if value not in (None, ""):
+			parts.append(f"{key}={value}")
+	date_value = item.get("created_at") or item.get("date") or item.get("recorded_at")
+	if date_value:
+		parts.append(f"date={str(date_value)[:10]}")
+	return "; ".join(parts) if parts else ""
+
+
 def _format_patient_context_for_prompt(patient_context: dict[str, Any] | None) -> str:
+	"""Compact plain-text summary (not JSON). Keeps prompt small and model-focused."""
 	if not isinstance(patient_context, dict):
 		return ""
 
+	name = " ".join(
+		str(p) for p in [patient_context.get("first_name"), patient_context.get("last_name")] if p
+	).strip() or "Unknown"
+	gender = patient_context.get("gender") or "unknown"
+	dob = patient_context.get("date_of_birth") or "unknown"
+
 	medical_history = patient_context.get("medical_history") or {}
-	recent_cases = list(medical_history.get("recent_cases") or [])[:10]
-	recent_ecg = list(medical_history.get("recent_ecg_results") or [])[:10]
-	recent_mri = list(medical_history.get("recent_mri_results") or [])[:10]
+	recent_cases = list(medical_history.get("recent_cases") or [])[:3]
+	recent_ecg = list(medical_history.get("recent_ecg_results") or [])[:3]
+	recent_mri = list(medical_history.get("recent_mri_results") or [])[:3]
 
-	summary_payload = {
-		"patient": {
-			"id": patient_context.get("id"),
-			"mrn": patient_context.get("mrn"),
-			"first_name": patient_context.get("first_name"),
-			"last_name": patient_context.get("last_name"),
-			"gender": patient_context.get("gender"),
-			"date_of_birth": patient_context.get("date_of_birth"),
-		},
-		"medical_history": {
-			"recent_cases": recent_cases,
-			"recent_ecg_results": recent_ecg,
-			"recent_mri_results": recent_mri,
-		},
-	}
+	lines = [
+		f"Patient: {name} | gender={gender} | dob={dob}",
+	]
+	if recent_mri:
+		mri_lines = [s for s in (_summarize_finding(m) for m in recent_mri) if s]
+		if mri_lines:
+			lines.append("Recent MRI: " + " || ".join(mri_lines))
+	if recent_ecg:
+		ecg_lines = [s for s in (_summarize_finding(e) for e in recent_ecg) if s]
+		if ecg_lines:
+			lines.append("Recent ECG: " + " || ".join(ecg_lines))
+	if recent_cases:
+		case_lines = []
+		for case in recent_cases:
+			if not isinstance(case, dict):
+				continue
+			title = case.get("title") or case.get("chief_complaint") or case.get("diagnosis") or "case"
+			status_value = case.get("status") or case.get("priority") or ""
+			case_lines.append(f"{title} ({status_value})".strip())
+		if case_lines:
+			lines.append("Recent cases: " + "; ".join(case_lines))
 
-	return json.dumps(summary_payload, ensure_ascii=False)
+	return "\n".join(lines)
 
 
 def _augment_question_with_patient_context(question: str, patient_context: dict[str, Any] | None) -> str:
@@ -364,9 +484,9 @@ def _augment_question_with_patient_context(question: str, patient_context: dict[
 		return question
 
 	return (
-		"Use the following patient clinical context to answer accurately and specifically. "
-		"If a field is missing, state that clearly instead of guessing.\n"
-		f"PATIENT_CONTEXT_JSON:\n{context_blob}\n\n"
+		"Use the following patient clinical context when it is relevant. "
+		"If a field is missing, say so instead of guessing.\n"
+		f"PATIENT_CONTEXT:\n{context_blob}\n\n"
 		f"USER_QUESTION:\n{question}"
 	)
 
@@ -386,7 +506,7 @@ async def _assert_conversation_access(
 		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Conversation does not belong to this project")
 
 	if _is_privileged_user(user):
-		return conversation
+		return _enrich_conversation(conversation)
 
 	profile_id = _resolve_profile_id(user)
 	role = str(user.get("role") or "").strip().lower()
@@ -395,7 +515,7 @@ async def _assert_conversation_access(
 	if role != "patient" and conversation.get("doctor_id") != profile_id:
 		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-	return conversation
+	return _enrich_conversation(conversation)
 
 
 async def _resolve_or_create_conversation(
@@ -429,8 +549,10 @@ async def _resolve_or_create_conversation(
 		doctor_id = profile_id
 		conversation_type = "doctor_llm"
 
+	conversation_project_id = str(uuid.uuid4())
 	conversation_metadata: dict[str, Any] = {
 		"project_id": project_id,
+		"conversation_project_id": conversation_project_id,
 		"created_via": "nlp_routes",
 	}
 	if role != "patient":
@@ -454,7 +576,15 @@ async def _resolve_or_create_conversation(
 	)
 	if not conversation:
 		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to create conversation")
-	return conversation
+
+	# Surface conversation_project_id at the top level for easy access
+	result = dict(conversation)
+	result["conversation_project_id"] = (
+		result.get("conversation_project_id")
+		or (result.get("metadata") or {}).get("conversation_project_id")
+		or conversation_project_id
+	)
+	return result
 
 @router.post("/index/push/{project_id}", dependencies=[UPLOAD_FILES_DEPENDENCY])
 async def index_project(request: Request, project_id: str, push_request: PushRequest):
@@ -524,30 +654,6 @@ async def index_project(request: Request, project_id: str, push_request: PushReq
 		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 	return {"message": f"Successfully indexed {len(chunks)} chunks into vector database for project {project_id}"}
 
-@router.get("/index/info/{project_id}", dependencies=[CHAT_LLM_DEPENDENCY])
-async def get_index_info(request: Request, project_id: str):
-	if not project_id.strip():
-		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
-
-	vectordb_client = getattr(request.app.state, "vectordb_client", None)
-	if vectordb_client is None:
-		raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Vector database client is not initialized")
-	
-	nlp_controller = NLPController(
-		vectorDB_client=vectordb_client,
-		generation_client=None,
-		embedding_client=None,
-		template_parser=getattr(request.app.state, "template_parser", None),
-	)
-
-	try:
-		collection_info = nlp_controller.get_vector_db_collection_info(project_id=project_id)
-	except Exception as exc:
-		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
-
-	if collection_info is None:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No vector database collection found for project {project_id}")
-	return {"collection_info": collection_info}
 @router.post("/index/search/{project_id}", dependencies=[CHAT_LLM_DEPENDENCY])
 async def search_index(request: Request, project_id: str, search_request: SearchRequest):
 	if not project_id.strip():
@@ -603,10 +709,18 @@ async def upload_chat_attachments(
 	project_id: str,
 	files: list[UploadFile] = ATTACHMENT_FILES_FORM,
 	patient_id: str | None = Form(default=None),
+	conversation_project_id: str | None = Form(default=None),
 	user: dict[str, Any] = CURRENT_USER_DEPENDENCY,
 ):
 	if not project_id.strip():
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
+
+	# Prefer the per-conversation UUID; fall back to the URL project_id only if
+	# that one is a valid UUID itself. Raises a clear 400 otherwise.
+	rag_project_id = _resolve_rag_project_id(
+		url_project_id=project_id,
+		conversation_project_id=conversation_project_id,
+	)
 	if not files:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one file is required")
 
@@ -615,7 +729,7 @@ async def upload_chat_attachments(
 	if role != "patient" and not resolved_patient_id:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="patient_id is required")
 
-	process_controller = ProcessController(project_id=project_id)
+	process_controller = ProcessController(project_id=rag_project_id)
 	base_dir = os.path.realpath(process_controller.project_path)
 	upload_dir = os.path.realpath(os.path.join(base_dir, CHAT_UPLOAD_DIR))
 	if not upload_dir.startswith(base_dir + os.sep):
@@ -659,8 +773,10 @@ async def upload_chat_attachments(
 			uploaded_images.append({"id": upload_identifier, "label": label})
 			continue
 
-		if vectordb_client is None or embedding_client is None or generation_client is None or template_parser is None:
-			indexed_documents.append({"id": upload_identifier, "label": f"{label} • not indexed"})
+		if vectordb_client is None or embedding_client is None or template_parser is None:
+			missing = [n for n, v in [("vectordb", vectordb_client), ("embedding", embedding_client), ("template_parser", template_parser)] if v is None]
+			rejected_files.append({"file": upload.filename or "unknown", "reason": f"Server NLP clients not ready: {', '.join(missing)}"})
+			logger.error(f"Cannot index uploaded file — missing clients: {missing}")
 			continue
 
 		try:
@@ -670,6 +786,7 @@ async def upload_chat_attachments(
 				raise ValueError("No chunks generated")
 
 			texts = [chunk.page_content for chunk in chunks]
+			logger.info(f"Embedding {len(texts)} chunks for uploaded file: {filename}")
 			vectors = embedding_client.embed_text(text=texts, document_type=DocumentTypeEnums.document.value)
 			if any(vector is None or len(vector) == 0 for vector in vectors):
 				raise ValueError("Failed to generate embeddings")
@@ -686,19 +803,21 @@ async def upload_chat_attachments(
 
 			nlp_controller = NLPController(
 				vectorDB_client=vectordb_client,
-				generation_client=generation_client,
+				generation_client=generation_client,  # not used during indexing
 				embedding_client=embedding_client,
 				template_parser=template_parser,
 			)
 			nlp_controller.index_into_vector_db(
-				project_id=project_id,
+				project_id=rag_project_id,
 				texts=texts,
 				vectors=vectors,
 				metadata=metadata,
 				do_reset=False,
 			)
+			logger.info(f"Indexed {len(chunks)} chunks for '{filename}' into collection '{rag_project_id}' under source_file_id='{upload_identifier}'")
 			indexed_documents.append({"id": upload_identifier, "label": label})
 		except Exception as exc:
+			logger.error(f"Indexing failed for '{filename}': {exc}")
 			rejected_files.append({"file": upload.filename or "unknown", "reason": f"Indexing failed: {str(exc)}"})
 
 	return {
@@ -739,6 +858,11 @@ async def create_rag_conversation(
 
 	repo = LLMRepository()
 
+	# Each conversation gets its own isolated Qdrant collection via a unique
+	# conversation_project_id. This prevents uploaded files from leaking across
+	# conversations that share the same hospital_id.
+	conversation_project_id = str(uuid.uuid4())
+
 	conversation = await repo.create(
 		{
 			"title": str(payload.get("title") or "Medical Consultation").strip() or "Medical Consultation",
@@ -746,13 +870,24 @@ async def create_rag_conversation(
 			"patient_id": patient_id,
 			"doctor_id": doctor_id,
 			"hospital_id": hospital_id,
-			"metadata": {"project_id": project_id, "created_via": "nlp_routes"},
+			"metadata": {
+				"project_id": project_id,
+				"conversation_project_id": conversation_project_id,
+				"created_via": "nlp_routes",
+			},
 		}
 	)
 	if not conversation:
 		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to create conversation")
 
-	return {"conversation": conversation}
+	# Inject conversation_project_id at top level so the frontend can read it directly
+	result = dict(conversation)
+	result["conversation_project_id"] = (
+		result.get("conversation_project_id")
+		or (result.get("metadata") or {}).get("conversation_project_id")
+		or conversation_project_id
+	)
+	return {"conversation": result}
 
 
 @router.get(
@@ -841,7 +976,16 @@ async def answer_rag(
 		requested_backend=search_request.model_backend,
 	)
 	search_request.model_backend = resolved_backend
-	image_path = _resolve_uploaded_image_path(project_id=project_id, image_ids=search_request.image_file_ids)
+
+	# Use the per-conversation project_id for all vector operations so each
+	# conversation has its own isolated Qdrant collection. Fall back to the
+	# hospital-level project_id only if none was provided (legacy conversations).
+	rag_project_id = _resolve_rag_project_id(
+		url_project_id=project_id,
+		conversation_project_id=search_request.conversation_project_id,
+	)
+
+	image_path = _resolve_uploaded_image_path(project_id=rag_project_id, image_ids=search_request.image_file_ids)
 
 	nlp_controller = NLPController(
 		vectorDB_client=vectordb_client,
@@ -849,33 +993,86 @@ async def answer_rag(
 		embedding_client=embedding_client,
 		template_parser=template_parser,
 	)
-	
-	# Load patient context for augmentation (same as streaming endpoint)
-	patient_context = None
+
+	# Kick off the Supabase patient-context fetch in parallel with the rest of
+	# the setup. The heavy work (embedding + vector search + LLM call) runs
+	# after this, so overlapping the two I/O paths trims end-to-end latency.
 	patient_id_for_context = str(search_request.patient_id or "").strip()
+	patient_context_task: asyncio.Task | None = None
 	if patient_id_for_context:
+		patient_context_task = asyncio.create_task(
+			_build_patient_context(patient_id_for_context)
+		)
+
+	patient_context = None
+	if patient_context_task is not None:
 		try:
-			patient_context = await _build_patient_context(patient_id_for_context)
+			patient_context = await patient_context_task
 		except Exception as exc:
 			logger.warning(f"Failed to fetch patient context for {patient_id_for_context}: {str(exc)}")
-	
-	question_for_model = _augment_question_with_patient_context(search_request.text, patient_context)
-	
-	try:
-		answer, full_prompt, chat_history = nlp_controller.answer_rag_question(
-			project_id=project_id,
-			question=question_for_model,
-			limit=search_request.top_k,
-			chat_history=search_request.chat_history,
-			language=language,
-			image_path=image_path,
-		)
-	except ValueError as exc:
-		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-	except Exception as exc:
-		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Failed to answer RAG question: {str(exc)}") from exc
 
-	if not answer :
+	question_for_model = _augment_question_with_patient_context(search_request.text, patient_context)
+
+	sources: list[dict[str, Any]] = []
+	# MedMo bypasses RAG entirely — the file content was already inlined in the prompt by the
+	# frontend. We call generate_text directly so the full inline context reaches the model
+	# without a vector retrieval step that would find nothing (MedMo files are not embedded).
+	if resolved_backend == "medmo":
+		settings = get_settings()
+		try:
+			clean_history = [
+				msg for msg in (search_request.chat_history or [])
+				if isinstance(msg, dict) and str(msg.get("role", "")).capitalize() != "System"
+			][-settings.CHAT_HISTORY_MAX_MESSAGES:]
+			answer = await asyncio.to_thread(
+				generation_client.generate_text,
+				prompt=question_for_model,
+				chat_history=clean_history,
+				max_output_tokens=settings.CHAT_MAX_OUTPUT_TOKENS,
+				image_path=image_path,
+			)
+			answer = (answer or "").strip() or "I couldn't generate a response right now."
+		except Exception as exc:
+			raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"MedMo generation failed: {str(exc)}") from exc
+		full_prompt = question_for_model
+		chat_history_out = list(search_request.chat_history or [])
+	else:
+		# Only filter by IDs that were actually indexed as chat attachments (chat_upload:: prefix).
+		# ECG/MRI record UUIDs from context_file_ids are NOT indexed in the vector DB — they are
+		# already embedded in the patient context above. Mixing them into filter_file_ids
+		# causes Qdrant to find zero matching chunks and return no documents at all.
+		indexed_file_ids = list({
+			fid for fid in (
+				list(search_request.context_file_ids or []) +
+				list(search_request.image_file_ids or [])
+			)
+			if fid and str(fid).startswith(CHAT_UPLOAD_PREFIX)
+		}) or None
+
+		# When the doctor uploaded files, retrieve more chunks so the model has
+		# enough content from those documents even if their similarity scores are
+		# moderate. Without this, top_k=3 frequently returns zero filtered results.
+		effective_top_k = max(search_request.top_k, 8) if indexed_file_ids else search_request.top_k
+
+		try:
+			# Run the blocking embed+search+LLM pipeline off the event loop so
+			# the server stays responsive for concurrent chats.
+			answer, full_prompt, chat_history_out, sources = await asyncio.to_thread(
+				nlp_controller.answer_rag_question,
+				project_id=rag_project_id,
+				question=question_for_model,
+				limit=effective_top_k,
+				chat_history=search_request.chat_history,
+				language=language,
+				image_path=image_path,
+				filter_file_ids=indexed_file_ids,
+			)
+		except ValueError as exc:
+			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+		except Exception as exc:
+			raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Failed to answer RAG question: {str(exc)}") from exc
+
+	if not answer:
 		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to generate answer for the question")
 
 	repo = LLMRepository()
@@ -921,6 +1118,7 @@ async def answer_rag(
 						"full_prompt": full_prompt,
 						"model_backend": resolved_backend,
 						"model_id": resolved_model_id,
+						"sources": sources,
 					},
 				),
 			}
@@ -935,174 +1133,11 @@ async def answer_rag(
 		"conversation_id": conversation_id,
 		"answer": answer,
 		"full_prompt": full_prompt,
-		"chat_history": chat_history,
+		"chat_history": chat_history_out,
+		"sources": sources,
 		"user_message": user_message,
 		"assistant_message": assistant_message,
 	}
-
-
-def _format_sse(event_name: str, payload: dict) -> str:
-	return f"event: {event_name}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
-
-
-def _chunk_text(text: str, chunk_size: int = 24):
-	for index in range(0, len(text), chunk_size):
-		yield text[index : index + chunk_size]
-
-
-@router.post(
-	"/index/answer-stream/{project_id}",
-	dependencies=[CHAT_LLM_DEPENDENCY],
-)
-async def answer_rag_stream(
-	request: Request,
-	project_id: str,
-	search_request: SearchRequest,
-	user: dict[str, Any] = CURRENT_USER_DEPENDENCY,
-):
-	if not project_id.strip():
-		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
-	if not search_request.text or not search_request.text.strip():
-		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="query is required")
-
-	vectordb_client = getattr(request.app.state, "vectordb_client", None)
-	embedding_client = getattr(request.app.state, "embedding_client", None)
-	template_parser = getattr(request.app.state, "template_parser", None)
-	if vectordb_client is None or embedding_client is None or template_parser is None:
-		raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Required NLP clients are not initialized")
-
-	generation_client, resolved_backend, resolved_model_id = _resolve_generation_client(
-		request=request,
-		requested_backend=search_request.model_backend,
-	)
-	search_request.model_backend = resolved_backend
-	image_path = _resolve_uploaded_image_path(project_id=project_id, image_ids=search_request.image_file_ids)
-
-	nlp_controller = NLPController(
-		vectorDB_client=vectordb_client,
-		generation_client=generation_client,
-		embedding_client=embedding_client,
-		template_parser=template_parser,
-	)
-	repo = LLMRepository()
-
-	async def event_generator():
-		try:
-			conversation = await _resolve_or_create_conversation(
-				repo=repo,
-				project_id=project_id,
-				search_request=search_request,
-				user=user,
-			)
-		except HTTPException as exc:
-			yield _format_sse("error", {"message": str(exc.detail)})
-			return
-
-		conversation_id = str(conversation.get("id"))
-		conversation_metadata = conversation.get("metadata") or {}
-		patient_id_for_context = str(
-			conversation.get("patient_id")
-			or search_request.patient_id
-			or ""
-		).strip()
-		patient_context = None
-		if patient_id_for_context:
-			try:
-				# Always fetch fresh patient history from Supabase for each streamed answer.
-				patient_context = await _build_patient_context(patient_id_for_context)
-			except Exception as exc:
-				logger.warning(
-					f"Failed to fetch live patient context for {patient_id_for_context}: {str(exc)}"
-				)
-
-		if not patient_context and isinstance(conversation_metadata, dict):
-			patient_context = conversation_metadata.get("patient_context")
-
-		question_for_model = _augment_question_with_patient_context(
-			search_request.text,
-			patient_context,
-		)
-		yield _format_sse("start", {"project_id": project_id, "conversation_id": conversation_id})
-
-		try:
-			await repo.create_message(
-				{
-					"conversation_id": conversation_id,
-					"sender_type": _sender_type_for_role(user),
-					"sender_id": _resolve_profile_id(user),
-					"message_content": search_request.text,
-					"message_type": "medical_query",
-					"metadata": _build_message_metadata(
-						project_id,
-						search_request,
-						search_request.language or "en",
-					),
-				}
-			)
-		except Exception as exc:
-			yield _format_sse("error", {"message": f"Failed to save user message: {str(exc)}"})
-			return
-
-		try:
-			# Emit an immediate progress token so clients do not appear frozen
-			# while the model prepares the first real chunk.
-			yield _format_sse("token", {"text": "..."})
-			await asyncio.sleep(0)
-
-			answer, _, _ = await asyncio.to_thread(
-				nlp_controller.answer_rag_question,
-				project_id=project_id,
-				question=question_for_model,
-				limit=search_request.top_k,
-				chat_history=search_request.chat_history,
-				language=search_request.language,
-				image_path=image_path,
-			)
-			answer = str(answer or "")
-		except ValueError as exc:
-			yield _format_sse("error", {"message": str(exc)})
-			return
-		except Exception as exc:
-			yield _format_sse("error", {"message": f"Failed to answer RAG question: {str(exc)}"})
-			return
-
-		for chunk in _chunk_text(answer):
-			yield _format_sse("token", {"text": chunk})
-			await asyncio.sleep(0)
-
-		try:
-			assistant_message = await repo.create_message(
-				{
-					"conversation_id": conversation_id,
-					"sender_type": "llm",
-					"message_content": answer,
-					"message_type": "text",
-					"metadata": _build_message_metadata(
-						project_id,
-						search_request,
-						search_request.language or "en",
-						extra={
-							"model_backend": resolved_backend,
-							"model_id": resolved_model_id,
-						},
-					),
-				}
-			)
-		except Exception as exc:
-			yield _format_sse("error", {"message": f"Failed to save assistant message: {str(exc)}"})
-			return
-
-		yield _format_sse("done", {"answer": answer, "conversation_id": conversation_id, "assistant_message": assistant_message})
-
-	return StreamingResponse(
-		event_generator(),
-		media_type="text/event-stream",
-		headers={
-			"Cache-Control": "no-cache",
-			"Connection": "keep-alive",
-			"X-Accel-Buffering": "no",
-		},
-	)
 
 
 @router.get(

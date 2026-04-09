@@ -22,16 +22,20 @@ class PhiQAProvider(LLMInterface):
 
         self.logger.info(f"Loading PhiQA model from: {self.model_path}")
         try:
-            model_device_map = "cpu" if self.force_cpu_only else "auto"
             model_dtype = torch.float32 if self.force_cpu_only else torch.float16
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path,trust_remote_code=True,)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_path,
-                torch_dtype=model_dtype,
-                device_map=model_device_map,
-                low_cpu_mem_usage=True,
-                trust_remote_code=True,
-            )
+            load_kwargs: dict = {
+                "torch_dtype": model_dtype,
+                "low_cpu_mem_usage": True,
+                "trust_remote_code": True,
+            }
+            if not self.force_cpu_only:
+                try:
+                    import accelerate  # noqa: F401
+                    load_kwargs["device_map"] = "auto"
+                except ImportError:
+                    self.logger.warning("accelerate not installed — loading PhiQA on CPU (device_map disabled)")
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True)
+            self.model = AutoModelForCausalLM.from_pretrained(self.model_path, **load_kwargs)
             
             self.model.eval()
             self.logger.info(f"PhiQA model loaded successfully (force_cpu_only={self.force_cpu_only}).")

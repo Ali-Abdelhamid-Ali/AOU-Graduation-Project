@@ -98,16 +98,39 @@ class QdrantDBProvider(VectorDBInterface):
                 return False
         return True
     
-    def search_py_vector(self, collection_name: str, vector: list, limit: int = 3) -> list[dict] | None:
-        results =self.client.search(collection_name=collection_name, query_vector=vector, limit=limit)
+    def search_py_vector(self, collection_name: str, vector: list, limit: int = 3, filter_file_ids: list[str] | None = None) -> list[dict] | None:
+        query_filter = None
+        if filter_file_ids:
+            query_filter = models.Filter(
+                should=[
+                    models.FieldCondition(
+                        key="metadata.source_file_id",
+                        match=models.MatchValue(value=fid),
+                    )
+                    for fid in filter_file_ids
+                ]
+            )
+        results = self.client.search(
+            collection_name=collection_name,
+            query_vector=vector,
+            limit=limit,
+            query_filter=query_filter,
+        )
 
         if not results or len(results) == 0:
             return None
-        
-        return [
-            RetrievedItem(**{
-                "text": (result.payload or {}).get("text", ""),
-                "score": result.score,
-            })
-            for result in results
-        ]
+
+        items: list[RetrievedItem] = []
+        for result in results:
+            payload = result.payload or {}
+            metadata = payload.get("metadata") or {}
+            if not isinstance(metadata, dict):
+                metadata = {}
+            items.append(RetrievedItem(
+                text=payload.get("text", ""),
+                score=result.score,
+                metadata=metadata,
+                source_file_id=metadata.get("source_file_id"),
+                file_name=metadata.get("file_name"),
+            ))
+        return items

@@ -47,6 +47,8 @@ _PATIENT_SELECT_COLUMNS = select_columns_for_table(
         "insurance_number",
         "primary_doctor_id",
         "is_active",
+        "has_disability",
+        "disability_notes",
         "notes",
         "settings",
         "created_at",
@@ -830,6 +832,8 @@ class UserRepository:
                 "allergies",
                 "chronic_conditions",
                 "current_medications",
+                "has_disability",
+                "disability_notes",
                 "notes",
             ],
             "doctors": [

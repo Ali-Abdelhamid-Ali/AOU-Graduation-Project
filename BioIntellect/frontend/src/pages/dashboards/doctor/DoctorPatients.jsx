@@ -63,7 +63,31 @@ export const DoctorPatients = () => {
           <div className={styles.patientList}>
             {filtered.map((item) => (
               <div key={item.id} className={styles.patientCard}>
-                <strong>{item.name}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <strong>{item.name}</strong>
+                  {item.has_disability && (
+                    <span
+                      title={item.disability_notes || 'Disability / special accessibility needs'}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        background: 'rgba(251,191,36,0.15)',
+                        color: '#f59e0b',
+                        border: '1px solid rgba(251,191,36,0.35)',
+                        letterSpacing: '0.02em',
+                        whiteSpace: 'nowrap',
+                        cursor: item.disability_notes ? 'help' : 'default',
+                      }}
+                    >
+                      ♿ Accessibility
+                    </span>
+                  )}
+                </div>
                 <span>{item.mrn || 'MRN unavailable'}</span>
                 <p>Last touchpoint: {item.last_visit_label}</p>
               </div>

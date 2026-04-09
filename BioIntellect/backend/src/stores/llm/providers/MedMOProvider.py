@@ -30,15 +30,19 @@ class MedMOProvider(LLMInterface):
 
         self.logger.info(f"Loading MedMO model from: {self.model_path}")
         try:
-            model_device_map = "cpu" if self.force_cpu_only else "auto"
             model_dtype = torch.float32 if self.force_cpu_only else torch.float16
-            self.model = Qwen3VLForConditionalGeneration.from_pretrained(
-                self.model_path,
-                torch_dtype=model_dtype,
-                device_map=model_device_map,
-                low_cpu_mem_usage=True,
-                offload_folder=self.offload_folder,
-            )
+            load_kwargs: dict = {
+                "dtype": model_dtype,
+                "low_cpu_mem_usage": True,
+                "offload_folder": self.offload_folder,
+            }
+            if not self.force_cpu_only:
+                try:
+                    import accelerate  # noqa: F401
+                    load_kwargs["device_map"] = "auto"
+                except ImportError:
+                    self.logger.warning("accelerate not installed — loading MedMO on CPU (device_map disabled)")
+            self.model = Qwen3VLForConditionalGeneration.from_pretrained(self.model_path, **load_kwargs)
             self.processor = AutoProcessor.from_pretrained(self.model_path)
             self.logger.info(f"MedMO model loaded successfully (force_cpu_only={self.force_cpu_only}).")
         except Exception as e:

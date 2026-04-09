@@ -94,16 +94,17 @@ async def upload_data(
 async def process_endpoint(project_id: str, process_request: processRecquest):
     project_id = _validate_project_id(project_id)
     file_id: str = process_request.file_id
-    chunk_size: int = int(process_request.chunk_size if process_request.chunk_size is not None else 100)
-    overlap_size: int = int(process_request.overlap_size if process_request.overlap_size is not None else 0)
+    # None => ProcessController picks adaptive chunk/overlap based on file size.
+    chunk_size = int(process_request.chunk_size) if process_request.chunk_size is not None else None
+    overlap_size = int(process_request.overlap_size) if process_request.overlap_size is not None else None
 
 
     try:
         process_controller=ProcessController(project_id=project_id)
         file_content=process_controller.get_file_content(file_id=file_id)
         file_chunk=process_controller.process_file_content(file_content=file_content,
-                                                            chunk_size=chunk_size, 
-                                                            overlap_size=overlap_size, 
+                                                            chunk_size=chunk_size,
+                                                            overlap_size=overlap_size,
                                                             file_id=file_id)
     except ValueError as exc:
         return JSONResponse(

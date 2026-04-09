@@ -488,6 +488,8 @@ _TABLE_COLUMNS: dict[str, set[str]] = {
         "insurance_number",
         "primary_doctor_id",
         "is_active",
+        "has_disability",
+        "disability_notes",
         "notes",
         "settings",
         "created_at",

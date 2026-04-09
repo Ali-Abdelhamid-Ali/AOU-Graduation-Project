@@ -1,6 +1,4 @@
 import apiClient from './axios.config'
-import { API_BASE_URL } from './baseUrl'
-import { getAccessToken } from '@/services/auth/sessionStore'
 
 const normalizeEnvelope = (response, transform = (value) => value) => {
   if (response?.success !== undefined) {
@@ -67,49 +65,6 @@ const normalizeMessage = (message = {}) => {
     message_content: message.message_content ?? message.content ?? '',
     sender_type: message.sender_type ?? message.role ?? 'llm',
   }
-}
-
-const parseSseChunk = (chunk, handlers) => {
-  const normalizedChunk = String(chunk || '').replace(/\r\n/g, '\n')
-  const blocks = normalizedChunk.split('\n\n')
-
-  blocks.forEach((block) => {
-    if (!block.trim()) {
-      return
-    }
-
-    const lines = block.split('\n')
-    let eventName = 'message'
-    const dataLines = []
-
-    lines.forEach((line) => {
-      if (line.startsWith('event:')) {
-        eventName = line.slice(6).trim()
-      }
-
-      if (line.startsWith('data:')) {
-        dataLines.push(line.slice(5).trim())
-      }
-    })
-
-    const dataText = dataLines.join('\n')
-    let payload = null
-    try {
-      payload = dataText ? JSON.parse(dataText) : null
-    } catch {
-      payload = { raw: dataText }
-    }
-
-    if (eventName === 'start') {
-      handlers?.onStart?.(payload)
-    } else if (eventName === 'token') {
-      handlers?.onToken?.(payload)
-    } else if (eventName === 'done') {
-      handlers?.onDone?.(payload)
-    } else if (eventName === 'error') {
-      handlers?.onError?.(payload)
-    }
-  })
 }
 
 const normalizeList = (normalizer) => (items) =>
@@ -351,57 +306,6 @@ export const nlpChatAPI = {
       ),
       (payload) => payload || {}
     ),
-  // Legacy: Streaming is handled separately due to SSE requirements
-  // Uses fetch to access response.body for streaming chunks
-  streamAnswer: async (projectId, data, handlers = {}, signal) => {
-    const token = getAccessToken()
-    const response = await fetch(`${API_BASE_URL}/nlp/index/answer-stream/${projectId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      credentials: 'include',
-      body: JSON.stringify(data),
-      ...(signal ? { signal } : {}),
-    })
-
-    if (!response.ok) {
-      let message = 'Failed to start streaming response'
-      try {
-        const payload = await response.json()
-        message = payload?.detail || message
-      } catch {
-        // ignore parse failures and keep fallback message
-      }
-      throw new Error(message)
-    }
-
-    if (!response.body) {
-      throw new Error('Streaming is not available in this browser')
-    }
-
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder('utf-8')
-    let buffer = ''
-
-    let isReading = true
-    while (isReading) {
-      const { value, done } = await reader.read()
-      if (done) {
-        if (buffer.trim()) {
-          parseSseChunk(buffer, handlers)
-        }
-        isReading = false
-        continue
-      }
-
-      buffer += decoder.decode(value, { stream: true })
-      const chunks = buffer.split('\n\n')
-      buffer = chunks.pop() || ''
-      chunks.forEach((chunk) => parseSseChunk(`${chunk}\n\n`, handlers))
-    }
-  },
 }
 
 export default {

@@ -70,6 +70,8 @@ const CreatePatient = ({ onBack, userRole }) => {
         emergencyContactRelation: '',
 
         currentMedications: '',
+        hasDisability: false,
+        disabilityNotes: '',
         notes: ''
     })
 
@@ -154,7 +156,9 @@ const CreatePatient = ({ onBack, userRole }) => {
             ...resolveNames(formData),
             allergies: splitDelimitedValues(formData.allergies),
             chronicConditions: splitDelimitedValues(formData.chronicConditions),
-            currentMedications: splitDelimitedValues(formData.currentMedications)
+            currentMedications: splitDelimitedValues(formData.currentMedications),
+            hasDisability: formData.hasDisability,
+            disabilityNotes: formData.hasDisability ? formData.disabilityNotes : ''
         }
 
         const result = await registerPatient(payload)
@@ -174,7 +178,7 @@ const CreatePatient = ({ onBack, userRole }) => {
                 insuranceProvider: '', insuranceNumber: '',
                 allergies: '', chronicConditions: '', emergencyContactName: '',
                 emergencyContactPhone: '', emergencyContactRelation: '',
-                currentMedications: '', notes: ''
+                currentMedications: '', hasDisability: false, disabilityNotes: '', notes: ''
             })
         } else {
             setError(result.error || 'Registration failed')
@@ -332,6 +336,61 @@ const CreatePatient = ({ onBack, userRole }) => {
                                 <InputField label="Chronic Conditions (comma separated)" value={formData.chronicConditions} onChange={(e) => handleInputChange('chronicConditions', e.target.value)} />
                                 <InputField label="Current Medications" value={formData.currentMedications} onChange={(e) => handleInputChange('currentMedications', e.target.value)} multiline />
                                 <InputField label="Internal Notes" value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} multiline />
+                            </div>
+                        </section>
+
+                        <section className={styles.section}>
+                            <h3 className={styles.sectionTitle}>7. Accessibility & Special Needs</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+                                    <div
+                                        onClick={() => handleInputChange('hasDisability', !formData.hasDisability)}
+                                        style={{
+                                            width: '48px',
+                                            height: '26px',
+                                            borderRadius: '13px',
+                                            background: formData.hasDisability ? 'var(--color-primary, #6c63ff)' : 'var(--color-border, #444)',
+                                            position: 'relative',
+                                            cursor: 'pointer',
+                                            transition: 'background 0.25s ease',
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            borderRadius: '50%',
+                                            background: '#fff',
+                                            position: 'absolute',
+                                            top: '3px',
+                                            left: formData.hasDisability ? '25px' : '3px',
+                                            transition: 'left 0.25s ease',
+                                            boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                                        }} />
+                                    </div>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>
+                                        Patient has a disability or requires special accessibility support
+                                    </span>
+                                </label>
+
+                                <AnimatePresence>
+                                    {formData.hasDisability && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            style={{ overflow: 'hidden' }}
+                                        >
+                                            <InputField
+                                                label="Disability / Accessibility Notes"
+                                                value={formData.disabilityNotes}
+                                                onChange={(e) => handleInputChange('disabilityNotes', e.target.value)}
+                                                placeholder="Describe the disability or special needs (e.g. wheelchair user, visual impairment, hearing aid)"
+                                                multiline
+                                            />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </section>
 

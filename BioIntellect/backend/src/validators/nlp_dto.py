@@ -12,16 +12,16 @@ class PushRequest(BaseModel):
         default_factory=dict,
         description="Optional metadata that may include file_id",
     )
-    chunk_size: int = Field(
-        default=500,
+    chunk_size: Optional[int] = Field(
+        default=None,
         gt=0,
-        le=2000,
-        description="Chunk size for text splitting (in tokens)",
+        le=4000,
+        description="Chunk size. Leave null to auto-pick based on file size.",
     )
-    overlap_size: int = Field(
-        default=20,
+    overlap_size: Optional[int] = Field(
+        default=None,
         ge=0,
-        description="Chunk overlap size for text splitting",
+        description="Chunk overlap. Leave null to auto-pick based on file size.",
     )
     do_reset: Optional[bool] = Field(
         False,
@@ -30,7 +30,11 @@ class PushRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_chunking(self):
-        if self.overlap_size >= self.chunk_size:
+        if (
+            self.chunk_size is not None
+            and self.overlap_size is not None
+            and self.overlap_size >= self.chunk_size
+        ):
             raise ValueError("overlap_size must be less than chunk_size")
         return self
 
@@ -66,4 +70,8 @@ class SearchRequest(BaseModel):
         default_factory=list,
         max_length=20,
         description="Optional image file IDs to bind to the message context",
+    )
+    conversation_project_id: Optional[str] = Field(
+        default=None,
+        description="Per-conversation isolated project_id for scoped vector storage",
     )

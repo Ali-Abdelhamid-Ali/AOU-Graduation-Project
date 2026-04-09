@@ -48,7 +48,7 @@ class NLPController(BaseController):
         if not inserted:
             raise ValueError("Failed to insert vectors into vector database")
         return True
-    def search_vector_db_collection(self, project_id: str, text: str, limit: int = 10) -> list:
+    def search_vector_db_collection(self, project_id: str, text: str, limit: int = 10, filter_file_ids: list[str] | None = None) -> list:
         collection_name = self.create_collection_name(project_id=project_id)
         if not self.vectorDB_client.is_collection_exists(collection_name):
             raise ValueError(f"Vector database collection for project {project_id} does not exist")
@@ -60,10 +60,31 @@ class NLPController(BaseController):
         )
         if not vector or len(vector) == 0:
             raise ValueError("Failed to generate embedding for search query")
-        results = self.vectorDB_client.search_py_vector(collection_name=collection_name, vector=vector, limit=limit)
-        if not results:
-            raise ValueError("No results returned from vector database search")
-        return results
+
+        active_filter = filter_file_ids if filter_file_ids else None
+
+        # When specific file IDs are requested, use a higher limit so that even
+        # low-scoring chunks from those files are surfaced before we fall back.
+        search_limit = max(limit * 3, 10) if active_filter else limit
+
+        results = self.vectorDB_client.search_py_vector(
+            collection_name=collection_name,
+            vector=vector,
+            limit=search_limit,
+            filter_file_ids=active_filter,
+        )
+
+        # If the filtered search returned nothing, fall back to an unfiltered
+        # search so the model still gets relevant context from other documents.
+        if not results and active_filter:
+            results = self.vectorDB_client.search_py_vector(
+                collection_name=collection_name,
+                vector=vector,
+                limit=limit,
+                filter_file_ids=None,
+            )
+
+        return results or []
 
     def answer_rag_question(
         self,
@@ -73,9 +94,15 @@ class NLPController(BaseController):
         chat_history = None,
         language: str = "en",
         image_path: str | None = None,
+        filter_file_ids: list[str] | None = None,
     ) -> tuple:
         try:
-            retrieved_documents = self.search_vector_db_collection(project_id=project_id, text=question, limit=limit)
+            retrieved_documents = self.search_vector_db_collection(
+                project_id=project_id,
+                text=question,
+                limit=limit,
+                filter_file_ids=filter_file_ids if filter_file_ids else None,
+            )
         except ValueError:
             retrieved_documents = []
 
@@ -88,24 +115,67 @@ class NLPController(BaseController):
         self.template_parser.set_language(language)
         system_prompt = self.template_parser.get("rag", "system_prompt", vars={})
 
+        # Build per-document prompt blocks WITH source name so the model can
+        # cite. We also return a parallel `sources` list for the UI.
+        sources: list[dict] = []
         if retrieved_documents:
-            document_prompts = "\n".join([
-                self.template_parser.get("rag", "document_prompt", vars={
-                    "doc_no": idx + 1,
-                    "doc_content": doc.text,
+            doc_blocks: list[str] = []
+            for idx, doc in enumerate(retrieved_documents):
+                meta = getattr(doc, "metadata", None) or {}
+                file_name = (
+                    getattr(doc, "file_name", None)
+                    or meta.get("file_name")
+                    or meta.get("source")
+                    or "unknown_source"
+                )
+                source_file_id = (
+                    getattr(doc, "source_file_id", None)
+                    or meta.get("source_file_id")
+                )
+                chunk_index = meta.get("chunk_index")
+                page = meta.get("page")
+                doc_no = idx + 1
+                header_bits = [f"Document {doc_no}", f"source: {file_name}"]
+                if chunk_index is not None:
+                    header_bits.append(f"chunk: {chunk_index}")
+                if page is not None:
+                    header_bits.append(f"page: {page}")
+                header = " | ".join(header_bits)
+                doc_blocks.append(f"## {header}\n{doc.text}")
+                sources.append({
+                    "doc_no": doc_no,
+                    "file_name": file_name,
+                    "source_file_id": source_file_id,
+                    "chunk_index": chunk_index,
+                    "page": page,
+                    "score": float(getattr(doc, "score", 0.0) or 0.0),
+                    "preview": (doc.text or "")[:240],
                 })
-                for idx, doc in enumerate(retrieved_documents)
-            ])
+            document_prompts = "\n\n".join(doc_blocks)
+            citation_instruction = (
+                "When you answer, cite the supporting documents inline using the "
+                "format [source: <file_name>]. At the end of your answer, add a "
+                "'Sources' section listing the distinct file names you relied on."
+            )
         else:
             document_prompts = (
                 "No indexed documents were found for this project and question. "
-                "Answer based on your general medical knowledge, and clearly indicate uncertainty when applicable. Clearly state that this answer is based on general knowledge and not from the patient's uploaded documents."
+                "Answer based on your general medical knowledge, and clearly "
+                "indicate uncertainty when applicable. Clearly state that this "
+                "answer is based on general knowledge and not from the patient's "
+                "uploaded documents."
             )
+            citation_instruction = ""
 
         footer_prompt = self.template_parser.get("rag", "footer_prompt", vars={})
         question_label = "Question" if language != "ar" else "السؤال"
         answer_label = "Answer" if language != "ar" else "الإجابة"
-        full_prompt = f"{document_prompts}\n{footer_prompt}\n{question_label}: {question}\n{answer_label}:"
+        full_prompt = (
+            f"{document_prompts}\n"
+            f"{citation_instruction}\n"
+            f"{footer_prompt}\n"
+            f"{question_label}: {question}\n{answer_label}:"
+        )
 
         settings = get_settings()
         history_limit = settings.CHAT_HISTORY_MAX_MESSAGES
@@ -146,5 +216,4 @@ class NLPController(BaseController):
             )
         )
 
-        return answer, full_prompt.strip(), chat_history
-    
+        return answer, full_prompt.strip(), chat_history, sources

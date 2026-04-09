@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '@/store/AuthContext'
@@ -7,6 +7,176 @@ import { medicalService } from '@/services/medical.service'
 import { Skeleton } from '@/components/ui/Skeleton'
 import SkeletonText from '@/components/ui/SkeletonText'
 import styles from './PatientResults.module.css'
+
+/* ── AI Report Modal ─────────────────────────────────────────────────── */
+const AIReportModal = ({ result, onClose }) => {
+  if (!result) return null
+
+  const lines = result.summary
+    ? result.summary.split(/\.\s+/).filter(Boolean)
+    : ['No detailed report available for this analysis.']
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.72)',
+          backdropFilter: 'blur(6px)',
+          zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '1rem',
+        }}
+      >
+        <motion.div
+          key="modal"
+          initial={{ opacity: 0, scale: 0.88, y: 32 }}
+          animate={{ opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 340, damping: 28 } }}
+          exit={{ opacity: 0, scale: 0.92, y: 20 }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: 'var(--color-surface, #12121f)',
+            border: '1px solid rgba(108,99,255,0.35)',
+            borderRadius: '18px',
+            padding: '2rem',
+            maxWidth: '560px',
+            width: '100%',
+            boxShadow: '0 8px 48px rgba(108,99,255,0.22), 0 2px 12px rgba(0,0,0,0.5)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Glow ring */}
+          <div style={{
+            position: 'absolute', insetBlockStart: '-60px', insetInlineStart: '50%',
+            transform: 'translateX(-50%)',
+            width: '240px', height: '240px',
+            background: 'radial-gradient(circle, rgba(108,99,255,0.18) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+            <motion.div
+              animate={{ rotate: [0, 8, -8, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ fontSize: '1.75rem', lineHeight: 1 }}
+            >
+              🧠
+            </motion.div>
+            <div>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--color-primary, #6c63ff)', textTransform: 'uppercase', margin: 0 }}>
+                AI-Generated Report
+              </p>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>{result.name}</h2>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close report"
+              style={{
+                marginInlineStart: 'auto', background: 'none', border: 'none',
+                color: 'var(--color-text-muted, #888)', fontSize: '1.25rem',
+                cursor: 'pointer', lineHeight: 1, padding: '0.25rem',
+              }}
+            >✕</button>
+          </div>
+
+          {/* Meta row */}
+          <div style={{
+            display: 'flex', gap: '0.5rem', flexWrap: 'wrap',
+            marginBottom: '1.25rem',
+          }}>
+            <span style={{ fontSize: '0.72rem', padding: '3px 10px', borderRadius: '999px', background: 'rgba(108,99,255,0.15)', color: 'var(--color-primary, #6c63ff)', border: '1px solid rgba(108,99,255,0.3)' }}>
+              {result.type === 'ecg' ? '⚡ ECG Analysis' : '🧩 MRI Segmentation'}
+            </span>
+            <span style={{ fontSize: '0.72rem', padding: '3px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', color: 'var(--color-text-muted, #888)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {result.date}
+            </span>
+            <span style={{ fontSize: '0.72rem', padding: '3px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', color: 'var(--color-text-muted, #888)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {result.status}
+            </span>
+          </div>
+
+          {/* Report body */}
+          <div style={{
+            background: 'rgba(255,255,255,0.04)',
+            borderRadius: '10px',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.25rem',
+            borderInlineStart: '3px solid var(--color-primary, #6c63ff)',
+          }}>
+            {lines.map((line, i) => (
+              <motion.p
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.07 }}
+                style={{ margin: i === 0 ? 0 : '0.5rem 0 0', fontSize: '0.875rem', lineHeight: 1.65, color: 'var(--color-text, #e0e0e0)' }}
+              >
+                {line}{line.endsWith('.') ? '' : '.'}
+              </motion.p>
+            ))}
+          </div>
+
+          {/* Disclaimer */}
+          <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted, #888)', margin: 0, lineHeight: 1.55 }}>
+            ⚠️ This report is generated by an AI model and is intended for informational purposes only. It does not replace the advice of a qualified healthcare professional.
+          </p>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+/* ── Animated AI Report Button ───────────────────────────────────────── */
+const AIReportButton = ({ onClick }) => (
+  <motion.button
+    onClick={onClick}
+    whileHover={{ scale: 1.04 }}
+    whileTap={{ scale: 0.97 }}
+    style={{
+      position: 'relative',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '0.45rem',
+      padding: '0.5rem 1rem',
+      borderRadius: '10px',
+      border: 'none',
+      background: 'linear-gradient(135deg, #6c63ff 0%, #a78bfa 100%)',
+      color: '#fff',
+      fontSize: '0.78rem',
+      fontWeight: 700,
+      letterSpacing: '0.03em',
+      cursor: 'pointer',
+      overflow: 'hidden',
+      boxShadow: '0 2px 14px rgba(108,99,255,0.35)',
+    }}
+  >
+    {/* Shimmer sweep */}
+    <motion.span
+      animate={{ x: ['-100%', '200%'] }}
+      transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1.5 }}
+      style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.22) 50%, transparent 100%)',
+        pointerEvents: 'none',
+      }}
+    />
+    <motion.span
+      animate={{ rotate: [0, 15, -15, 0] }}
+      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      style={{ fontSize: '0.9rem', lineHeight: 1 }}
+    >
+      🧠
+    </motion.span>
+    View AI Report
+  </motion.button>
+)
 
 const hasText = (value) => typeof value === 'string' && value.trim().length > 0
 
@@ -69,6 +239,7 @@ export const PatientResults = () => {
   const [results, setResults] = useState([])
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
+  const [reportResult, setReportResult] = useState(null)
   const pageSize = 12
 
   useEffect(() => {
@@ -179,6 +350,7 @@ export const PatientResults = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
+      <AIReportModal result={reportResult} onClose={() => setReportResult(null)} />
       <div className={styles.header}>
         <h1 className={styles.title}>Medical Analysis Results</h1>
         <p className={styles.subtitle}>
@@ -211,14 +383,17 @@ export const PatientResults = () => {
               </div>
               <h3 className={styles.resultName}>{result.name}</h3>
               <p className={styles.summary}>{result.summary}</p>
-              <button
-                className={styles.viewDetails}
-                onClick={() =>
-                  navigate(`/patient-results/${result.type}/${result.resultId}`)
-                }
-              >
-                Open result details {'->'}
-              </button>
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.5rem' }}>
+                <AIReportButton onClick={() => setReportResult(result)} />
+                <button
+                  className={styles.viewDetails}
+                  onClick={() =>
+                    navigate(`/patient-results/${result.type}/${result.resultId}`)
+                  }
+                >
+                  Open result details {'->'}
+                </button>
+              </div>
             </motion.div>
           )
         })}

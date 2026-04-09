@@ -425,6 +425,64 @@
     color: var(--color-text-light);
 }
 
+.messageSources {
+    margin-block-start: var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    border: 1px dashed var(--color-border-strong);
+}
+
+.messageSourcesTitle {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-light);
+    margin-block-end: 4px;
+}
+
+.messageSourcesList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.messageSourceItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-primary);
+}
+
+.messageSourceBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 18px;
+    block-size: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--color-primary-gradient);
+    color: var(--color-text-inverse);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.messageSourceName {
+    font-weight: 500;
+    word-break: break-all;
+}
+
+.messageSourceMeta {
+    color: var(--color-text-light);
+    font-size: 11px;
+}
+
 .inputArea {
     padding: var(--spacing-lg) var(--spacing-xl);
     background: var(--color-surface);

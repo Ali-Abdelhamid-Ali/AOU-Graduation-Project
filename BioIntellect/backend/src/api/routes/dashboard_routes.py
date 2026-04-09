@@ -436,6 +436,8 @@ def build_doctor_overview_payload(user: dict[str, Any], sources: dict[str, Any])
                 "mrn": patient.get("mrn"),
                 "last_visit": case.get("updated_at") or case.get("created_at"),
                 "last_visit_label": _relative_time(case.get("updated_at") or case.get("created_at")),
+                "has_disability": bool(patient.get("has_disability")),
+                "disability_notes": patient.get("disability_notes") or "",
             }
 
         if str(case.get("status") or "").lower() in {"open", "in_progress", "pending_review"}:

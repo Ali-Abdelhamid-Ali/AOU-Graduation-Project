@@ -282,12 +282,16 @@ export const nlpChatAPI = {
   // Returns full response immediately without SSE
   answerQuestion: async (projectId, data) =>
     normalizeEnvelope(
-      await apiClient.post(`/nlp/index/answer/${projectId}`, data),
+      await apiClient.post(`/nlp/index/answer/${projectId}`, data, {
+        timeout:
+          String(data?.model_backend || '').toLowerCase() === 'medmo'
+            ? 900000
+            : 300000,
+      }),
       (payload) => ({
         conversation_id: payload?.conversation_id,
         answer: payload?.answer,
-        full_prompt: payload?.full_prompt,
-        chat_history: payload?.chat_history,
+        sources: payload?.sources ?? [],
         user_message: payload?.user_message,
         assistant_message: normalizeMessage(payload?.assistant_message),
       })

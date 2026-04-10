@@ -1,8 +1,8 @@
 import asyncio
 import os
+import time
 import uuid
-from typing import Any
-from typing import cast
+from typing import Any, cast
 
 from fastapi import (
 	APIRouter,
@@ -15,6 +15,7 @@ from fastapi import (
 	UploadFile,
 	status,
 )
+
 from src.api.controllers.NLPController import NLPController
 from src.api.controllers.ProcessController import ProcessController
 from src.config.settings import get_settings
@@ -204,6 +205,12 @@ def _resolve_generation_client(request: Request, requested_backend: str | None):
 			if backend == "medmo" and local_model_path:
 				from src.stores.llm.providers.MedMOProvider import MedMOProvider
 
+				if not MedMOProvider.is_runtime_available():
+					raise RuntimeError(
+						"MedMO backend is unavailable because required runtime dependencies are missing "
+						"(supported Qwen-VL class + qwen_vl_utils)"
+					)
+
 				client = MedMOProvider(
 					model_path=local_model_path,
 					default_input_max_characters=default_input_max_characters,
@@ -221,6 +228,7 @@ def _resolve_generation_client(request: Request, requested_backend: str | None):
 					model_path=local_model_path,
 					default_input_max_characters=default_input_max_characters,
 					default_output_max_tokens=default_output_max_tokens,
+					default_max_input_tokens=default_output_max_tokens,
 					default_temp=default_temp,
 					force_cpu_only=settings.FORCE_CPU_ONLY,
 				)
@@ -959,6 +967,10 @@ async def answer_rag(
 	search_request: SearchRequest,
 	user: dict[str, Any] = CURRENT_USER_DEPENDENCY,
 ):
+	request_started = time.perf_counter()
+	timings: dict[str, float] = {}
+	phase_started = request_started
+
 	language = search_request.language if search_request.language is not None else "en"
 	if not project_id.strip():
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="project_id is required")
@@ -993,10 +1005,12 @@ async def answer_rag(
 		embedding_client=embedding_client,
 		template_parser=template_parser,
 	)
+	timings["setup_s"] = time.perf_counter() - phase_started
 
 	# Kick off the Supabase patient-context fetch in parallel with the rest of
 	# the setup. The heavy work (embedding + vector search + LLM call) runs
 	# after this, so overlapping the two I/O paths trims end-to-end latency.
+	phase_started = time.perf_counter()
 	patient_id_for_context = str(search_request.patient_id or "").strip()
 	patient_context_task: asyncio.Task | None = None
 	if patient_id_for_context:
@@ -1010,67 +1024,70 @@ async def answer_rag(
 			patient_context = await patient_context_task
 		except Exception as exc:
 			logger.warning(f"Failed to fetch patient context for {patient_id_for_context}: {str(exc)}")
+	timings["patient_context_s"] = time.perf_counter() - phase_started
 
+	phase_started = time.perf_counter()
 	question_for_model = _augment_question_with_patient_context(search_request.text, patient_context)
+	timings["question_augmentation_s"] = time.perf_counter() - phase_started
 
 	sources: list[dict[str, Any]] = []
-	# MedMo bypasses RAG entirely — the file content was already inlined in the prompt by the
-	# frontend. We call generate_text directly so the full inline context reaches the model
-	# without a vector retrieval step that would find nothing (MedMo files are not embedded).
+
+	# Resolve timeout for local models (MedMO / PhiQA can be slow).
+	settings = get_settings()
+	local_timeout = 0
 	if resolved_backend == "medmo":
-		settings = get_settings()
-		try:
-			clean_history = [
-				msg for msg in (search_request.chat_history or [])
-				if isinstance(msg, dict) and str(msg.get("role", "")).capitalize() != "System"
-			][-settings.CHAT_HISTORY_MAX_MESSAGES:]
-			answer = await asyncio.to_thread(
-				generation_client.generate_text,
-				prompt=question_for_model,
-				chat_history=clean_history,
-				max_output_tokens=settings.CHAT_MAX_OUTPUT_TOKENS,
-				image_path=image_path,
-			)
-			answer = (answer or "").strip() or "I couldn't generate a response right now."
-		except Exception as exc:
-			raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"MedMo generation failed: {str(exc)}") from exc
-		full_prompt = question_for_model
-		chat_history_out = list(search_request.chat_history or [])
-	else:
-		# Only filter by IDs that were actually indexed as chat attachments (chat_upload:: prefix).
-		# ECG/MRI record UUIDs from context_file_ids are NOT indexed in the vector DB — they are
-		# already embedded in the patient context above. Mixing them into filter_file_ids
-		# causes Qdrant to find zero matching chunks and return no documents at all.
-		indexed_file_ids = list({
-			fid for fid in (
-				list(search_request.context_file_ids or []) +
-				list(search_request.image_file_ids or [])
-			)
-			if fid and str(fid).startswith(CHAT_UPLOAD_PREFIX)
-		}) or None
+		local_timeout = int(settings.MEDMO_REQUEST_TIMEOUT_SECONDS or 0)
 
-		# When the doctor uploaded files, retrieve more chunks so the model has
-		# enough content from those documents even if their similarity scores are
-		# moderate. Without this, top_k=3 frequently returns zero filtered results.
-		effective_top_k = max(search_request.top_k, 8) if indexed_file_ids else search_request.top_k
+	# Only filter by IDs that were actually indexed as chat attachments (chat_upload:: prefix).
+	# ECG/MRI record UUIDs from context_file_ids are NOT indexed in the vector DB — they are
+	# already embedded in the patient context above. Mixing them into filter_file_ids
+	# causes Qdrant to find zero matching chunks and return no documents at all.
+	#
+	# When context_file_ids is empty we pass None so the search covers ALL
+	# uploaded files in the conversation, not just the last one.
+	indexed_file_ids = list({
+		fid for fid in (
+			list(search_request.context_file_ids or []) +
+			list(search_request.image_file_ids or [])
+		)
+		if fid and str(fid).startswith(CHAT_UPLOAD_PREFIX)
+	}) or None
 
-		try:
-			# Run the blocking embed+search+LLM pipeline off the event loop so
-			# the server stays responsive for concurrent chats.
-			answer, full_prompt, chat_history_out, sources = await asyncio.to_thread(
-				nlp_controller.answer_rag_question,
-				project_id=rag_project_id,
-				question=question_for_model,
-				limit=effective_top_k,
-				chat_history=search_request.chat_history,
-				language=language,
-				image_path=image_path,
-				filter_file_ids=indexed_file_ids,
+	# Always retrieve enough chunks so that multiple uploaded files are
+	# represented in the context. top_k=3 is too low when several documents
+	# are indexed — bump to at least 8 so the model sees content from all files.
+	effective_top_k = max(search_request.top_k, 8)
+
+	try:
+		phase_started = time.perf_counter()
+		# All backends (including MedMO) go through the same RAG pipeline now.
+		# This ensures uploaded documents are always retrieved and cited.
+		rag_task = asyncio.to_thread(
+			nlp_controller.answer_rag_question,
+			project_id=rag_project_id,
+			question=question_for_model,
+			limit=effective_top_k,
+			chat_history=search_request.chat_history,
+			language=language,
+			image_path=image_path,
+			filter_file_ids=indexed_file_ids,
+		)
+		if local_timeout > 0:
+			answer, full_prompt, chat_history_out, sources = await asyncio.wait_for(
+				rag_task, timeout=local_timeout,
 			)
-		except ValueError as exc:
-			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-		except Exception as exc:
-			raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Failed to answer RAG question: {str(exc)}") from exc
+		else:
+			answer, full_prompt, chat_history_out, sources = await rag_task
+		timings["answer_generation_s"] = time.perf_counter() - phase_started
+	except asyncio.TimeoutError as exc:
+		raise HTTPException(
+			status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+			detail=f"Generation exceeded timeout ({local_timeout}s). Try a faster model.",
+		) from exc
+	except ValueError as exc:
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+	except Exception as exc:
+		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Failed to answer RAG question: {str(exc)}") from exc
 
 	if not answer:
 		raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to generate answer for the question")
@@ -1086,54 +1103,53 @@ async def answer_rag(
 	sender_type = _sender_type_for_role(user)
 	sender_id = _resolve_profile_id(user)
 	
-	try:
-		user_message = await repo.create_message(
-			{
-				"conversation_id": conversation_id,
-				"sender_type": sender_type,
-				"sender_id": sender_id,
-				"message_content": search_request.text,
-				"message_type": "medical_query",
-				"metadata": _build_message_metadata(project_id, search_request, language),
-			}
-		)
-		if user_message is None:
-			logger.warning(f"Failed to create user message for conversation {conversation_id}")
-	except Exception as exc:
-		logger.warning(f"Error creating user message: {str(exc)}")
-		user_message = None
-	
-	try:
-		assistant_message = await repo.create_message(
-			{
-				"conversation_id": conversation_id,
-				"sender_type": "llm",
-				"message_content": answer,
-				"message_type": "text",
-				"metadata": _build_message_metadata(
-					project_id,
-					search_request,
-					language,
-					extra={
-						"full_prompt": full_prompt,
-						"model_backend": resolved_backend,
-						"model_id": resolved_model_id,
-						"sources": sources,
-					},
-				),
-			}
-		)
-		if assistant_message is None:
-			logger.warning(f"Failed to create assistant message for conversation {conversation_id}")
-	except Exception as exc:
-		logger.warning(f"Error creating assistant message: {str(exc)}")
-		assistant_message = None
+	phase_started = time.perf_counter()
+	user_message = await repo.create_message(
+		{
+			"conversation_id": conversation_id,
+			"sender_type": sender_type,
+			"sender_id": sender_id,
+			"message_content": search_request.text,
+			"message_type": "medical_query",
+			"metadata": _build_message_metadata(project_id, search_request, language),
+		}
+	)
+	if user_message is None:
+		logger.error(f"Failed to persist user message for conversation {conversation_id}")
+
+	# Store assistant response — keep metadata lean (no full_prompt to avoid DB bloat).
+	assistant_message = await repo.create_message(
+		{
+			"conversation_id": conversation_id,
+			"sender_type": "llm",
+			"message_content": answer,
+			"message_type": "text",
+			"metadata": _build_message_metadata(
+				project_id,
+				search_request,
+				language,
+				extra={
+					"model_backend": resolved_backend,
+					"model_id": resolved_model_id,
+					"sources": sources,
+				},
+			),
+		}
+	)
+	if assistant_message is None:
+		logger.error(f"Failed to persist assistant message for conversation {conversation_id}")
+	timings["persistence_s"] = time.perf_counter() - phase_started
+	timings["total_s"] = time.perf_counter() - request_started
+	logger.info(
+		"RAG answer timings project_id=%s backend=%s timings=%s",
+		project_id,
+		resolved_backend,
+		timings,
+	)
 
 	return {
 		"conversation_id": conversation_id,
 		"answer": answer,
-		"full_prompt": full_prompt,
-		"chat_history": chat_history_out,
 		"sources": sources,
 		"user_message": user_message,
 		"assistant_message": assistant_message,

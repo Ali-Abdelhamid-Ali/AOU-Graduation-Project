@@ -3,10 +3,10 @@
 import os
 import time
 from contextlib import asynccontextmanager
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
@@ -122,13 +122,17 @@ def create_app() -> FastAPI:
     }
 
     async def on_startup(app: FastAPI) -> None:
+        startup_started = time.perf_counter()
+        timings: Dict[str, float] = {}
         settings = get_settings()
         embedding_backend = settings.EMBEDDING_BACKEND or settings.GENERATION_BACKEND
         #Provider Factories
         llm_provider_factory = LLMProviderFactory(settings)
         vectordb_provider_factory = VectorDBProviderFactory(settings)
         
+        generation_started = time.perf_counter()
         generation_client = llm_provider_factory.create(backend=settings.GENERATION_BACKEND)
+        timings["generation_client_s"] = time.perf_counter() - generation_started
 
         if settings.GENERATION_MODEL_ID:
             generation_client.set_generation_model(model_id=settings.GENERATION_MODEL_ID)
@@ -136,6 +140,7 @@ def create_app() -> FastAPI:
             logger.warning("GENERATION_MODEL_ID is not set; using provider default generation model")
         app.state.generation_client = generation_client
 
+        embedding_started = time.perf_counter()
         if embedding_backend == settings.GENERATION_BACKEND:
             embedding_client = generation_client
         else:
@@ -155,8 +160,10 @@ def create_app() -> FastAPI:
             raise RuntimeError("medmo embedding is not supported. ""Set EMBEDDING_BACKEND to phi_qa, openai, or cohere.")
         else:
             raise RuntimeError(f"Unsupported embedding backend during startup: {embedding_backend}")
+        timings["embedding_client_s"] = time.perf_counter() - embedding_started
 
         app.state.embedding_client = embedding_client
+        vectordb_started = time.perf_counter()
         app.state.vectordb_client = vectordb_provider_factory.create(
             Provider=settings.VECTOR_DB_BACKEND
         )
@@ -186,7 +193,10 @@ def create_app() -> FastAPI:
                     f"error={exc}; continuing without vectordb client"
                 )
                 app.state.vectordb_client = None
+        timings["vectordb_client_s"] = time.perf_counter() - vectordb_started
         app.state.template_parser = template_parser(language=settings.PRIMARY_LANG, default_language=settings.DEFAULT_LANG)
+        timings["startup_total_s"] = time.perf_counter() - startup_started
+        logger.info("Startup timings %s", timings)
         
 
     @asynccontextmanager
@@ -216,7 +226,11 @@ def create_app() -> FastAPI:
     )
 
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    async def _rate_limit_exception_handler(request: Request, exc: Exception):
+        return _rate_limit_exceeded_handler(request, cast(RateLimitExceeded, exc))
+
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exception_handler)
     app.add_middleware(SlowAPIMiddleware)
 
     app.add_middleware(SecurityHeadersMiddleware)

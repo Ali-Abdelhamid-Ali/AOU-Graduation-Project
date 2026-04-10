@@ -1,9 +1,12 @@
-import inspect
+import time
 from typing import Any, Optional
 
 from src.api.controllers.BaseController import BaseController
+from src.observability.logger import get_logger
 from src.stores.llm.LLMEnums import DocumentTypeEnums
 from src.config.settings import get_settings
+
+logger = get_logger("controller.NLPController")
 
 
 class NLPController(BaseController):
@@ -96,6 +99,10 @@ class NLPController(BaseController):
         image_path: str | None = None,
         filter_file_ids: list[str] | None = None,
     ) -> tuple:
+        timings: dict[str, float] = {}
+        started_at = time.perf_counter()
+
+        search_started = time.perf_counter()
         try:
             retrieved_documents = self.search_vector_db_collection(
                 project_id=project_id,
@@ -105,6 +112,7 @@ class NLPController(BaseController):
             )
         except ValueError:
             retrieved_documents = []
+        timings["vector_search_s"] = time.perf_counter() - search_started
 
         if self.generation_client is None:
             raise ValueError("Generation client is not initialized")
@@ -112,6 +120,7 @@ class NLPController(BaseController):
         if chat_history is None:
             chat_history = []
 
+        prompt_started = time.perf_counter()
         self.template_parser.set_language(language)
         system_prompt = self.template_parser.get("rag", "system_prompt", vars={})
 
@@ -132,30 +141,27 @@ class NLPController(BaseController):
                     getattr(doc, "source_file_id", None)
                     or meta.get("source_file_id")
                 )
-                chunk_index = meta.get("chunk_index")
                 page = meta.get("page")
                 doc_no = idx + 1
                 header_bits = [f"Document {doc_no}", f"source: {file_name}"]
-                if chunk_index is not None:
-                    header_bits.append(f"chunk: {chunk_index}")
                 if page is not None:
-                    header_bits.append(f"page: {page}")
+                    header_bits.append(f"page: {int(page) + 1}")
                 header = " | ".join(header_bits)
                 doc_blocks.append(f"## {header}\n{doc.text}")
                 sources.append({
                     "doc_no": doc_no,
                     "file_name": file_name,
                     "source_file_id": source_file_id,
-                    "chunk_index": chunk_index,
-                    "page": page,
+                    "page": (int(page) + 1) if page is not None else None,
                     "score": float(getattr(doc, "score", 0.0) or 0.0),
                     "preview": (doc.text or "")[:240],
                 })
             document_prompts = "\n\n".join(doc_blocks)
             citation_instruction = (
                 "When you answer, cite the supporting documents inline using the "
-                "format [source: <file_name>]. At the end of your answer, add a "
-                "'Sources' section listing the distinct file names you relied on."
+                "format [source: <file_name>, page: <page_number>]. At the end of "
+                "your answer, add a 'Sources' section listing each file name and "
+                "page number you relied on."
             )
         else:
             document_prompts = (
@@ -185,17 +191,26 @@ class NLPController(BaseController):
             msg for msg in chat_history
             if isinstance(msg, dict) and str(msg.get("role", "")).capitalize() != "System"
         ][-history_limit:]
-        model_history = [{"role": "System", "message": system_prompt}, *clean_history]
+        # Include both "message" (Cohere) and "content" (OpenAI/local) keys
+        # so every provider can read the system prompt correctly.
+        model_history = [
+            {"role": "system", "message": system_prompt, "content": system_prompt},
+            *clean_history,
+        ]
+        timings["prompt_build_s"] = time.perf_counter() - prompt_started
 
+        generation_started = time.perf_counter()
         generate_kwargs = {
             "prompt": full_prompt,
             "chat_history": model_history,
             "max_output_tokens": max_tokens,
         }
-        if image_path and "image_path" in inspect.signature(self.generation_client.generate_text).parameters:
+        import inspect as _inspect
+        if image_path and "image_path" in _inspect.signature(self.generation_client.generate_text).parameters:
             generate_kwargs["image_path"] = image_path
 
         answer = self.generation_client.generate_text(**generate_kwargs)
+        timings["generation_s"] = time.perf_counter() - generation_started
         answer = answer.strip() if isinstance(answer, str) else ""
         if not answer:
             answer = (
@@ -203,6 +218,7 @@ class NLPController(BaseController):
                 "Please try another model or check the local model configuration."
             )
 
+        history_started = time.perf_counter()
         chat_history.append(
             self.generation_client.construct_prompt(
                 query=question,
@@ -215,5 +231,8 @@ class NLPController(BaseController):
                 role=self.generation_client.Enums.assistant.value,
             )
         )
+        timings["history_update_s"] = time.perf_counter() - history_started
+        timings["total_s"] = time.perf_counter() - started_at
+        logger.info("RAG controller timings project_id=%s timings=%s", project_id, timings)
 
         return answer, full_prompt.strip(), chat_history, sources

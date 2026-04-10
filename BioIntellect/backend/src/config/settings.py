@@ -48,6 +48,8 @@ class Settings(BaseSettings):
 
     MEDMO_MODEL_PATH:     Optional[str] = None
     MEDMO_OFFLOAD_FOLDER: str           = "./offload"
+    MEDMO_MAX_OUTPUT_TOKENS: int = Field(default=768, alias="MEDMO_MAX_OUTPUT_TOKENS")
+    MEDMO_REQUEST_TIMEOUT_SECONDS: int = Field(default=900, alias="MEDMO_REQUEST_TIMEOUT_SECONDS")
     PHI_QA_MODEL_PATH:    Optional[str] = None
     FORCE_CPU_ONLY:       bool          = Field(default=True, alias="FORCE_CPU_ONLY")
 

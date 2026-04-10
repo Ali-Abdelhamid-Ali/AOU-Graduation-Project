@@ -76,17 +76,14 @@ async def upload_data(
             os.remove(file_path)
         raise
     except Exception as e:
-        logger.error(f"error:{e}")
+        logger.error(f"Upload error: {e}")
         if os.path.exists(file_path):
             os.remove(file_path)
-        return JSONResponse(
-         status_code=status.HTTP_400_BAD_REQUEST,
-         content={"signal": "can't upload the file"}
-            )
-    return JSONResponse(
-         status_code=status.HTTP_200_OK,
-         content={"signal": "file uploaded successfully","path": file_path,"file_id":file_id}
-            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload file",
+        ) from e
+    return {"file_id": file_id, "message": "file uploaded successfully"}
 
 
 
@@ -107,20 +104,11 @@ async def process_endpoint(project_id: str, process_request: processRecquest):
                                                             overlap_size=overlap_size,
                                                             file_id=file_id)
     except ValueError as exc:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"signal": str(exc)},
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except FileNotFoundError as exc:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"signal": str(exc)},
-        )
-    if file_chunk is None or len (file_chunk)==0:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"signal": "can't process the file content"}
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if not file_chunk:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No content could be extracted from the file")
 
     serialized_chunks = [
         {
@@ -130,9 +118,6 @@ async def process_endpoint(project_id: str, process_request: processRecquest):
         for chunk in file_chunk
     ]
 
-    return JSONResponse(
-        status_code=status.HTTP_200_OK, 
-        content={"signal": "file processed successfully","file_chunk": serialized_chunks}
-    )
+    return {"message": "file processed successfully", "chunks": serialized_chunks}
 
 

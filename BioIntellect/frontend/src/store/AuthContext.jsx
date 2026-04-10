@@ -25,7 +25,43 @@ import {
   splitDelimitedValues,
 } from '@/utils/userFormUtils'
 
-const AuthContext = createContext()
+const AUTH_CONTEXT_GLOBAL_KEY = '__biointellect_auth_context__'
+
+const buildAuthFallback = () => ({
+  userRole: null,
+  currentUser: null,
+  isAuthenticated: false,
+  isLoading: false,
+  error: null,
+  mustResetPassword: false,
+  selectRole: () => {},
+  signIn: async () => ({ success: false, error: 'Auth provider unavailable' }),
+  signUp: async () => ({ success: false, error: 'Auth provider unavailable' }),
+  signOut: async () => {},
+  clearError: () => {},
+  refreshUser: async () => ({ success: false, error: 'Auth provider unavailable' }),
+  registerPatient: async () => ({ success: false, error: 'Auth provider unavailable' }),
+  registerDoctor: async () => ({ success: false, error: 'Auth provider unavailable' }),
+  registerAdmin: async () => ({ success: false, error: 'Auth provider unavailable' }),
+  updatePatientProfile: async () => ({ success: false, error: 'Auth provider unavailable' }),
+  resetPassword: async () => ({ success: false, error: 'Auth provider unavailable' }),
+  updatePassword: async () => ({ success: false, error: 'Auth provider unavailable' }),
+  completeForcedReset: async () => ({ success: false, error: 'Auth provider unavailable' }),
+  fetchCountries: async () => [],
+  fetchRegions: async () => [],
+  fetchHospitals: async () => [],
+  CLINICAL_ROLES,
+})
+
+const globalScope = typeof window !== 'undefined' ? window : globalThis
+const authFallback = buildAuthFallback()
+
+const AuthContext =
+  globalScope[AUTH_CONTEXT_GLOBAL_KEY] || createContext(authFallback)
+
+if (!globalScope[AUTH_CONTEXT_GLOBAL_KEY]) {
+  globalScope[AUTH_CONTEXT_GLOBAL_KEY] = AuthContext
+}
 
 const normalizeApiError = (err, fallback) => getApiErrorMessage(err, fallback)
 
@@ -641,8 +677,13 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
+  if (!context || context === authFallback) {
+    const message = 'useAuth must be used within AuthProvider'
+    if (import.meta.env?.DEV) {
+      console.error(message)
+      return authFallback
+    }
+    throw new Error(message)
   }
   return context
 }

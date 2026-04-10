@@ -43,12 +43,22 @@ class OpenAIProvider(LLMInterface):
             return None
         if chat_history is None:
             chat_history = []
-        else:
-            chat_history = list(chat_history)
-        chat_history.append(self.construct_prompt(query=prompt, role=OpenAIEnums.user.value))
+
+        # Normalize chat history to OpenAI format {role, content}
+        normalized: list[dict] = []
+        for msg in chat_history:
+            if not isinstance(msg, dict) or "role" not in msg:
+                continue
+            role = str(msg["role"]).lower()
+            content = msg.get("content") or msg.get("message") or ""
+            if role in ("chatbot",):
+                role = "assistant"
+            normalized.append({"role": role, "content": str(content)})
+
+        normalized.append(self.construct_prompt(query=prompt, role=OpenAIEnums.user.value))
         response = self.client.chat.completions.create(
             model=self.generation_model_id,
-            messages=chat_history,
+            messages=normalized,
             max_tokens=max_output_tokens or self.default_output_max_tokens,
             temperature=temp if temp is not None else self.default_temp,
             timeout=30.0,
@@ -80,7 +90,8 @@ class OpenAIProvider(LLMInterface):
 
         response = self.client.embeddings.create(
             input=text,
-            model=self.embedding_model_id
+            model=self.embedding_model_id,
+            timeout=30.0,
         )
 
 

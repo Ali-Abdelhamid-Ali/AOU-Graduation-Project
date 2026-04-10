@@ -4,8 +4,8 @@ from typing import Optional
 
 class processRecquest(BaseModel):
     file_id: str = Field(..., description="the id of the file to be processed")
-    chunk_size: Optional[int] = Field(100, description="the size of the chunk to be processed in each iteration")
-    overlap_size: Optional[int] = Field(20, description="the size of the overlap between chunks")
+    chunk_size: Optional[int] = Field(None, description="Chunk size. Leave null to auto-pick based on file size.")
+    overlap_size: Optional[int] = Field(None, description="Chunk overlap. Leave null to auto-pick based on file size.")
     do_reset: Optional[bool] = Field(False, description="whether to reset the processing state for the file")
 
     @field_validator("file_id")

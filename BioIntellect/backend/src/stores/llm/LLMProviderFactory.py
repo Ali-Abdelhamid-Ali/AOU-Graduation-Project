@@ -25,6 +25,12 @@ class LLMProviderFactory:
             elif backend == "medmo":
                 from .providers.MedMOProvider import MedMOProvider
 
+                if not MedMOProvider.is_runtime_available():
+                    raise RuntimeError(
+                        "MedMO backend is unavailable because required runtime dependencies are missing "
+                        "(supported Qwen-VL class + qwen_vl_utils)"
+                    )
+
                 return MedMOProvider(
                     model_path=self.settings.MEDMO_MODEL_PATH,
                     default_input_max_characters=self.settings.INPUT_DEFAULT_MAX_CHARACTERS,
@@ -40,9 +46,10 @@ class LLMProviderFactory:
                     model_path=self.settings.PHI_QA_MODEL_PATH,
                     default_input_max_characters=self.settings.INPUT_DEFAULT_MAX_CHARACTERS,
                     default_output_max_tokens=self.settings.INPUT_DEFAULT_MAX_TOKENS,
+                    default_max_input_tokens=self.settings.INPUT_DEFAULT_MAX_TOKENS,
                     default_temp=self.settings.INPUT_DEFAULT_TEMPERATURE,
                     force_cpu_only=self.settings.FORCE_CPU_ONLY,
-                                        )
+                )
             else:
                 raise ValueError(f"Unsupported backend: {backend}")
         except Exception as exc:

@@ -1,3 +1,6 @@
+# Force CPU-only PyTorch — prevents pip from pulling CUDA/cuDNN wheels
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 Flask==3.1.0
 flask-cors==6.0.1
 numpy==1.24.3

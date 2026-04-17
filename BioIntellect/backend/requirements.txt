@@ -1,4 +1,6 @@
 # BioIntellect Backend Requirements
+# Force CPU-only PyTorch — prevents pip from pulling CUDA/cuDNN wheels (1+ GB)
+--extra-index-url https://download.pytorch.org/whl/cpu
 
 # Web Framework
 fastapi==0.115.2
@@ -9,7 +11,7 @@ python-multipart==0.0.12
 
 # ML/DL Stack (CPU-only)
 tensorflow-cpu==2.18.0
-tf_keras==2.18.0
+tf-keras==2.18.0
 # keras==3.7.0 removed: conflicts with tensorflow-cpu 2.18 which bundles Keras 2
 # scikit-learn removed: not directly used in backend code
 numpy==1.26.4
@@ -17,6 +19,7 @@ scipy==1.14.1
 PyWavelets==1.7.0
 
 # Transformers stack for local LLMs (PhiQA / MedMO)
+torch==2.5.1+cpu
 transformers==4.46.3
 accelerate==1.13.0
 sentencepiece==0.2.1

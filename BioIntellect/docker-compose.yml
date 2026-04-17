@@ -44,7 +44,6 @@ services:
     volumes:
       - mri-models:/app/models
       - mri-outputs:/app/outputs
-    # Remove the deploy.resources block entirely if the host has no NVIDIA GPU.
     deploy:
       resources:
         limits:
@@ -53,10 +52,6 @@ services:
         reservations:
           cpus: '1'
           memory: 2G
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     healthcheck:
       test:
         [
@@ -73,7 +68,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    # Remove the deploy.resources.reservations.devices block if no NVIDIA GPU.
     deploy:
       resources:
         limits:
@@ -82,10 +76,6 @@ services:
         reservations:
           cpus: '1'
           memory: 1G
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     env_file:
       - ./.env
     environment:

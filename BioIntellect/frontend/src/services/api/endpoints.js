@@ -89,12 +89,15 @@ export const authAPI = {
   resetPassword: (email, redirect_to) =>
     apiClient.post('/auth/reset-password', { email, redirect_to }),
   updatePassword: (new_password, access_token, logout_all, current_password) =>
-    apiClient.post('/auth/update-password', {
-      new_password,
-      access_token,
-      logout_all,
-      current_password,
-    }),
+    apiClient.post(
+      '/auth/update-password',
+      { new_password, logout_all, current_password },
+      // Send the token in the Authorization header — never in the request body
+      // so it is not captured by access logs or CDN caches.
+      access_token
+        ? { headers: { Authorization: `Bearer ${access_token}` } }
+        : {},
+    ),
   getMe: () => apiClient.get('/auth/me'),
 }
 
@@ -170,16 +173,28 @@ export const reportsAPI = {
     normalizeEnvelope(
       await apiClient.get('/reports', { params: { patient_id: patientId } })
     ),
+  listForPatient: async (patientId, params) =>
+    normalizeEnvelope(
+      await apiClient.get(`/reports/patient/${patientId}`, { params })
+    ),
+  getById: async (reportId) =>
+    normalizeEnvelope(await apiClient.get(`/reports/${reportId}`)),
+  getByResult: async (resultType, resultId) =>
+    normalizeEnvelope(await apiClient.get(`/reports/by-result/${resultType}/${resultId}`)),
+  update: async (reportId, data) =>
+    normalizeEnvelope(await apiClient.put(`/reports/${reportId}`, data)),
   approve: async (reportId, notes) =>
     normalizeEnvelope(
       await apiClient.post(`/reports/${reportId}/approve`, { notes })
     ),
+  discard: async (reportId) =>
+    normalizeEnvelope(await apiClient.post(`/reports/${reportId}/discard`)),
 }
 
 export const geographyAPI = {
-  getCountries: async () =>
+  getCountries: async (limit = 300) =>
     normalizeEnvelope(
-      await apiClient.get('/geography/countries'),
+      await apiClient.get('/geography/countries', { params: { limit } }),
       normalizeList(normalizeCountry)
     ),
   getRegions: async (countryId) =>
@@ -283,10 +298,11 @@ export const nlpChatAPI = {
   answerQuestion: async (projectId, data) =>
     normalizeEnvelope(
       await apiClient.post(`/nlp/index/answer/${projectId}`, data, {
-        timeout:
-          String(data?.model_backend || '').toLowerCase() === 'medmo'
-            ? 900000
-            : 300000,
+        timeout: ['medmo', 'phiqa'].includes(
+          String(data?.model_backend || '').toLowerCase()
+        )
+          ? 900000
+          : 300000,
       }),
       (payload) => ({
         conversation_id: payload?.conversation_id,

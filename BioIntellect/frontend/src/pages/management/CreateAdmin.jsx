@@ -46,7 +46,7 @@ const CreateAdmin = ({ onBack, userRole }) => {
             return ''
         }
 
-        return countries.find((country) => country.country_name === 'Egypt')?.country_id || countries[0].country_id
+        return countries.find((country) => country.label === 'Egypt')?.value || countries[0].value
     }, [countries])
 
     const handleInputChange = (field, value) => {
@@ -88,7 +88,7 @@ const CreateAdmin = ({ onBack, userRole }) => {
         if (!formData.lastName.trim()) errors.lastName = 'Last name is required'
         if (!formData.email.trim()) errors.email = 'Administrative email is required'
         if (!formData.role) errors.role = 'System Role is required'
-        if (!formData.hospitalId) errors.hospitalId = 'Assigned hospital is required'
+        if (!formData.hospitalId && hospitals.some(h => !h.is_static)) errors.hospitalId = 'Assigned hospital is required'
 
         if (!formData.password) {
             errors.password = 'Password is required'
@@ -224,7 +224,7 @@ const CreateAdmin = ({ onBack, userRole }) => {
                                 label="Country"
                                 value={formData.countryId}
                                 onChange={onCountryChange}
-                                options={countries.map(c => ({ value: c.country_id, label: c.country_name, flag_url: c.flag_url }))}
+                                options={countries}
                                 isCountry
                                 required
                             />

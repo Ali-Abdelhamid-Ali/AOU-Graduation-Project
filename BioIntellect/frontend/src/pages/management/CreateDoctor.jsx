@@ -52,7 +52,7 @@ const CreateDoctor = ({ onBack, userRole }) => {
             return ''
         }
 
-        return countries.find((country) => country.country_name === 'Egypt')?.country_id || countries[0].country_id
+        return countries.find((country) => country.label === 'Egypt')?.value || countries[0].value
     }, [countries])
 
     const handleInputChange = (field, value) => {
@@ -102,7 +102,7 @@ const CreateDoctor = ({ onBack, userRole }) => {
         else if (!LICENSE_REGEX.test(formData.licenseNumber.trim())) {
             errors.licenseNumber = 'License number must be 4-30 chars (letters, numbers, -)'
         }
-        if (!formData.hospitalId) errors.hospitalId = 'Hospital selection is required'
+        if (!formData.hospitalId && hospitals.some(h => !h.is_static)) errors.hospitalId = 'Hospital selection is required'
         if (!formData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required'
         if (!formData.gender) errors.gender = 'Gender is required'
 
@@ -272,7 +272,7 @@ const CreateDoctor = ({ onBack, userRole }) => {
                                 label="Country"
                                 value={formData.countryId}
                                 onChange={onCountryChange}
-                                options={countries.map(c => ({ value: c.country_id, label: c.country_name, flag_url: c.flag_url }))}
+                                options={countries}
                                 isCountry
                                 required
                             />

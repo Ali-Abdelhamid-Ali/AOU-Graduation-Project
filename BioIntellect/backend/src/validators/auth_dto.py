@@ -128,9 +128,18 @@ class PasswordResetRequestDTO(BaseModel):
 
 
 class PasswordUpdateDTO(BaseModel):
-    """DTO for password update."""
+    """DTO for password update.
 
-    access_token: str = Field(..., description="Access token")
+    `access_token` is now optional — the preferred way is to pass the token
+    in the `Authorization: Bearer <token>` header so it is never written to
+    request logs.  The body field is kept for the password-recovery flow where
+    the user has no active session yet.
+    """
+
+    access_token: Optional[str] = Field(
+        None,
+        description="Access token (prefer Authorization header over this field)",
+    )
     new_password: str = Field(..., min_length=8, description="New password")
     current_password: Optional[str] = Field(
         None, description="Current password for authenticated password changes"

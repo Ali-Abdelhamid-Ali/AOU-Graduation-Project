@@ -22,6 +22,7 @@ from src.config.settings import get_settings
 from src.observability.logger import get_logger
 from src.repositories.clinical_repository import ClinicalRepository
 from src.repositories.llm_repository import LLMRepository
+from src.repositories.report_repository import ReportRepository
 from src.repositories.user_repository import UserRepository
 from src.security.auth_middleware import (
 	Permission,
@@ -178,6 +179,45 @@ def _model_catalog() -> list[dict[str, Any]]:
 	]
 
 
+def _resolve_embedding_client(request: Request, backend: str):
+	"""Return the correct embedding client for the given backend.
+
+	Cloud backends (cohere, openai) use the startup embedding_client only when
+	the embedding backend matches the generation backend. Local backends
+	(medmo, phi_qa) do not support embeddings — always fall back to the
+	startup embedding_client so vector search still works.
+	"""
+	startup_client = getattr(request.app.state, "embedding_client", None)
+	settings = get_settings()
+	embedding_backend = str(settings.EMBEDDING_BACKEND or "").strip().lower()
+
+	# If the embedding backend already matches what was requested, use as-is
+	if embedding_backend == backend:
+		return startup_client
+
+	# Local models have no standalone embedding API — use startup client
+	if backend in {"medmo", "phi_qa"}:
+		return startup_client
+
+	# For cloud backends, try to get a cached embedding client for that backend
+	if not hasattr(request.app.state, "embedding_clients") or request.app.state.embedding_clients is None:
+		request.app.state.embedding_clients = {}
+	cache = request.app.state.embedding_clients
+
+	if backend in cache:
+		return cache[backend]
+
+	# Build a new embedding client for the requested backend
+	try:
+		factory = LLMProviderFactory(settings)
+		client = factory.create(backend=backend)
+		cache[backend] = client
+		return client
+	except Exception:
+		# Fall back to the startup embedding client rather than failing the request
+		return startup_client
+
+
 def _resolve_generation_client(request: Request, requested_backend: str | None):
 	settings = get_settings()
 	default_backend = settings.GENERATION_BACKEND
@@ -253,11 +293,17 @@ def _resolve_generation_client(request: Request, requested_backend: str | None):
 	return client, backend, model_id
 
 
-def _resolve_uploaded_image_path(project_id: str, image_ids: list[str]) -> str | None:
+def _resolve_uploaded_image_paths(project_id: str, image_ids: list[str]) -> list[str]:
+	"""Resolve all uploaded image IDs to their full absolute paths.
+
+	Returns a list (possibly empty) instead of just the first match so that
+	MedMO (Qwen3-VL) can receive multiple images in a single message.
+	"""
 	if not image_ids:
-		return None
+		return []
 	process_controller = ProcessController(project_id=project_id)
 	base_dir = os.path.realpath(process_controller.project_path)
+	paths: list[str] = []
 	for identifier in image_ids:
 		relative_path = _extract_relative_upload_path(str(identifier))
 		if not relative_path:
@@ -266,8 +312,9 @@ def _resolve_uploaded_image_path(project_id: str, image_ids: list[str]) -> str |
 		if not full_path.startswith(base_dir + os.sep):
 			continue
 		if os.path.isfile(full_path):
-			return full_path
-	return None
+			paths.append(full_path)
+	return paths
+
 
 
 def _resolve_profile_id(user: dict[str, Any]) -> str:
@@ -364,10 +411,12 @@ def _enrich_conversation(conversation: dict[str, Any]) -> dict[str, Any]:
 async def _build_patient_context(patient_id: str) -> dict[str, Any] | None:
 	repo = UserRepository()
 	clinical_repo = ClinicalRepository()
+	report_repo = ReportRepository()
 
-	patient, history = await asyncio.gather(
+	patient, history, reports_result = await asyncio.gather(
 		repo.get_patient(patient_id),
 		clinical_repo.get_patient_history(patient_id),
+		report_repo.get_reports_for_patient(patient_id, limit=5, offset=0),
 		return_exceptions=True,
 	)
 
@@ -386,6 +435,20 @@ async def _build_patient_context(patient_id: str) -> dict[str, Any] | None:
 			"recent_mri_results": list(history.get("mri_results") or [])[:10],
 		}
 
+	clinical_reports: list[dict[str, Any]] = []
+	if not isinstance(reports_result, Exception) and reports_result:
+		raw = getattr(reports_result, "data", None) or []
+		clinical_reports = [
+			{
+				"title": r.get("title", ""),
+				"summary": r.get("summary", ""),
+				"report_type": r.get("report_type", ""),
+				"body": (r.get("content") or {}).get("body", "") if isinstance(r.get("content"), dict) else "",
+				"approved_at": r.get("approved_at", ""),
+			}
+			for r in (raw or [])
+		]
+
 	return {
 		"id": patient.get("id"),
 		"mrn": patient.get("mrn") or patient.get("medical_record_number"),
@@ -396,6 +459,7 @@ async def _build_patient_context(patient_id: str) -> dict[str, Any] | None:
 		"primary_doctor_id": patient.get("primary_doctor_id"),
 		"hospital_id": patient.get("hospital_id"),
 		"medical_history": history_payload,
+		"clinical_reports": clinical_reports,
 	}
 
 
@@ -461,6 +525,8 @@ def _format_patient_context_for_prompt(patient_context: dict[str, Any] | None) -
 	recent_ecg = list(medical_history.get("recent_ecg_results") or [])[:3]
 	recent_mri = list(medical_history.get("recent_mri_results") or [])[:3]
 
+	clinical_reports = list(patient_context.get("clinical_reports") or [])[:3]
+
 	lines = [
 		f"Patient: {name} | gender={gender} | dob={dob}",
 	]
@@ -482,6 +548,23 @@ def _format_patient_context_for_prompt(patient_context: dict[str, Any] | None) -
 			case_lines.append(f"{title} ({status_value})".strip())
 		if case_lines:
 			lines.append("Recent cases: " + "; ".join(case_lines))
+	if clinical_reports:
+		for rpt in clinical_reports:
+			rtype = rpt.get("report_type", "report").replace("_", " ")
+			title = rpt.get("title") or rtype
+			summary = rpt.get("summary") or ""
+			body = (rpt.get("body") or "").strip()
+			date = (rpt.get("approved_at") or "")[:10]
+			# Include the full body only if it's short enough to not bloat the prompt
+			body_snippet = (body[:400] + "…") if len(body) > 400 else body
+			line_parts = [f"[{rtype}] {title}"]
+			if summary:
+				line_parts.append(f"summary={summary}")
+			if body_snippet:
+				line_parts.append(f"report={body_snippet}")
+			if date:
+				line_parts.append(f"date={date}")
+			lines.append("Clinical report: " + " | ".join(line_parts))
 
 	return "\n".join(lines)
 
@@ -989,6 +1072,10 @@ async def answer_rag(
 	)
 	search_request.model_backend = resolved_backend
 
+	# Use the embedding client that matches the resolved backend so that
+	# switching backends doesn't cause a dimension mismatch in vector search.
+	embedding_client = _resolve_embedding_client(request, resolved_backend) or embedding_client
+
 	# Use the per-conversation project_id for all vector operations so each
 	# conversation has its own isolated Qdrant collection. Fall back to the
 	# hospital-level project_id only if none was provided (legacy conversations).
@@ -997,7 +1084,9 @@ async def answer_rag(
 		conversation_project_id=search_request.conversation_project_id,
 	)
 
-	image_path = _resolve_uploaded_image_path(project_id=rag_project_id, image_ids=search_request.image_file_ids)
+	# Resolve all uploaded image paths — MedMO supports multiple images per turn
+	image_paths = _resolve_uploaded_image_paths(project_id=rag_project_id, image_ids=search_request.image_file_ids)
+	image_path = image_paths[0] if image_paths else None  # single-image fallback for non-MedMO backends
 
 	nlp_controller = NLPController(
 		vectorDB_client=vectordb_client,
@@ -1037,6 +1126,8 @@ async def answer_rag(
 	local_timeout = 0
 	if resolved_backend == "medmo":
 		local_timeout = int(settings.MEDMO_REQUEST_TIMEOUT_SECONDS or 0)
+	elif resolved_backend == "phi_qa":
+		local_timeout = int(settings.PHIQA_REQUEST_TIMEOUT_SECONDS or 0)
 
 	# Only filter by IDs that were actually indexed as chat attachments (chat_upload:: prefix).
 	# ECG/MRI record UUIDs from context_file_ids are NOT indexed in the vector DB — they are
@@ -1062,6 +1153,10 @@ async def answer_rag(
 		phase_started = time.perf_counter()
 		# All backends (including MedMO) go through the same RAG pipeline now.
 		# This ensures uploaded documents are always retrieved and cited.
+		# Pass all image paths to MedMO (supports multiple images per turn).
+		# For other backends that only support a single image, image_path is
+		# the first path — the provider ignores extra kwargs it doesn't accept.
+		effective_image = image_paths if resolved_backend == "medmo" else image_path
 		rag_task = asyncio.to_thread(
 			nlp_controller.answer_rag_question,
 			project_id=rag_project_id,
@@ -1069,7 +1164,7 @@ async def answer_rag(
 			limit=effective_top_k,
 			chat_history=search_request.chat_history,
 			language=language,
-			image_path=image_path,
+			image_path=effective_image,
 			filter_file_ids=indexed_file_ids,
 		)
 		if local_timeout > 0:

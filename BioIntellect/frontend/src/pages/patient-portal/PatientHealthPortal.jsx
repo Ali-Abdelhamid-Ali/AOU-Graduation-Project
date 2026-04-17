@@ -518,10 +518,8 @@ export const PatientHealthPortal = () => {
                       setFormData({ ...formData, country_id: value, region_id: '' })
                       selectCountry(value)
                     }}
-                    options={countries.map((country) => ({
-                      value: country.country_id,
-                      label: country.country_name,
-                    }))}
+                    options={countries}
+                    isCountry
                     required
                   />
                   <SearchableSelect

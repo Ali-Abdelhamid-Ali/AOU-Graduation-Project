@@ -77,3 +77,42 @@ class ReportService:
         )
         return result
 
+    async def update_report(
+        self, user_id: str, report_id: str, data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Update a draft report's title, summary, or content."""
+        allowed = {"title", "summary", "content", "status"}
+        payload = {k: v for k, v in data.items() if k in allowed}
+        # Prevent editing finalized reports
+        existing = await self.repo.get_by_id(report_id)
+        if not existing:
+            raise ValueError(f"Report {report_id} not found")
+        if existing.get("is_final"):
+            raise ValueError("Cannot edit a finalized report")
+        result = await self.repo.update(report_id, payload)
+        if not result:
+            raise ValueError(f"Failed to update report {report_id}")
+        log_audit(
+            AuditAction.ACCESS_MEDICAL_DATA,
+            user_id=user_id,
+            details={"report_id": report_id, "action": "update_report"},
+        )
+        return result
+
+    async def discard_report(self, user_id: str, report_id: str) -> bool:
+        """Soft-delete a draft report by setting status=discarded."""
+        existing = await self.repo.get_by_id(report_id)
+        if not existing:
+            raise ValueError(f"Report {report_id} not found")
+        if existing.get("is_final"):
+            raise ValueError("Cannot discard a finalized report")
+        result = await self.repo.update(report_id, {"status": "discarded"})
+        if not result:
+            raise ValueError(f"Failed to discard report {report_id}")
+        log_audit(
+            AuditAction.ACCESS_MEDICAL_DATA,
+            user_id=user_id,
+            details={"report_id": report_id, "action": "discard_report"},
+        )
+        return True
+

@@ -42,11 +42,12 @@ export const InputField = ({
     className: `${styles.input} ${error ? styles.error : ''} ${
       success ? styles.success : ''
     } ${isFocused ? styles.focused : ''} ${multiline ? styles.textarea : ''}`,
-    autoComplete: type === 'password' ? 'current-password' : 'on',
     spellCheck: type === 'text' || multiline ? 'true' : 'false',
     'aria-invalid': !!error,
     'aria-describedby': error ? `${id}-error` : helperText ? `${id}-helper` : undefined,
     ...rest,
+    // autoComplete from rest takes priority; fallback based on type
+    autoComplete: rest.autoComplete ?? (type === 'password' ? 'current-password' : 'on'),
   }
 
   return (

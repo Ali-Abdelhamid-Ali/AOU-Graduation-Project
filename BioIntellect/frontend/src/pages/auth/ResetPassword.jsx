@@ -44,6 +44,13 @@ export const ResetPassword = ({ onResetSuccess, onBackToLogin, onBack }) => {
       setValidationError('Invalid or expired recovery link. Please request a new reset email.')
       window.history.replaceState(null, '', window.location.pathname)
     }
+
+    // Supabase sends type=signup for email confirmation links.
+    // After confirmation, show the update form so the user can set their password.
+    if (type === 'signup') {
+      window.history.replaceState(null, '', window.location.pathname)
+      setValidationError('Email confirmed! Please sign in with your temporary password, then you will be asked to set a new one.')
+    }
   }, [])
 
   const handleEmailChange = (value) => {

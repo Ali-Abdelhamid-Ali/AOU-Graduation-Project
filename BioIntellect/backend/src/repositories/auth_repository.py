@@ -54,12 +54,19 @@ class AuthRepository:
         # Checking implementation: AsyncClient.auth returns an AsyncGoTrueClient usually.
         # We will assume await is needed.
 
+        # email_confirm=False → Supabase sends a confirmation email to the user.
+        # password_change_required in metadata → the frontend forces a password
+        # reset on first login before the user can access the app.
+        user_metadata = {
+            **metadata,
+            "password_change_required": True,
+        }
         response = await client.auth.admin.create_user(
             {
                 "email": email,
                 "password": password,
-                "email_confirm": True,
-                "user_metadata": metadata,
+                "email_confirm": False,
+                "user_metadata": user_metadata,
             }
         )
         if not response.user:

@@ -373,15 +373,118 @@ class ECGInferenceEngine:
             dtype=np.float32,
         )
 
+    @staticmethod
+    def _compute_ecg_measurements(signal: np.ndarray, fs: int = 500) -> Dict[str, Optional[int]]:
+        """Estimate basic ECG interval measurements from the preprocessed signal.
+
+        Uses Lead II (index 1) for R-peak detection. All output values are in
+        milliseconds (integer), or None when estimation is not reliable.
+        """
+        try:
+            lead = signal[:, 1].astype(np.float64)
+
+            # --- Heart rate via R-peak detection ---
+            min_rr_samples = int(0.3 * fs)  # 200 bpm max
+            peaks, props = scipy_signal.find_peaks(
+                lead,
+                distance=min_rr_samples,
+                height=np.percentile(lead, 60),
+                prominence=0.05,
+            )
+            heart_rate: Optional[int] = None
+            mean_rr_ms: Optional[float] = None
+            if len(peaks) >= 2:
+                rr_samples = np.diff(peaks)
+                mean_rr_ms = float(np.mean(rr_samples)) / fs * 1000.0
+                hr = 60_000.0 / mean_rr_ms
+                if 30 < hr < 300:
+                    heart_rate = int(round(hr))
+
+            # --- PR interval: distance from P wave onset to R peak ---
+            # Estimate P-wave as the local max in the window 100-250 ms before R
+            pr_intervals: List[float] = []
+            qrs_durations: List[float] = []
+            qt_intervals: List[float] = []
+
+            p_search_ms = (100, 250)  # ms before R
+            q_search_ms = (20, 80)    # ms before R
+            s_search_ms = (20, 80)    # ms after R
+            t_end_ms = (200, 450)     # ms after R
+
+            for r_idx in peaks:
+                # PR interval
+                p_start = r_idx - int(p_search_ms[1] / 1000 * fs)
+                p_end = r_idx - int(p_search_ms[0] / 1000 * fs)
+                if p_start >= 0 and p_end > p_start:
+                    p_win = lead[p_start:p_end]
+                    p_local = int(np.argmax(p_win)) + p_start
+                    pr_ms = (r_idx - p_local) / fs * 1000.0
+                    if 60 < pr_ms < 350:
+                        pr_intervals.append(pr_ms)
+
+                # QRS duration: Q onset to S offset
+                q_start = r_idx - int(q_search_ms[1] / 1000 * fs)
+                q_end = r_idx - int(q_search_ms[0] / 1000 * fs)
+                s_start = r_idx + int(s_search_ms[0] / 1000 * fs)
+                s_end = r_idx + int(s_search_ms[1] / 1000 * fs)
+                if q_start >= 0 and s_end < len(lead):
+                    q_local = int(np.argmin(lead[q_start:q_end])) + q_start
+                    s_local = int(np.argmin(lead[s_start:s_end])) + s_start
+                    qrs_ms = (s_local - q_local) / fs * 1000.0
+                    if 40 < qrs_ms < 200:
+                        qrs_durations.append(qrs_ms)
+
+                # QT interval: Q onset to T-wave end (steepest descent back to baseline)
+                t_start = r_idx + int(t_end_ms[0] / 1000 * fs)
+                t_end = r_idx + int(t_end_ms[1] / 1000 * fs)
+                if q_start >= 0 and t_end < len(lead):
+                    q_local2 = int(np.argmin(lead[q_start:q_end])) + q_start
+                    t_win = lead[t_start:t_end]
+                    if len(t_win) > 0:
+                        t_peak_local = int(np.argmax(np.abs(t_win))) + t_start
+                        qt_ms = (t_peak_local - q_local2) / fs * 1000.0
+                        if 200 < qt_ms < 600:
+                            qt_intervals.append(qt_ms)
+
+            pr_interval: Optional[int] = int(round(float(np.median(pr_intervals)))) if pr_intervals else None
+            qrs_duration: Optional[int] = int(round(float(np.median(qrs_durations)))) if qrs_durations else None
+            qt_interval_val: Optional[int] = int(round(float(np.median(qt_intervals)))) if qt_intervals else None
+
+            # QTc (Bazett): QTc = QT / sqrt(RR in seconds)
+            qtc_interval: Optional[int] = None
+            if qt_interval_val is not None and mean_rr_ms is not None and mean_rr_ms > 0:
+                rr_sec = mean_rr_ms / 1000.0
+                qtc_ms = qt_interval_val / np.sqrt(rr_sec)
+                if 200 < qtc_ms < 700:
+                    qtc_interval = int(round(float(qtc_ms)))
+
+            return {
+                "heart_rate": heart_rate,
+                "pr_interval": pr_interval,
+                "qrs_duration": qrs_duration,
+                "qt_interval": qt_interval_val,
+                "qtc_interval": qtc_interval,
+            }
+        except Exception:
+            return {
+                "heart_rate": None,
+                "pr_interval": None,
+                "qrs_duration": None,
+                "qt_interval": None,
+                "qtc_interval": None,
+            }
+
     def _build_clinical_report(
         self,
         enriched_conditions: List[Dict[str, Any]],
         signal_meta: Dict[str, Any],
         top_code: str,
         top_confidence: float,
+        measurements: Optional[Dict[str, Optional[int]]] = None,
     ) -> str:
         """Generate a structured plain-text clinical report from enriched conditions."""
         meta = signal_meta or {}
+        meas = measurements or {}
 
         age_raw = meta.get("age", "N/A")
         sex_raw = meta.get("sex", "N/A")
@@ -394,6 +497,12 @@ class ECGInferenceEngine:
         weight_raw = meta.get("weight")
         height_str = f"{height_raw} cm" if height_raw is not None else "Not recorded"
         weight_str = f"{weight_raw} kg" if weight_raw is not None else "Not recorded"
+
+        def _ms(val: Optional[int]) -> str:
+            return f"{val} ms" if val is not None else "Not computed"
+
+        def _bpm(val: Optional[int]) -> str:
+            return f"{val} bpm" if val is not None else "Not computed"
 
         lines: List[str] = []
 
@@ -415,7 +524,17 @@ class ECGInferenceEngine:
         lines.append("")
 
         lines.append("-" * 64)
-        lines.append("SECTION 2 — AI MODEL SUMMARY")
+        lines.append("SECTION 2 — ECG MEASUREMENTS")
+        lines.append("-" * 64)
+        lines.append(f"  Heart Rate      : {_bpm(meas.get('heart_rate'))}")
+        lines.append(f"  PR Interval     : {_ms(meas.get('pr_interval'))}")
+        lines.append(f"  QRS Duration    : {_ms(meas.get('qrs_duration'))}")
+        lines.append(f"  QT Interval     : {_ms(meas.get('qt_interval'))}")
+        lines.append(f"  QTc Interval    : {_ms(meas.get('qtc_interval'))}")
+        lines.append("")
+
+        lines.append("-" * 64)
+        lines.append("SECTION 3 — AI MODEL SUMMARY")
         lines.append("-" * 64)
         lines.append(f"  Model           : BioIntellect InceptionTime Multimodal")
         lines.append(f"  Primary Finding : {top_code}")
@@ -424,7 +543,7 @@ class ECGInferenceEngine:
         lines.append("")
 
         lines.append("-" * 64)
-        lines.append("SECTION 3 — DETECTED CONDITIONS (with Clinical Detail)")
+        lines.append("SECTION 4 — DETECTED CONDITIONS (with Clinical Detail)")
         lines.append("-" * 64)
 
         primary = enriched_conditions[0] if enriched_conditions else None
@@ -467,7 +586,7 @@ class ECGInferenceEngine:
 
         lines.append("")
         lines.append("-" * 64)
-        lines.append("SECTION 4 — CLINICAL RECOMMENDATIONS")
+        lines.append("SECTION 5 — CLINICAL RECOMMENDATIONS")
         lines.append("-" * 64)
 
         all_hints: List[str] = []
@@ -496,7 +615,7 @@ class ECGInferenceEngine:
 
         lines.append("")
         lines.append("-" * 64)
-        lines.append("SECTION 5 — DISCLAIMER")
+        lines.append("SECTION 6 — DISCLAIMER")
         lines.append("-" * 64)
         lines.append(
             "  This report is AI-generated and is intended solely to ASSIST"
@@ -567,12 +686,16 @@ class ECGInferenceEngine:
             for i in detected_indices
         ]
 
+        # Compute interval measurements from the preprocessed signal
+        measurements = self._compute_ecg_measurements(signal, fs=500)
+
         # Build the full structured clinical report
         clinical_report = self._build_clinical_report(
             enriched_conditions=enriched_conditions,
             signal_meta=signal_meta or {},
             top_code=top_label,
             top_confidence=top_confidence,
+            measurements=measurements,
         )
 
         return {
@@ -580,8 +703,12 @@ class ECGInferenceEngine:
             "confidence": top_confidence,
             "ai_notes": f"Model-based ECG classification completed with {len(enriched_conditions)} detected label(s).",
             "risk_score": float(top_confidence * 100.0),
-            "heart_rate": None,
+            "heart_rate": measurements["heart_rate"],
             "heart_rate_variability": None,
+            "pr_interval": measurements["pr_interval"],
+            "qrs_duration": measurements["qrs_duration"],
+            "qt_interval": measurements["qt_interval"],
+            "qtc_interval": measurements["qtc_interval"],
             "detected_conditions": detected_conditions_flat,
             "enriched_conditions": enriched_conditions,
             "clinical_report": clinical_report,

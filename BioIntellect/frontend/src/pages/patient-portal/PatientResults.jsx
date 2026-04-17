@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '@/store/AuthContext'
 import { medicalService } from '@/services/medical.service'
+import { reportsAPI } from '@/services/api/endpoints'
 import { Skeleton } from '@/components/ui/Skeleton'
 import SkeletonText from '@/components/ui/SkeletonText'
 import styles from './PatientResults.module.css'
@@ -177,6 +178,130 @@ const AIReportButton = ({ onClick }) => (
     View AI Report
   </motion.button>
 )
+
+/* ── Clinical Reports Panel ──────────────────────────────────────────── */
+const REPORT_TYPE_COLORS = {
+  ecg_analysis:  { text: '#63b3ed', bg: 'rgba(99,179,237,0.12)', label: 'ECG' },
+  mri_analysis:  { text: '#9a75ea', bg: 'rgba(154,117,234,0.12)', label: 'MRI' },
+}
+
+const ClinicalReports = ({ patientId }) => {
+  const [reports, setReports]       = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [expanded, setExpanded]     = useState(null)
+
+  useEffect(() => {
+    if (!patientId) { setLoading(false); return }
+    let cancelled = false
+    reportsAPI.listForPatient(patientId)
+      .then((res) => { if (!cancelled) setReports(res.data || []) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [patientId])
+
+  if (loading) return (
+    <div style={{ marginTop: '3rem' }}>
+      <Skeleton width="220px" height="24px" borderRadius="8px" style={{ marginBottom: '1rem' }} />
+      <div style={{ display: 'grid', gap: '1rem' }}>
+        {[1, 2].map((k) => <Skeleton key={k} width="100%" height="76px" borderRadius="14px" />)}
+      </div>
+    </div>
+  )
+
+  if (!reports.length) return (
+    <div style={{ marginTop: '3rem' }}>
+      <h2 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: '0.5rem' }}>Clinical Reports</h2>
+      <div style={{
+        background: 'rgba(255,255,255,0.03)', border: '1px dashed var(--color-border-strong)',
+        borderRadius: '14px', padding: '2rem', textAlign: 'center',
+        color: 'var(--color-text-muted)', fontSize: '0.9rem',
+      }}>
+        No finalized clinical reports yet. Your doctor will publish them here once complete.
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ marginTop: '3rem' }}>
+      <h2 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: '1rem' }}>Clinical Reports</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {reports.map((r) => {
+          const tone = REPORT_TYPE_COLORS[r.report_type] || { text: '#888', bg: 'rgba(255,255,255,0.06)', label: r.report_type || 'Report' }
+          const isOpen = expanded === r.id
+          const date = r.approved_at || r.created_at
+          const dateLabel = date ? new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : ''
+          return (
+            <motion.div
+              key={r.id}
+              layout
+              style={{
+                background: 'var(--color-surface-elevated)',
+                border: `1px solid ${isOpen ? tone.text + '55' : 'var(--color-border)'}`,
+                borderRadius: '14px',
+                overflow: 'hidden',
+                transition: 'border-color 0.2s',
+              }}
+            >
+              {/* Header row */}
+              <button
+                onClick={() => setExpanded(isOpen ? null : r.id)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  padding: '1rem 1.25rem', background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'inherit', textAlign: 'start',
+                }}
+              >
+                <span style={{
+                  padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.68rem',
+                  fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                  background: tone.bg, color: tone.text, flexShrink: 0,
+                }}>
+                  {tone.label}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.9rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.title || 'Clinical Report'}
+                  </strong>
+                  {r.summary && <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.summary}</p>}
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', flexShrink: 0 }}>{dateLabel}</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginLeft: '0.25rem', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
+              </button>
+
+              {/* Expanded body */}
+              <AnimatePresence initial={false}>
+                {isOpen && (
+                  <motion.div
+                    key="body"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22 }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div style={{ padding: '0 1.25rem 1.25rem', borderTop: '1px solid var(--color-border-subtle)' }}>
+                      <p style={{
+                        marginTop: '1rem', fontSize: '0.875rem', lineHeight: 1.7,
+                        color: 'var(--color-text-secondary, #b0b0c8)',
+                        whiteSpace: 'pre-wrap',
+                      }}>
+                        {r.content?.body || r.summary || 'No detailed content available.'}
+                      </p>
+                      <p style={{ margin: '0.75rem 0 0', fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
+                        ⚠️ This report was written by your treating physician. It is part of your official medical record.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 const hasText = (value) => typeof value === 'string' && value.trim().length > 0
 
@@ -430,6 +555,8 @@ export const PatientResults = () => {
           <p>When your medical tests are processed, they will appear here.</p>
         </div>
       )}
+
+      <ClinicalReports patientId={currentUser?.id} />
     </motion.div>
   )
 }

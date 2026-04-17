@@ -31,7 +31,7 @@ router = APIRouter(prefix="/geography", tags=["geography"])
 @router.get("/countries", response_model=List[CountryResponseDTO])
 async def list_countries(
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    limit: int = Query(50, le=100, description="Number of results to return"),
+    limit: int = Query(300, le=300, description="Number of results to return"),
     offset: int = Query(0, description="Number of results to skip"),
     repo: GeographyRepository = Depends(GeographyRepository),
 ):

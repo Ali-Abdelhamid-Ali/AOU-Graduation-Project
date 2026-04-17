@@ -77,6 +77,10 @@ class ClinicalService:
             "ai_recommendations": analysis.get("recommendations", []),
             "heart_rate": analysis.get("heart_rate"),
             "heart_rate_variability": analysis.get("heart_rate_variability"),
+            "pr_interval": analysis.get("pr_interval"),
+            "qrs_duration": analysis.get("qrs_duration"),
+            "qt_interval": analysis.get("qt_interval"),
+            "qtc_interval": analysis.get("qtc_interval"),
             "risk_score": analysis.get("risk_score"),
             "analyzed_by_model": analysis.get("model_info", {}).get(
                 "name", "BioIntellect ECG"
@@ -262,6 +266,10 @@ class ClinicalService:
             "ai_recommendations": analysis.get("recommendations", []),
             "heart_rate": analysis.get("heart_rate"),
             "heart_rate_variability": analysis.get("heart_rate_variability"),
+            "pr_interval": analysis.get("pr_interval"),
+            "qrs_duration": analysis.get("qrs_duration"),
+            "qt_interval": analysis.get("qt_interval"),
+            "qtc_interval": analysis.get("qtc_interval"),
             "risk_score": analysis.get("risk_score"),
             "analyzed_by_model": analysis.get("model_info", {}).get(
                 "name", "BioIntellect ECG"

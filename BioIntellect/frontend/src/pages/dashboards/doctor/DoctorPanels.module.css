@@ -166,6 +166,25 @@
   border-block-end: 0;
 }
 
+.reportBtn {
+  align-self: center;
+  flex-shrink: 0;
+  padding: 0.38rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 179, 237, 0.35);
+  background: rgba(99, 179, 237, 0.08);
+  color: #63b3ed;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.reportBtn:hover {
+  background: rgba(99, 179, 237, 0.18);
+  border-color: rgba(99, 179, 237, 0.6);
+}
+
 .timelineItem {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);

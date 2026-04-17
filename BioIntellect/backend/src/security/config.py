@@ -28,7 +28,8 @@ class SecurityConfig:
     ENABLE_RETRIES = os.getenv("ENABLE_RETRIES", "True").lower() == "true"
 
     # CORS Configuration
-    CORS_ORIGINS = [
+    # Development: explicit list (no 0.0.0.0 — that would accept requests from any host)
+    _DEV_CORS_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5174",
@@ -37,18 +38,15 @@ class SecurityConfig:
         "http://127.0.0.1:3000",
         "http://localhost:8080",
         "http://127.0.0.1:8080",
-        "http://0.0.0.0:5173",
-        "http://0.0.0.0:5174",
-        "http://0.0.0.0:3000",
-        "http://0.0.0.0:8080",
         "http://localhost:5175",
         "http://127.0.0.1:5175",
-        "http://0.0.0.0:5175",
     ]
 
     if ENVIRONMENT == "production":
-        # Production CORS should be explicit and environment-driven.
+        # Production CORS must come from the environment variable — no localhost fallback.
         CORS_ORIGINS = settings.cors_origin_list
+    else:
+        CORS_ORIGINS = _DEV_CORS_ORIGINS
 
     CORS_ALLOW_CREDENTIALS = True
     CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
@@ -60,8 +58,12 @@ class SecurityConfig:
         "X-Requested-With",
     ]
 
-    # Regex to allow all localhost/local network URLs in development
-    CORS_ORIGIN_REGEX = r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|192\.168\.\d+\.\d+|172\.1[6-9]\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$"
+    # Regex: only used in development. Covers localhost and private RFC-1918 ranges.
+    # 0.0.0.0 intentionally excluded — it matches "all interfaces", not a browser origin.
+    if ENVIRONMENT == "production":
+        CORS_ORIGIN_REGEX = None  # Disabled in production — use explicit list only
+    else:
+        CORS_ORIGIN_REGEX = r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|172\.1[6-9]\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$"
 
     # Trusted host policy
     TRUSTED_HOSTS = settings.trusted_host_list
@@ -76,8 +78,8 @@ class SecurityConfig:
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; "
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
                 "img-src 'self' data: https: blob:; "
-                "font-src 'self' data: https://fonts.gstatic.com; "
-                "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://*.supabase.co https://*.supabase.in https://fonts.googleapis.com https://fonts.gstatic.com https://restcountries.com https://countriesnow.space; "
+                "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://fonts.scalar.com; "
+                "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://*.supabase.co https://*.supabase.in https://fonts.googleapis.com https://fonts.gstatic.com https://restcountries.com https://countriesnow.space https://api.scalar.com https://cdn.jsdelivr.net; "
                 "frame-src 'self' https://sketchfab.com; "
                 "frame-ancestors 'self'; "
                 "object-src 'none'; "
@@ -194,8 +196,20 @@ class SecurityConfig:
                 "SUPABASE_SERVICE_ROLE_KEY format is invalid (expected JWT)"
             )
 
-        if cls.ENVIRONMENT == "production" and not cls.CORS_ORIGINS:
-            raise ValueError("CORS_ORIGINS is required in production")
+        if cls.ENVIRONMENT == "production":
+            if not cls.CORS_ORIGINS:
+                raise ValueError("CORS_ORIGINS is required in production")
+            # Ensure no 0.0.0.0 or localhost slips into production CORS
+            bad_origins = [
+                o for o in cls.CORS_ORIGINS
+                if "0.0.0.0" in o or "localhost" in o or "127.0.0.1" in o
+            ]
+            if bad_origins:
+                raise ValueError(
+                    f"Production CORS_ORIGINS must not include local addresses: {bad_origins}"
+                )
+            if cls.DEBUG:
+                raise ValueError("DEBUG must be False in production")
 
         logger.info("Security configuration validated successfully")
 

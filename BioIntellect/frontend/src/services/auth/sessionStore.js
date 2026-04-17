@@ -52,8 +52,10 @@ export const getAccessToken = () => accessToken
 export const getAccessTokenExpiresAt = () => accessTokenExpiresAt
 
 export const isAccessTokenExpiringSoon = (bufferMs = 60_000) => {
+  // If there is no token or no known expiry, treat it as expired so the
+  // interceptor triggers a refresh rather than sending a stale/missing token.
   if (!accessToken || !accessTokenExpiresAt) {
-    return false
+    return true
   }
 
   return accessTokenExpiresAt - Date.now() <= bufferMs

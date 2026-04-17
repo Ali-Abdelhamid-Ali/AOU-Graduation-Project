@@ -102,10 +102,10 @@ const CreatePatient = ({ onBack, userRole }) => {
     // Set default country (Egypt) once countries are loaded
     useEffect(() => {
         if (countries.length > 0 && !formData.countryId) {
-            const egypt = countries.find(c => c.country_name === 'Egypt') || countries[0]
+            const egypt = countries.find(c => c.label === 'Egypt') || countries[0]
             if (egypt) {
-                handleInputChange('countryId', egypt.country_id)
-                selectCountry(egypt.country_id)
+                handleInputChange('countryId', egypt.value)
+                selectCountry(egypt.value)
             }
         }
     }, [countries, formData.countryId, handleInputChange, selectCountry])
@@ -124,7 +124,9 @@ const CreatePatient = ({ onBack, userRole }) => {
             return
         }
 
-        if (!formData.hospitalId) {
+        // Hospital is only required when DB hospitals exist for the selected region
+        const hasDbHospitals = hospitals.some(h => !h.is_static)
+        if (hasDbHospitals && !formData.hospitalId) {
             setError("Hospital selection is required.")
             return
         }
@@ -287,7 +289,7 @@ const CreatePatient = ({ onBack, userRole }) => {
                                     label="Country"
                                     value={formData.countryId}
                                     onChange={onCountryChange}
-                                    options={countries.map(c => ({ value: c.country_id, label: c.country_name, flag_url: c.flag_url }))}
+                                    options={countries}
                                     isCountry
                                     required
                                 />

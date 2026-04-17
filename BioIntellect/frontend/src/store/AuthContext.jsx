@@ -252,7 +252,10 @@ export const AuthProvider = ({ children }) => {
         if (refreshResponse?.success && refreshResponse?.session?.access_token) {
           applySessionPayload(refreshResponse.session)
           userPayload = refreshResponse.user || null
-        } else if (!getAccessToken()) {
+        } else {
+          // Refresh failed — clear any stale in-memory token so the user
+          // is not stuck in a login loop with a token that can never be used.
+          clearAccessSession()
           throw new Error(refreshResponse?.message || 'Unable to restore the session')
         }
 

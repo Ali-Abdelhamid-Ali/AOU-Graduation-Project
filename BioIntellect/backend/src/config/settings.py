@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     MEDMO_MAX_OUTPUT_TOKENS: int = Field(default=768, alias="MEDMO_MAX_OUTPUT_TOKENS")
     MEDMO_REQUEST_TIMEOUT_SECONDS: int = Field(default=900, alias="MEDMO_REQUEST_TIMEOUT_SECONDS")
     PHI_QA_MODEL_PATH:    Optional[str] = None
+    PHIQA_REQUEST_TIMEOUT_SECONDS: int = Field(default=300, alias="PHIQA_REQUEST_TIMEOUT_SECONDS")
     FORCE_CPU_ONLY:       bool          = Field(default=True, alias="FORCE_CPU_ONLY")
 
     # ── File handling ────────────────────────────────────────────────────

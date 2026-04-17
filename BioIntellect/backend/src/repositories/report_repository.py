@@ -1,6 +1,6 @@
 ﻿"""Report Repository - Data Access for Clinical Reports."""
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from src.repositories.base_repository import BaseRepository
 from src.repositories.schema_compat import (
@@ -51,4 +51,46 @@ class ReportRepository(BaseRepository):
         if record.get("mri_results"):
             record["mri_results"] = normalize_mri_result_record(record["mri_results"])
         return record
+
+    async def get_report_by_result(
+        self, result_type: str, result_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Fetch the latest report linked to a specific ECG or MRI result."""
+        client = await self._get_client()
+        col = "ecg_result_id" if result_type == "ecg" else "mri_result_id"
+        result = await (
+            client.table(self.table_name)
+            .select("*")
+            .eq(col, result_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        return result.data[0] if result.data else None
+
+    async def get_reports_for_patient(
+        self, patient_id: str, limit: int = 20, offset: int = 0, finalized_only: bool = True
+    ):
+        """Fetch reports for a patient (for patient portal + chat context).
+
+        By default only returns finalized (is_final=True) reports so the patient
+        portal and LLM context never surface in-progress drafts.
+        """
+        client = await self._get_client()
+        query = (
+            client.table(self.table_name)
+            .select(
+                "id, report_number, report_type, title, summary, content, status, "
+                "is_final, approved_at, created_at, updated_at, ecg_result_id, mri_result_id"
+            )
+            .eq("patient_id", patient_id)
+        )
+        if finalized_only:
+            query = query.eq("is_final", True)
+        return await (
+            query
+            .order("approved_at", desc=True)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
 

@@ -31,7 +31,7 @@
 /* ── Two-column layout: sidebar (upload) + results ── */
 .mainGrid {
     display: grid;
-    grid-template-columns: clamp(260px, 28vw, 340px) 1fr;
+    grid-template-columns: clamp(240px, 26vw, 320px) minmax(0, 1fr);
     gap: 1.25rem;
     align-items: start;
 }
@@ -144,6 +144,8 @@
     border-radius: 14px;
     border: 1px solid var(--color-border);
     padding: clamp(0.85rem, 1.5vw, 1.25rem);
+    overflow: hidden;
+    min-width: 0;
 }
 
 .emptyState {
@@ -180,6 +182,8 @@
 
 .resultCard {
     animation: fadeIn 0.4s ease;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .resultHeader {
@@ -361,14 +365,15 @@
     font-family: 'Courier New', Courier, monospace;
     font-size: clamp(0.65rem, 0.9vw, 0.75rem);
     line-height: 1.6;
-    white-space: pre;
-    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: 1rem 1.25rem;
     margin: 0;
     background: var(--color-surface);
     color: var(--color-text);
-    max-block-size: 400px;
-    overflow-y: auto;
+    max-block-size: 420px;
 }
 
 /* ── Responsive breakpoints ── */

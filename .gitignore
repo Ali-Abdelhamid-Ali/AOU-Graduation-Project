@@ -79,6 +79,7 @@ temp/
 *.pptx
 .claude
 # Project-specific AI artifacts and datasets
+BioIntellect/certs
 BioIntellect/backend/tests
 BioIntellect/AI/fintune/medmo_8B
 BioIntellect/AI/ECG/App/classification/12_lead_ECGFounder.pth

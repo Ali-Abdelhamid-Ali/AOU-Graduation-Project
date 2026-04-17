@@ -96,7 +96,7 @@ class NLPController(BaseController):
         limit: int,
         chat_history = None,
         language: str = "en",
-        image_path: str | None = None,
+        image_path: str | list[str] | None = None,
         filter_file_ids: list[str] | None = None,
     ) -> tuple:
         timings: dict[str, float] = {}

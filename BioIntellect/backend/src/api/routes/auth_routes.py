@@ -200,14 +200,26 @@ async def update_password(
     data: PasswordUpdateDTO,
     controller: AuthController = Depends(get_auth_controller),
 ):
-    user_identity = await controller.get_user_identity_from_access_token(
-        data.access_token
-    )
+    # Prefer Authorization header token (never logged by nginx).
+    # Fall back to body token for recovery flow (no active session yet).
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        token = auth_header[7:].strip()
+    else:
+        token = data.access_token
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required. Provide a Bearer token.",
+        )
+
+    user_identity = await controller.get_user_identity_from_access_token(token)
 
     return await controller.update_password(
         user_identity["id"],
         user_identity["email"],
-        data.access_token,
+        token,
         data.new_password,
         data.current_password,
         data.logout_all if data.logout_all is not None else False,

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { medicalService } from '@/services/medical.service'
+import { reportsAPI } from '@/services/api/endpoints'
 import { Skeleton } from '@/components/ui/Skeleton'
 import SkeletonText from '@/components/ui/SkeletonText'
 import styles from './PatientResultDetails.module.css'
@@ -70,12 +71,138 @@ const renderMetricValue = (item) => {
   return formatMetricValue(item.value)
 }
 
+/* ── Doctor Report Popup ─────────────────────────────────────────────── */
+const DoctorReportModal = ({ resultType, resultId, onClose }) => {
+  const [report, setReport] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    reportsAPI.getByResult(resultType, resultId)
+      .then((res) => { if (!cancelled) setReport(res.data || null) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [resultType, resultId])
+
+  const typeTone = resultType === 'ecg'
+    ? { color: '#63b3ed', bg: 'rgba(99,179,237,0.12)', label: 'ECG' }
+    : { color: '#9a75ea', bg: 'rgba(154,117,234,0.12)', label: 'MRI' }
+
+  const date = report?.approved_at || report?.created_at
+  const dateLabel = date
+    ? new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+    : ''
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9000,
+          background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+        }}
+      >
+        <motion.div
+          key="modal"
+          initial={{ opacity: 0, y: 32, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 320, damping: 28 } }}
+          exit={{ opacity: 0, y: 20, scale: 0.97 }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: 'var(--color-surface, #12121e)',
+            border: '1px solid var(--color-border, #2a2a40)',
+            borderRadius: '16px', width: '100%', maxWidth: '680px',
+            maxHeight: '88vh', display: 'flex', flexDirection: 'column',
+            overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+          }}
+        >
+          {/* Header */}
+          <div style={{ padding: '1.5rem 2rem 1rem', borderBottom: '1px solid var(--color-border, #2a2a40)', position: 'relative' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <span style={{ padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: typeTone.bg, color: typeTone.color }}>
+                {typeTone.label}
+              </span>
+              {report?.is_final && (
+                <span style={{ padding: '0.2rem 0.65rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700, background: 'rgba(72,199,142,0.15)', color: '#48c78e' }}>
+                  Finalized
+                </span>
+              )}
+            </div>
+            <h2 style={{ margin: '0 0 0.2rem', fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-text-primary, #e8e8f0)' }}>
+              {report?.title || 'Clinical Report'}
+            </h2>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted, #888)' }}>
+              {dateLabel || 'Written by your treating physician'}
+            </p>
+            <button
+              onClick={onClose}
+              style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'none', border: 'none', color: 'var(--color-text-muted, #888)', fontSize: '1.1rem', cursor: 'pointer', padding: '0.25rem 0.5rem', borderRadius: '6px' }}
+            >✕</button>
+          </div>
+
+          {/* Body */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '3rem', color: 'var(--color-text-muted, #888)' }}>
+                <div style={{ width: 28, height: 28, border: '3px solid rgba(99,179,237,0.2)', borderTopColor: '#63b3ed', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                <p style={{ margin: 0, fontSize: '0.9rem' }}>Loading report…</p>
+              </div>
+            ) : !report ? (
+              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted, #888)' }}>
+                <p style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>No report yet</p>
+                <p style={{ fontSize: '0.875rem', margin: 0 }}>
+                  Your doctor has not published a clinical report for this result yet. Check back after your consultation.
+                </p>
+              </div>
+            ) : (
+              <>
+                {report.summary && (
+                  <div style={{ background: 'rgba(99,179,237,0.06)', border: '1px solid rgba(99,179,237,0.18)', borderRadius: '10px', padding: '0.9rem 1.1rem' }}>
+                    <p style={{ margin: '0 0 0.35rem', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#63b3ed' }}>Clinical Impression</p>
+                    <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary, #b0b0c8)', lineHeight: 1.65 }}>{report.summary}</p>
+                  </div>
+                )}
+                <div>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-text-muted, #888)' }}>Full Report</p>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary, #b0b0c8)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
+                    {report.content?.body || 'No detailed report content was added.'}
+                  </p>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--color-text-muted, #888)', lineHeight: 1.55 }}>
+                  ⚠️ This report was prepared by your treating physician and forms part of your official medical record. It is provided for your information and does not replace clinical consultation.
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: '1rem 2rem', borderTop: '1px solid var(--color-border, #2a2a40)', display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={onClose}
+              style={{ padding: '0.55rem 1.4rem', borderRadius: '8px', border: 'none', background: 'var(--color-border, #2a2a40)', color: 'var(--color-text-primary, #e8e8f0)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+            >
+              Close
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
 export const PatientResultDetails = () => {
   const navigate = useNavigate()
   const { resultType, resultId } = useParams()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
+  const [showReport, setShowReport] = useState(false)
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -221,6 +348,14 @@ export const PatientResultDetails = () => {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
     >
+      {showReport && (
+        <DoctorReportModal
+          resultType={resultType}
+          resultId={resultId}
+          onClose={() => setShowReport(false)}
+        />
+      )}
+
       <div className={styles.header}>
         <div>
           <button
@@ -240,6 +375,24 @@ export const PatientResultDetails = () => {
           <span className={styles.timestamp}>
             Updated {formatDateTime(result.updated_at || result.analysis_completed_at)}
           </span>
+          <button
+            type="button"
+            onClick={() => setShowReport(true)}
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.5rem 1.1rem',
+              borderRadius: '8px',
+              border: '1px solid rgba(99,179,237,0.35)',
+              background: 'rgba(99,179,237,0.08)',
+              color: '#63b3ed',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'background 0.15s',
+            }}
+          >
+            View Doctor Report
+          </button>
         </div>
       </div>
 

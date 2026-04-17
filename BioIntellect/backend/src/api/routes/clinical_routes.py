@@ -657,16 +657,22 @@ async def list_ecg_results(
 @router.get(
     "/ecg/results/{result_id}",
     response_model=ECGResultResponseDTO,
-    dependencies=[Depends(require_permission(Permission.VIEW_PATIENT))],
 )
 async def get_ecg_result(
-    result_id: str, repo: ClinicalRepository = Depends(ClinicalRepository)
+    result_id: str,
+    user: dict[str, Any] = Depends(get_current_user),
+    repo: ClinicalRepository = Depends(ClinicalRepository),
 ):
-    """Get a specific ECG result by ID."""
+    """Get a specific ECG result by ID. Patients can only access their own results."""
     try:
         result = await repo.get_ecg_result(result_id)
         if not result:
             raise HTTPException(status_code=404, detail="ECG result not found")
+        role = str(user.get("role") or "").lower()
+        if role == "patient":
+            profile_id = str(user.get("profile_id") or user.get("id") or "")
+            if str(result.get("patient_id") or "") != profile_id:
+                raise HTTPException(status_code=403, detail="Access denied")
         return result
     except HTTPException:
         raise
@@ -990,18 +996,22 @@ async def list_mri_results(
 @router.get(
     "/mri/results/{result_id}",
     response_model=MRISegmentationResultResponseDTO,
-    dependencies=[Depends(require_permission(Permission.VIEW_PATIENT))],
 )
 async def get_mri_result(
     result_id: str,
     user: dict[str, Any] = Depends(get_current_user),
-    service: ClinicalService = Depends(get_clinical_service),
+    repo: ClinicalRepository = Depends(ClinicalRepository),
 ):
-    """Get a specific MRI result by ID."""
+    """Get a specific MRI result by ID. Patients can only access their own results."""
     try:
-        result = await service.get_mri_result(user["id"], result_id)
+        result = await repo.get_mri_result(result_id)
         if not result:
             raise HTTPException(status_code=404, detail="MRI result not found")
+        role = str(user.get("role") or "").lower()
+        if role == "patient":
+            profile_id = str(user.get("profile_id") or user.get("id") or "")
+            if str(result.get("patient_id") or "") != profile_id:
+                raise HTTPException(status_code=403, detail="Access denied")
         return result
     except HTTPException:
         raise

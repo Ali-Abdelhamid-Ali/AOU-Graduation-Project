@@ -1,10 +1,14 @@
-FROM node:20-alpine AS build_frontend 
+FROM node:20-alpine AS build_frontend
 
 WORKDIR /app
 
 # Install the dependencies needed to compile the Vite app.
+# --legacy-peer-deps is required because @react-three/fiber@8 declares a peer
+# on react@^18 using a range that npm 10 treats as a conflict with
+# react-router-dom@7. This flag does NOT skip installation — it only suppresses
+# the conflict error the same way npm 6 did. No runtime behaviour is affected.
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy the source only after dependency installation to keep cache hits stable.
 COPY . .

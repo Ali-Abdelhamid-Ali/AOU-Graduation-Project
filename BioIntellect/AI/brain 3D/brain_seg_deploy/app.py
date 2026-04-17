@@ -1,11 +1,17 @@
 import os
 import logging
+import shutil
 import tempfile
+import threading
+import time
 import traceback
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Tuple, Dict, Optional
+
+# Output files older than this many seconds are deleted by the cleanup thread.
+_OUTPUT_TTL_SECONDS = int(os.getenv("OUTPUT_TTL_SECONDS", "1800"))  # 30 min default
 from keras import backend as K
 import nibabel as nib
 import numpy as np
@@ -29,13 +35,17 @@ import warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
 # --- App Configuration ---
+_HF_REPO_ID = "Ali-Abdelhamid-Ali/The_Best_3D_Brain_Tumor_Segmentation_BraTS_2021"
+_HF_FILENAME = "The Best 3D Brain MRI Segmentation.keras"
+
+
 class AppConfig:
     BASE_DIR = Path(__file__).parent
     OUTPUTS_DIR = BASE_DIR / "outputs"
     MODELS_DIR = BASE_DIR / "models"
     STATIC_DIR = BASE_DIR / "static"
     TEMPLATES_DIR = BASE_DIR / "templates"
-    model_path = hf_hub_download(repo_id="Ali-Abdelhamid-Ali/The_Best_3D_Brain_Tumor_Segmentation_BraTS_2021",filename="The Best 3D Brain MRI Segmentation.keras")
+
     @classmethod
     def setup_directories(cls):
         cls.OUTPUTS_DIR.mkdir(exist_ok=True, parents=True)
@@ -44,12 +54,30 @@ class AppConfig:
         cls.TEMPLATES_DIR.mkdir(exist_ok=True, parents=True)
         logger.info(f"Directories set up: {cls.OUTPUTS_DIR}, {cls.MODELS_DIR}")
 
+    @classmethod
+    def resolve_model_path(cls) -> Path:
+        """Return the model path, downloading from HuggingFace only if not cached locally."""
+        cached = cls.MODELS_DIR / _HF_FILENAME
+        if cached.exists():
+            logger.info("Model found in local cache: %s", cached)
+            return cached
+
+        logger.info("Model not found locally — downloading from HuggingFace (first run only)...")
+        downloaded = hf_hub_download(repo_id=_HF_REPO_ID, filename=_HF_FILENAME)
+        downloaded_path = Path(downloaded)
+
+        # Copy into the mounted volume so future starts skip the download.
+        import shutil
+        shutil.copy2(downloaded_path, cached)
+        logger.info("Model cached to volume: %s", cached)
+        return cached
+
 # --- Create app instance properly ---
 app_config = AppConfig()
+app_config.setup_directories()
 app = Flask(__name__, template_folder=str(app_config.TEMPLATES_DIR))
 app.config['MAX_CONTENT_LENGTH'] = 400 * 1024 * 1024  # 400 MB
 CORS(app)
-app_config.setup_directories()
 with tempfile.TemporaryDirectory() as temp_dir:
     td_path = Path(temp_dir)
 td_path = Path(os.getenv("TEMP_DIR", "default/temp/path"))
@@ -428,7 +456,7 @@ def dice_enhancing_tumor(y_true, y_pred):
     inter = K.sum(y_true_f * y_pred_f)
     return (2. * inter + SMOOTH) / (K.sum(y_true_f) + K.sum(y_pred_f) + SMOOTH)
 
-app.model = load_segmentation_model(app_config.model_path)
+app.model = load_segmentation_model(app_config.resolve_model_path())
 
 # --- Flask routes ---
 @app.route('/')
@@ -620,6 +648,32 @@ def route_predict():
     except Exception as e:
         logger.error(f"Prediction failed: {e}")
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+def _cleanup_old_outputs(outputs_dir: Path, ttl_seconds: int) -> None:
+    """Background thread: delete output files older than ttl_seconds."""
+    while True:
+        try:
+            cutoff = time.time() - ttl_seconds
+            for f in outputs_dir.glob("*.npy"):
+                try:
+                    if f.stat().st_mtime < cutoff:
+                        f.unlink()
+                        logger.info("Cleaned up expired output: %s", f.name)
+                except OSError:
+                    pass
+        except Exception as exc:
+            logger.warning("Output cleanup error: %s", exc)
+        time.sleep(300)  # run every 5 minutes
+
+
+_cleanup_thread = threading.Thread(
+    target=_cleanup_old_outputs,
+    args=(app_config.OUTPUTS_DIR, _OUTPUT_TTL_SECONDS),
+    daemon=True,
+    name="output-cleanup",
+)
+_cleanup_thread.start()
 
 
 if __name__ == '__main__':

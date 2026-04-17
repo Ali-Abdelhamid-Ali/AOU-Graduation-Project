@@ -39,6 +39,11 @@ class AuthService:
         if avatar_url and not profile.get("photo_url"):
             profile["photo_url"] = avatar_url
 
+        # Propagate password-change flag from Supabase metadata to the profile
+        # so the frontend ProtectedRoute can intercept and force a reset.
+        if user_metadata.get("password_change_required") or user_metadata.get("must_reset_password"):
+            profile["must_reset_password"] = True
+
         return {
             "id": auth_user.id,
             "email": auth_user.email,
@@ -468,6 +473,16 @@ class AuthService:
             logger.info(f"Updating password via Admin API for user {user_id}")
             await self.auth_repo.update_password(user_id, new_password)
             logger.info(f"Password updated successfully for user {user_id}")
+
+            # Clear the forced-reset flag from Supabase metadata so the user
+            # is not redirected to the reset page again on next login.
+            try:
+                await self.auth_repo.update_user_metadata(
+                    user_id,
+                    {"password_change_required": False, "must_reset_password": False},
+                )
+            except Exception as meta_err:
+                logger.warning(f"Could not clear password_change_required flag for {user_id}: {meta_err}")
 
             log_audit(AuditAction.PASSWORD_CHANGE, user_id=user_id)
 

@@ -465,6 +465,7 @@ def build_doctor_overview_payload(user: dict[str, Any], sources: dict[str, Any])
             {
                 "id": str(ecg.get("id")),
                 "type": "ECG",
+                "patient_id": str(ecg.get("patient_id") or patient.get("id") or ""),
                 "patient_name": _safe_name(patient, fallback="Patient"),
                 "mrn": patient.get("mrn"),
                 "case_number": medical_case.get("case_number"),
@@ -472,6 +473,16 @@ def build_doctor_overview_payload(user: dict[str, Any], sources: dict[str, Any])
                 "summary": ecg.get("rhythm_classification") or "Awaiting physician review",
                 "created_at": ecg.get("created_at"),
                 "time_ago": _relative_time(ecg.get("created_at")),
+                # Fields used by ReportModal to pre-fill AI analysis content
+                "ai_interpretation": ecg.get("ai_interpretation"),
+                "rhythm_classification": ecg.get("rhythm_classification"),
+                "clinical_report": ecg.get("clinical_report"),
+                "primary_diagnosis": ecg.get("primary_diagnosis"),
+                "heart_rate": ecg.get("heart_rate"),
+                "risk_score": ecg.get("risk_score"),
+                "ai_recommendations": ecg.get("ai_recommendations") or [],
+                "analyzed_by_model": ecg.get("analyzed_by_model"),
+                "model_version": ecg.get("model_version"),
             }
         )
 
@@ -484,10 +495,15 @@ def build_doctor_overview_payload(user: dict[str, Any], sources: dict[str, Any])
             medical_case = medical_case[0] if medical_case else {}
         abnormalities = mri.get("detected_abnormalities") or []
         summary = abnormalities[0] if isinstance(abnormalities, list) and abnormalities else "Awaiting radiology review"
+        # Normalize to surface compat fields (tumor_detected, confidence_score)
+        # that are stored inside measurements._compat
+        from src.repositories.schema_compat import normalize_mri_result_record
+        mri_norm = normalize_mri_result_record(mri)
         pending_results.append(
             {
                 "id": str(mri.get("id")),
                 "type": "MRI",
+                "patient_id": str(mri.get("patient_id") or patient.get("id") or ""),
                 "patient_name": _safe_name(patient, fallback="Patient"),
                 "mrn": patient.get("mrn"),
                 "case_number": medical_case.get("case_number"),
@@ -495,6 +511,13 @@ def build_doctor_overview_payload(user: dict[str, Any], sources: dict[str, Any])
                 "summary": summary,
                 "created_at": mri.get("created_at"),
                 "time_ago": _relative_time(mri.get("created_at")),
+                # Fields used by ReportModal to pre-fill AI analysis content
+                "ai_interpretation": mri.get("ai_interpretation"),
+                "tumor_detected": mri_norm.get("tumor_detected"),
+                "confidence_score": mri_norm.get("confidence_score"),
+                "ai_recommendations": mri.get("ai_recommendations") or [],
+                "analyzed_by_model": mri.get("analyzed_by_model"),
+                "model_version": mri.get("model_version"),
             }
         )
 
@@ -661,26 +684,79 @@ async def collect_doctor_overview_sources(
     case_ids = [row.get("id") for row in doctor_cases if row.get("id")]
 
     if case_ids:
-        pending_ecg_result = await (
-            client.table("ecg_results")
-            .select("id, case_id, patient_id, created_at, analysis_status, rhythm_classification, risk_score, is_reviewed, patients(first_name, last_name, mrn), medical_cases(case_number)")
-            .in_("case_id", case_ids)
-            .eq("is_reviewed", False)
-            .order("created_at", desc=True)
-            .limit(20)
-            .execute()
-        )
-        pending_mri_result = await (
-            client.table("mri_segmentation_results")
-            .select("id, case_id, patient_id, created_at, analysis_status, detected_abnormalities, is_reviewed, patients(first_name, last_name, mrn), medical_cases(case_number)")
-            .in_("case_id", case_ids)
-            .eq("is_reviewed", False)
-            .order("created_at", desc=True)
-            .limit(20)
-            .execute()
-        )
-        pending_ecg = pending_ecg_result.data or []
-        pending_mri = pending_mri_result.data or []
+        try:
+            pending_ecg_result = await (
+                client.table("ecg_results")
+                .select(
+                    "id, case_id, patient_id, created_at, analysis_status, is_reviewed, "
+                    "rhythm_classification, ai_interpretation, clinical_report, "
+                    "heart_rate, risk_score, ai_recommendations, "
+                    "analyzed_by_model, model_version, "
+                    "patients(id, first_name, last_name, mrn), medical_cases(case_number)"
+                )
+                .in_("case_id", case_ids)
+                .eq("is_reviewed", False)
+                .order("created_at", desc=True)
+                .limit(20)
+                .execute()
+            )
+            pending_ecg = pending_ecg_result.data or []
+        except Exception as ecg_exc:
+            logger.warning("ECG pending results query failed, falling back: %s", ecg_exc)
+            try:
+                pending_ecg_result = await (
+                    client.table("ecg_results")
+                    .select(
+                        "id, case_id, patient_id, created_at, analysis_status, is_reviewed, "
+                        "rhythm_classification, ai_interpretation, clinical_report, "
+                        "patients(id, first_name, last_name, mrn), medical_cases(case_number)"
+                    )
+                    .in_("case_id", case_ids)
+                    .eq("is_reviewed", False)
+                    .order("created_at", desc=True)
+                    .limit(20)
+                    .execute()
+                )
+                pending_ecg = pending_ecg_result.data or []
+            except Exception:
+                pending_ecg = []
+
+        try:
+            pending_mri_result = await (
+                client.table("mri_segmentation_results")
+                .select(
+                    "id, case_id, patient_id, created_at, analysis_status, is_reviewed, "
+                    "detected_abnormalities, ai_interpretation, "
+                    "measurements, severity_score, ai_recommendations, "
+                    "analyzed_by_model, model_version, "
+                    "patients(id, first_name, last_name, mrn), medical_cases(case_number)"
+                )
+                .in_("case_id", case_ids)
+                .eq("is_reviewed", False)
+                .order("created_at", desc=True)
+                .limit(20)
+                .execute()
+            )
+            pending_mri = pending_mri_result.data or []
+        except Exception as mri_exc:
+            logger.warning("MRI pending results query failed, falling back: %s", mri_exc)
+            try:
+                pending_mri_result = await (
+                    client.table("mri_segmentation_results")
+                    .select(
+                        "id, case_id, patient_id, created_at, analysis_status, is_reviewed, "
+                        "detected_abnormalities, measurements, "
+                        "patients(id, first_name, last_name, mrn), medical_cases(case_number)"
+                    )
+                    .in_("case_id", case_ids)
+                    .eq("is_reviewed", False)
+                    .order("created_at", desc=True)
+                    .limit(20)
+                    .execute()
+                )
+                pending_mri = pending_mri_result.data or []
+            except Exception:
+                pending_mri = []
     else:
         pending_ecg = []
         pending_mri = []
@@ -750,9 +826,9 @@ async def get_doctor_overview(
             "message": "Doctor overview retrieved successfully",
         }
     except Exception as e:
-        logger.error(f"Failed to get doctor overview for user {user['id']}: {str(e)}")
+        logger.error(f"Failed to get doctor overview for user {user['id']}: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=500, detail="Failed to retrieve doctor overview"
+            status_code=500, detail=f"Failed to retrieve doctor overview: {str(e)}"
         )
 
 
@@ -1213,23 +1289,59 @@ async def update_super_admin_config(
         - setting_value: New value
     """
     try:
-        # TODO: Implement actual config update via SystemRepository
-        # from src.repositories.system_repository import SystemRepository
-        # system_repo = SystemRepository()
+        from src.repositories.system_repository import SystemRepository
 
-        # Log this action for audit
+        setting_key = str(config_data.get("setting_key") or "").strip()
+        setting_value = config_data.get("setting_value")
+        setting_id = str(config_data.get("setting_id") or "").strip()
+
+        if not setting_key and not setting_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Either 'setting_key' or 'setting_id' is required",
+            )
+
+        system_repo = SystemRepository()
         logger.info(
-            f"Super admin {user['id']} updating config: {config_data.get('setting_key')}"
+            "Super admin %s updating config key=%s id=%s",
+            user["id"], setting_key or "(by id)", setting_id or "(by key)",
         )
 
-        # Update setting (this is a simplified version)
-        # In production, you'd want more validation and specific handling
+        if setting_id:
+            # Update by ID
+            updated = await system_repo.update_system_setting(
+                setting_id=setting_id,
+                setting_data={"setting_value": setting_value},
+            )
+        else:
+            # Look up existing setting by key, then update or create
+            existing_settings = await system_repo.get_global_settings()
+            matched = next(
+                (s for s in (existing_settings or []) if s.get("setting_key") == setting_key),
+                None,
+            )
+            if matched:
+                updated = await system_repo.update_system_setting(
+                    setting_id=str(matched["id"]),
+                    setting_data={"setting_value": setting_value},
+                )
+            else:
+                updated = await system_repo.create_system_setting(
+                    setting_data={
+                        "setting_key": setting_key,
+                        "setting_value": setting_value,
+                        "scope": "global",
+                    }
+                )
 
         return {
             "success": True,
             "message": "Configuration updated successfully",
             "updated_by": user["id"],
+            "data": updated,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to update config for super admin {user['id']}: {str(e)}")
         raise HTTPException(

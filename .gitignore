@@ -17,6 +17,7 @@ Desktop.ini
 node_modules/
 dist/
 dist-ssr/
+.vite/
 coverage/
 *.tsbuildinfo
 npm-debug.log*
@@ -77,7 +78,8 @@ temp/
 *.xlsx
 *.ppt
 *.pptx
-.claude
+.claude/
+.vscode/
 # Project-specific AI artifacts and datasets
 BioIntellect/certs
 BioIntellect/backend/tests
@@ -105,3 +107,11 @@ BioIntellect/AI/**/*.png
 
 # Generated / backup assets
 BioIntellect/frontend/model-backups/
+
+# Brain 3D deploy outputs and models
+BioIntellect/AI/brain 3D/brain_seg_deploy/outputs/
+BioIntellect/AI/brain 3D/brain_seg_deploy/models/
+
+# Python cache
+__pycache__/
+*.pyc

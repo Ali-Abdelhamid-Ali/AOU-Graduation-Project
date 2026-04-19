@@ -33,8 +33,7 @@ EXPOSE 8000
 # per-location; this is the gunicorn worker-level safeguard.
 CMD ["gunicorn", "main:app", \
      "-k", "uvicorn.workers.UvicornWorker", \
-     "-w", "4", \
-     "--preload", \
+     "-w", "1", \
      "-b", "0.0.0.0:8000", \
      "--timeout", "300", \
      "--graceful-timeout", "30", \

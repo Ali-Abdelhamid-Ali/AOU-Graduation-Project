@@ -15,7 +15,7 @@ class VectorDBProviderFactory:
         self.last_error = None
         self.last_db_path = None
 
-        if Provider == VectorDBENUMS.QDRANT.value:
+        if Provider and Provider.upper() == VectorDBENUMS.QDRANT.value:
             db_path = self.base_controller.get_database_path(
                 db_name=self.settings.VECTOR_DB_PATH
             )

@@ -173,26 +173,16 @@ def create_app() -> FastAPI:
                 if vectordb_provider_factory.last_error
                 else "unknown error"
             )
-            logger.warning(
-                "Vector database provider is unavailable; "
+            raise RuntimeError(
+                f"Vector database provider failed to initialize; "
                 f"provider={settings.VECTOR_DB_BACKEND}, "
                 f"db_path={vectordb_provider_factory.last_db_path}, "
-                f"reason={failure_context}; continuing without vectordb client"
+                f"reason={failure_context}"
             )
-        else:
-            try:
-                app.state.vectordb_client.connect()
-                logger.info(
-                    f"Connected to vector database using {settings.VECTOR_DB_BACKEND} provider"
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Vector database initialization skipped; "
-                    f"provider={settings.VECTOR_DB_BACKEND}, "
-                    f"db_path={vectordb_provider_factory.last_db_path}, "
-                    f"error={exc}; continuing without vectordb client"
-                )
-                app.state.vectordb_client = None
+        app.state.vectordb_client.connect()
+        logger.info(
+            f"Connected to vector database using {settings.VECTOR_DB_BACKEND} provider"
+        )
         timings["vectordb_client_s"] = time.perf_counter() - vectordb_started
         app.state.template_parser = template_parser(language=settings.PRIMARY_LANG, default_language=settings.DEFAULT_LANG)
         timings["startup_total_s"] = time.perf_counter() - startup_started

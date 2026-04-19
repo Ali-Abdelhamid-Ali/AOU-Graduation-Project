@@ -1,9 +1,11 @@
 /**
  * brandingConfig.js
- * 
+ *
  * The central configuration for hospital branding and identity.
  * Reverted to English-only as per user request.
  */
+
+import logoUrl from '@/assets/images/BioIntellect.png'
 
 export const brandingConfig = {
     // Identity
@@ -49,7 +51,7 @@ export const brandingConfig = {
 
     // Creative Assets
     assets: {
-        logo: '/src/assets/images/BioIntellect.png',
+        logo: logoUrl,
         heroBg: 'medical_hero_bg',
         textureBg: 'medical_texture_bg'
     }

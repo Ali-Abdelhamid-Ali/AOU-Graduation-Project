@@ -79,7 +79,7 @@ services:
     env_file:
       - ./.env
     environment:
-      ENVIRONMENT: production
+      ENVIRONMENT: development
       DEBUG: "false"
       ENABLE_CACHING: ${ENABLE_CACHING:-true}
       SUPABASE_URL: ${SUPABASE_URL:?Set SUPABASE_URL in BioIntellect/.env}

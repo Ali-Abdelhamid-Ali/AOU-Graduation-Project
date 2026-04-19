@@ -28,33 +28,10 @@ export default defineConfig(({ command, mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
+      dedupe: ['react', 'react-dom'],
     },
     build: {
-      chunkSizeWarningLimit: 500,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (!id.includes('node_modules')) return undefined
-            if (id.includes('@kitware/vtk.js')) return 'imaging-vendor'
-            if (
-              id.includes('three') ||
-              id.includes('@react-three/fiber') ||
-              id.includes('@react-three/drei')
-            ) {
-              return 'three-vendor'
-            }
-            if (
-              id.includes('react') ||
-              id.includes('react-dom') ||
-              id.includes('react-router-dom') ||
-              id.includes('framer-motion')
-            ) {
-              return 'react-vendor'
-            }
-            return 'vendor'
-          },
-        },
-      },
+      chunkSizeWarningLimit: 1500,
     },
     test: {
       environment: 'happy-dom',

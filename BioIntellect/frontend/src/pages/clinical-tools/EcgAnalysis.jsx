@@ -218,7 +218,7 @@ export const EcgAnalysis = ({ onBack }) => {
             <div className={styles.container}>
                 <header className={styles.header}>
                     <h1>Cardiac Arrhythmia Detection</h1>
-                    <p>Powered by BioIntellect CNN-Transformer Architecture</p>
+                    <p>Powered by BioIntellect InceptionTime Multimodal Architecture</p>
                 </header>
 
                 {userRole === ROLES.PATIENT ? <PatientDisclaimer /> : <EcgDisclaimer />}

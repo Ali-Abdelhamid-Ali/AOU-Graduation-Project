@@ -1,6 +1,5 @@
 # BioIntellect Backend Requirements
-# Force CPU-only PyTorch — prevents pip from pulling CUDA/cuDNN wheels (1+ GB)
---extra-index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://download.pytorch.org/whl/cu121
 
 # Web Framework
 fastapi==0.115.2
@@ -19,7 +18,7 @@ scipy==1.14.1
 PyWavelets==1.7.0
 
 # Transformers stack for local LLMs (PhiQA / MedMO)
-torch==2.5.1+cpu
+torch==2.5.1+cu121
 transformers==4.46.3
 accelerate==1.13.0
 sentencepiece==0.2.1

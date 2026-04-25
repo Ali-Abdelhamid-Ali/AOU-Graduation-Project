@@ -191,7 +191,7 @@ class Settings(BaseSettings):
                 "PHI_QA_MODEL_PATH is required when GENERATION_BACKEND=phi_qa.\n"
                 "Add this to your .env:\n"
                 "PHI_QA_MODEL_PATH=D:/AOU-Graduation-Project/BioIntellect/AI/fintune/"
-                "fintuned_QA_model/phi_medical_full_merged_16bit_QA"
+                "fintuned_chating_model/phi_medical_full_merged_16bit_chat"
             )
         if self.GENERATION_BACKEND == "phi_qa":
             self.PHI_QA_MODEL_PATH = _normalize_existing_dir(

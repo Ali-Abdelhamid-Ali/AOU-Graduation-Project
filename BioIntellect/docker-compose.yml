@@ -42,7 +42,7 @@ services:
     environment:
       TEMP_DIR: /tmp/biointellect-mri
     volumes:
-      - mri-models:/app/models
+      - "./AI/brain 3D/brain_seg_deploy/models:/app/models:ro"
       - mri-outputs:/app/outputs
     deploy:
       resources:
@@ -72,10 +72,14 @@ services:
       resources:
         limits:
           cpus: '4'
-          memory: 6G
+          memory: 12G
         reservations:
           cpus: '1'
-          memory: 1G
+          memory: 2G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     env_file:
       - ./.env
     environment:
@@ -93,6 +97,12 @@ services:
       MRI_SEGMENTATION_TIMEOUT_SECONDS: ${MRI_SEGMENTATION_TIMEOUT_SECONDS:-300}
       CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in BioIntellect/.env}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS:-localhost,127.0.0.1}
+      PHI_QA_MODEL_PATH: /app/ai_models/phi_qa
+      ECG_MODEL_PATH: /app/ai_models/ecg/ecg_inceptiontime_multimodal_asymmetric_loss_loss-min_best.h5
+      ECG_THRESHOLDS_PATH: /app/ai_models/ecg/per_class_thresholds.npy
+      ECG_TRAIN_CSV_PATH: /app/ai_models/ecg/ptbxl_train.csv
+      ECG_REPORTS_PATH: /app/ai_models/ecg_ref/reports_by_code.json
+      ECG_SCHEMA_PATH: /app/ai_models/ecg_ref/scp_compact_schema.json
     depends_on:
       redis:
         condition: service_healthy
@@ -101,6 +111,9 @@ services:
     volumes:
       - ./logs:/app/logs
       - backend-storage:/app/storage
+      - ./AI/ECG/App/classification:/app/ai_models/ecg:ro
+      - ./AI/ECG/App:/app/ai_models/ecg_ref:ro
+      - ./AI/fintune/fintuned_chating_model/phi_medical_full_merged_16bit_chat:/app/ai_models/phi_qa:ro
     healthcheck:
       test:
         [
@@ -169,5 +182,4 @@ networks:
 volumes:
   redis-data:
   backend-storage:
-  mri-models:
   mri-outputs:

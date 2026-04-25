@@ -41,8 +41,8 @@ class GlobalMemoryCache:
                     password=security_config.REDIS_PASSWORD or None,
                     ssl=security_config.REDIS_SSL,
                     decode_responses=True,
-                    socket_connect_timeout=0.25,
-                    socket_timeout=0.25,
+                    socket_connect_timeout=5,
+                    socket_timeout=5,
                 )
                 self._use_redis = True
                 logger.info(

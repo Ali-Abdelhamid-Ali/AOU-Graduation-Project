@@ -71,10 +71,34 @@ class PhiQAProvider(LLMInterface):
                 "low_cpu_mem_usage": True,
                 "trust_remote_code": True,
             }
-            if has_accelerate:
+            # Only use device_map=auto when a real GPU is available.
+            # On CPU-only hosts accelerate will offload weights to disk which
+            # makes generation 10-100x slower due to I/O on every token.
+            import torch as _torch
+            if has_accelerate and _torch.cuda.is_available():
                 fp16_kwargs["device_map"] = "auto"
+                # Tell accelerate to prioritize GPU and use RAM as overflow only.
+                # Without this, accelerate may split the model across GPU+CPU
+                # causing slow meta-device offloading on every forward pass.
+                gpu_mem = _torch.cuda.get_device_properties(0).total_memory
+                fp16_kwargs["max_memory"] = {
+                    0: f"{int(gpu_mem * 0.90 / 1024**3)}GiB",
+                    "cpu": "20GiB",
+                }
             load_strategies.append(("float16", fp16_kwargs))
 
+        # float16 on CPU — no device_map to prevent accelerate disk offloading
+        load_strategies.append(("float16-cpu", {
+            "torch_dtype": torch.float16,
+            "low_cpu_mem_usage": True,
+            "trust_remote_code": True,
+        }))
+        # bfloat16 on CPU — no device_map to prevent accelerate disk offloading
+        load_strategies.append(("bfloat16-cpu", {
+            "torch_dtype": torch.bfloat16,
+            "low_cpu_mem_usage": True,
+            "trust_remote_code": True,
+        }))
         load_strategies.append(("float32-cpu", {
             "torch_dtype": torch.float32,
             "low_cpu_mem_usage": True,
@@ -126,9 +150,16 @@ class PhiQAProvider(LLMInterface):
     def generate_text(self, prompt: str, chat_history: Optional[list] = None,
                       max_output_tokens: Optional[int] = None,
                       temp: Optional[float] = None) -> Optional[str]:
+        self.logger.info("=" * 60)
+        self.logger.info("[PhiQA] generate_text CALLED")
+        self.logger.info("[PhiQA] prompt_len=%d  history_msgs=%d  max_tokens=%s  temp=%s",
+                         len(prompt), len(chat_history or []), max_output_tokens, temp)
+
         if not self.model or not self.tokenizer:
+            self.logger.error("[PhiQA] ABORT — model or tokenizer is None")
             raise RuntimeError("PhiQA model is not loaded.")
 
+        self.logger.info("[PhiQA] STEP 1/5 — normalising chat history …")
         normalized: list[dict] = []
         for msg in (chat_history or []):
             if not isinstance(msg, dict):
@@ -136,7 +167,6 @@ class PhiQAProvider(LLMInterface):
             role = str(msg.get("role", "user")).lower()
             raw_content = msg.get("content")
             if isinstance(raw_content, list):
-                # Flatten Qwen-style content blocks into plain text for Phi.
                 text = " ".join(
                     str(block.get("text", ""))
                     for block in raw_content
@@ -155,18 +185,24 @@ class PhiQAProvider(LLMInterface):
             normalized.append({"role": role, "content": text})
 
         normalized.append({"role": PhiQAEnums.user.value, "content": prompt})
+        self.logger.info("[PhiQA] STEP 1/5 DONE — total messages in context: %d", len(normalized))
 
         try:
             generation_started = time.perf_counter()
+
+            self.logger.info("[PhiQA] STEP 2/5 — applying chat template …")
             if hasattr(self.tokenizer, "apply_chat_template") and getattr(self.tokenizer, "chat_template", None):
                 input_text = self.tokenizer.apply_chat_template(
                     normalized,
                     tokenize=False,
                     add_generation_prompt=True,
                 )
+                self.logger.info("[PhiQA] STEP 2/5 DONE — used apply_chat_template, input_text_len=%d chars", len(input_text))
             else:
                 input_text = self._build_plain_prompt(normalized)
+                self.logger.info("[PhiQA] STEP 2/5 DONE — used _build_plain_prompt, input_text_len=%d chars", len(input_text))
 
+            self.logger.info("[PhiQA] STEP 3/5 — tokenizing (max_length=%d) …", self.default_max_input_tokens)
             tokenize_started = time.perf_counter()
             inputs = self.tokenizer(
                 input_text,
@@ -175,12 +211,16 @@ class PhiQAProvider(LLMInterface):
                 max_length=self.default_max_input_tokens,
             ).to(self.model.device)
             tokenize_s = time.perf_counter() - tokenize_started
+            input_token_count = inputs.input_ids.shape[-1]
+            self.logger.info("[PhiQA] STEP 3/5 DONE — tokenize_s=%.2f  input_tokens=%d  device=%s",
+                             tokenize_s, input_token_count, self.model.device)
 
             actual_temp = self.default_temp if temp is None else temp
             do_sample = actual_temp is not None and actual_temp > 0
+            max_new = max_output_tokens or self.default_output_max_tokens
 
             gen_kwargs: dict = {
-                "max_new_tokens": max_output_tokens or self.default_output_max_tokens,
+                "max_new_tokens": max_new,
                 "do_sample": do_sample,
                 "repetition_penalty": 1.15,
                 "pad_token_id": self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
@@ -190,12 +230,20 @@ class PhiQAProvider(LLMInterface):
             if do_sample:
                 gen_kwargs["temperature"] = float(actual_temp)
 
+            self.logger.info("[PhiQA] STEP 4/5 — model.generate starting …")
+            self.logger.info("[PhiQA]   max_new_tokens=%d  do_sample=%s  temp=%s  use_cache=%s",
+                             max_new, do_sample, actual_temp, gen_kwargs["use_cache"])
             model_started = time.perf_counter()
             with torch.inference_mode():
                 generated_ids = self.model.generate(**inputs, **gen_kwargs)
             model_s = time.perf_counter() - model_started
+            output_token_count = generated_ids.shape[-1] - input_token_count
+            self.logger.info("[PhiQA] STEP 4/5 DONE — generate_s=%.2f  output_tokens=%d  tokens_per_sec=%.2f",
+                             model_s, output_token_count,
+                             output_token_count / model_s if model_s > 0 else 0)
 
-            new_tokens = generated_ids[0][inputs.input_ids.shape[-1]:]
+            self.logger.info("[PhiQA] STEP 5/5 — decoding output tokens …")
+            new_tokens = generated_ids[0][input_token_count:]
             output_text = self.tokenizer.decode(
                 new_tokens,
                 skip_special_tokens=True,
@@ -203,18 +251,20 @@ class PhiQAProvider(LLMInterface):
             ).strip()
 
             if not output_text:
+                self.logger.error("[PhiQA] STEP 5/5 FAILED — decoded text is empty")
                 raise RuntimeError("PhiQA returned empty output.")
 
-            self.logger.info(
-                "PhiQA generation timings tokenize_s=%.2f generate_s=%.2f total_s=%.2f",
-                tokenize_s, model_s, time.perf_counter() - generation_started,
-            )
+            total_s = time.perf_counter() - generation_started
+            self.logger.info("[PhiQA] STEP 5/5 DONE — output_len=%d chars", len(output_text))
+            self.logger.info("[PhiQA] COMPLETE — tokenize_s=%.2f  generate_s=%.2f  total_s=%.2f",
+                             tokenize_s, model_s, total_s)
+            self.logger.info("=" * 60)
             return output_text
 
         except RuntimeError:
             raise
         except Exception as e:
-            self.logger.error("PhiQA generation error: %s", e)
+            self.logger.error("[PhiQA] EXCEPTION in generate_text: %s", e, exc_info=True)
             raise
 
     def embed_text(self, text: str, document_type: Optional[str] = None) -> Optional[list[float]]:

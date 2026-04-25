@@ -53,7 +53,7 @@ class LLMProviderFactory:
                 model_path=self.settings.PHI_QA_MODEL_PATH,
                 default_input_max_characters=self.settings.INPUT_DEFAULT_MAX_CHARACTERS,
                 default_output_max_tokens=self.settings.INPUT_DEFAULT_MAX_TOKENS,
-                default_max_input_tokens=self.settings.INPUT_DEFAULT_MAX_TOKENS,
+                default_max_input_tokens=2048,
                 default_temp=self.settings.INPUT_DEFAULT_TEMPERATURE,
                 force_cpu_only=force_cpu_only,
             )

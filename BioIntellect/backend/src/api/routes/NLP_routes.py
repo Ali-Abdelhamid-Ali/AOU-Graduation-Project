@@ -53,6 +53,7 @@ DEFAULT_MEDMO_MODEL_CANDIDATES = [
 	os.path.join(PROJECT_ROOT, "AI", "fintune", "medmo_8B"),
 ]
 DEFAULT_PHI_QA_MODEL_CANDIDATES = [
+	os.path.join(PROJECT_ROOT, "AI", "fintune", "fintuned_chating_model", "phi_medical_full_merged_16bit_chat"),
 	os.path.join(PROJECT_ROOT, "AI", "fintune", "fintuned_QA_model", "phi_medical_full_merged_16bit_QA"),
 	os.path.join(PROJECT_ROOT, "AI", "fintune", "fintuned_QA_model", "phi-medical-af-qa-lora-r32_checkpoint"),
 	os.path.join(PROJECT_ROOT, "AI", "fintune", "fintuned_QA_model"),

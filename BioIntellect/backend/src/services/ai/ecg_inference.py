@@ -122,7 +122,7 @@ class ECGInferenceEngine:
                 "ECG_MODEL_PATH",
                 str(
                     base_dir
-                    / "ecg_inceptiontime_multimodal_asymmetric_loss_loss-min_best.h5"
+                    / "ecg_inceptiontime_multimodal_asymmetric_loss_loss-min_best_balance.h5"
                 ),
             )
         )

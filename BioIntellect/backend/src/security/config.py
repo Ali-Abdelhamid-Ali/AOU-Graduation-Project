@@ -43,8 +43,17 @@ class SecurityConfig:
     ]
 
     if ENVIRONMENT == "production":
-        # Production CORS must come from the environment variable — no localhost fallback.
-        CORS_ORIGINS = settings.cors_origin_list
+        # Production CORS comes from the env-driven list, plus the Render frontend
+        # and an optional FRONTEND_URL override so the deployed UI can reach the API.
+        _PROD_EXTRA_ORIGINS = [
+            "https://aou-graduation-project-teje.onrender.com",
+            os.getenv("FRONTEND_URL", ""),
+        ]
+        CORS_ORIGINS = list(
+            dict.fromkeys(
+                [*settings.cors_origin_list, *(o for o in _PROD_EXTRA_ORIGINS if o)]
+            )
+        )
     else:
         CORS_ORIGINS = _DEV_CORS_ORIGINS
 

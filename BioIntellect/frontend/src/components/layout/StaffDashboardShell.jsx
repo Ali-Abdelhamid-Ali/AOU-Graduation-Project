@@ -107,6 +107,7 @@ export const StaffDashboardShell = ({
     return window.localStorage.getItem(storageKey) === 'true'
   })
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -116,13 +117,26 @@ export const StaffDashboardShell = ({
 
   useEffect(() => {
     setIsNotificationsOpen(false)
+    setIsMobileDrawerOpen(false)
   }, [location.pathname])
+
+  const closeMobileDrawer = () => setIsMobileDrawerOpen(false)
 
   return (
     <div
-      className={`${styles.shell} ${isCollapsed ? styles.collapsed : ''}`}
+      className={`${styles.shell} ${isCollapsed ? styles.collapsed : ''} ${
+        isMobileDrawerOpen ? styles.drawerOpen : ''
+      }`}
       style={{ '--staff-sidebar-width': isCollapsed ? '104px' : '312px' }}
     >
+      {isMobileDrawerOpen ? (
+        <button
+          type="button"
+          className={styles.backdrop}
+          aria-label="Close navigation"
+          onClick={closeMobileDrawer}
+        />
+      ) : null}
       <aside className={styles.sidebar} data-print-hidden="true">
         <div className={styles.topSection}>
           <div className={styles.brandPanel}>
@@ -184,6 +198,18 @@ export const StaffDashboardShell = ({
 
       <div className={styles.contentArea}>
         <header className={styles.topBar} data-print-hidden="true">
+          <button
+            type="button"
+            className={styles.hamburger}
+            aria-label="Open navigation"
+            aria-expanded={isMobileDrawerOpen}
+            onClick={() => setIsMobileDrawerOpen(true)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+
           <div className={styles.topBarCopy}>
             <p className={styles.topBarEyebrow}>{roleLabel}</p>
             <h2 className={styles.topBarTitle}>{headerTitle}</h2>

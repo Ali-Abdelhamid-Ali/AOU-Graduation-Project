@@ -27,10 +27,16 @@ REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30
 
 
 def _cookie_kwargs():
+    is_production = settings.environment == "production"
     return {
         "httponly": True,
-        "secure": settings.environment == "production",
-        "samesite": "lax",
+        "secure": is_production,
+        # In production the frontend (teje.onrender.com) and backend
+        # (3hsv.onrender.com) live on different subdomains, which the browser
+        # treats as cross-site. The refresh cookie must be SameSite=None
+        # (with Secure) for it to be sent on those requests; otherwise the
+        # /auth/refresh call fires without the cookie and logs the user out.
+        "samesite": "none" if is_production else "lax",
         "path": "/",
     }
 

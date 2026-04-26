@@ -665,45 +665,158 @@ html.dark .notificationPanelAction {
   border-color: var(--color-border);
 }
 
+.hamburger {
+  display: none;
+}
+
+.backdrop {
+  display: none;
+}
+
 @media (max-width: 1180px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {
-    position: static;
-    height: auto;
-    max-height: none;
-    overflow: visible;
-    border-inline-end: 0;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: min(320px, 86vw);
+    max-inline-size: 320px;
+    block-size: 100dvh;
+    max-block-size: 100dvh;
+    overflow-y: auto;
+    z-index: 1100;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 24px 0 48px rgba(0, 0, 0, 0.2);
+    border-inline-end: 1px solid var(--color-border);
+  }
+
+  [dir='rtl'] .sidebar {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    transform: translateX(100%);
+    box-shadow: -24px 0 48px rgba(0, 0, 0, 0.2);
+  }
+
+  .drawerOpen .sidebar {
+    transform: translateX(0);
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    border: 0;
+    padding: 0;
+    background: rgba(8, 15, 35, 0.55);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .hamburger {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    border-radius: 12px;
+    cursor: pointer;
+    align-self: flex-start;
+    flex-shrink: 0;
+    transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  }
+
+  .hamburger:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-bg);
+  }
+
+  .hamburger span {
+    display: block;
+    inline-size: 100%;
+    block-size: 2px;
+    background: var(--color-text);
+    border-radius: 2px;
+  }
+
+  .topBar {
+    gap: var(--spacing-md);
+    padding: 16px clamp(0.75rem, 3vw, 1.5rem);
   }
 }
 
 @media (max-width: 760px) {
-  .sidebar,
-  .topBar,
+  .topBar {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .topBarCopy {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .topBarActions {
+    inline-size: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .searchField {
+    inline-size: 100%;
+    order: -1;
+  }
+
+  .profileChip {
+    inline-size: auto;
+    min-width: 0;
+    flex: 0 1 auto;
+    padding: 6px 10px;
+  }
+
+  .profileChip strong,
+  .profileChip span:last-child {
+    font-size: var(--font-size-xs);
+  }
+
   .mainContent {
     padding: var(--spacing-md);
   }
 
-  .topBar {
-    flex-direction: column;
-    align-items: stretch;
+  .topBarTitle {
+    font-size: clamp(1.25rem, 5vw, 1.75rem);
   }
 
-  .topBarActions {
-    justify-content: stretch;
+  .topBarSubtitle {
+    display: none;
   }
 
-  .searchField,
-  .profileChip {
-    width: 100%;
-    min-width: 0;
+  .notificationButton span:not(:last-child) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .profileChip strong {
+    max-inline-size: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
   }
 
-  .profileChip {
-    justify-content: center;
+  .profileChip span:last-child {
+    display: none;
   }
 }
 

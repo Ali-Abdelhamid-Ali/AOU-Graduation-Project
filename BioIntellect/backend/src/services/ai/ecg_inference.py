@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import ast
-import csv
 import io
 import json
 import os
@@ -27,6 +25,16 @@ import tf_keras  # type: ignore[reportMissingTypeStubs]
 from tf_keras import Model  # type: ignore[reportMissingTypeStubs]
 from src.services.ai.ecg_preprocessing import preprocess_ecg
 
+
+_ECG_CLASS_NAMES: list[str] = [
+    '1AVB', '2AVB', '3AVB', 'ABQRS', 'AFIB', 'AFLT', 'ALMI', 'AMI', 'ANEUR', 'ASMI',
+    'BIGU', 'CLBBB', 'CRBBB', 'DIG', 'EL', 'HVOLT', 'ILBBB', 'ILMI', 'IMI', 'INJAL',
+    'INJAS', 'INJIL', 'INJIN', 'INJLA', 'INVT', 'IPLMI', 'IPMI', 'IRBBB', 'ISCAL', 'ISCAN',
+    'ISCAS', 'ISCIL', 'ISCIN', 'ISCLA', 'ISC_', 'IVCD', 'LAFB', 'LAO/LAE', 'LMI', 'LNGQT',
+    'LOWT', 'LPFB', 'LPR', 'LVH', 'LVOLT', 'NDT', 'NORM', 'NST_', 'NT_', 'PAC',
+    'PACE', 'PMI', 'PRC(S)', 'PSVT', 'PVC', 'QWAVE', 'RAO/RAE', 'RVH', 'SARRH', 'SBRAD',
+    'SEHYP', 'SR', 'STACH', 'STD_', 'STE_', 'SVARR', 'SVTAC', 'TAB_', 'TRIGU', 'VCLVH', 'WPW',
+]
 
 CSV_FEATURE_COLUMNS = [
     "age",
@@ -161,43 +169,20 @@ class ECGInferenceEngine:
     def _load_thresholds(self) -> Optional[np.ndarray]:
         if self._thresholds is not None:
             return self._thresholds
-        if self.thresholds_path.exists():
-            self._thresholds = np.load(self.thresholds_path).astype(np.float32)
+        if not self.thresholds_path.exists():
+            self.thresholds_path = Path(
+                hf_hub_download(
+                    repo_id="Ali-Abdelhamid-Ali/ECG",
+                    filename="per_class_thresholds.npy",
+                )
+            )
+        self._thresholds = np.load(self.thresholds_path).astype(np.float32)
         return self._thresholds
 
     def _load_class_names(self) -> list[str]:
         if self._class_names is not None:
             return self._class_names
-
-        thresholds = self._load_thresholds()
-        thresholds_len = int(len(thresholds)) if thresholds is not None else 0
-
-        if self.train_csv_path.exists():
-            classes: set[str] = set()
-            with self.train_csv_path.open("r", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    raw = row.get("scp_codes")
-                    if not raw:
-                        continue
-                    try:
-                        parsed = ast.literal_eval(str(raw))
-                        if isinstance(parsed, dict):
-                            classes.update(str(k) for k in parsed.keys())
-                    except Exception:
-                        continue
-            if classes:
-                csv_classes = sorted(classes)
-                if thresholds_len and len(csv_classes) != thresholds_len:
-                    self._class_names = [f"class_{i}" for i in range(thresholds_len)]
-                else:
-                    self._class_names = csv_classes
-                return self._class_names
-
-        if thresholds is not None:
-            self._class_names = [f"class_{i}" for i in range(len(thresholds))]
-        else:
-            self._class_names = ["unknown"]
+        self._class_names = _ECG_CLASS_NAMES
         return self._class_names
 
     def _load_model(self) -> Model:

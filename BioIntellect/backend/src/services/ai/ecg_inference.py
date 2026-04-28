@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from huggingface_hub import hf_hub_download
+
 # Default to CPU-only TensorFlow for ECG inference to avoid GPU/CUDA dependency conflicts.
 _ECG_TF_CPU_ONLY = os.getenv("ECG_TF_CPU_ONLY", "1").strip().lower() in {
     "1",
@@ -117,15 +119,21 @@ class ECGInferenceEngine:
         base_dir = repo_root / "AI" / "ECG" / "App" / "classification"
         ref_dir = repo_root / "AI" / "ECG" / "App"
 
-        self.model_path = Path(
-            os.getenv(
-                "ECG_MODEL_PATH",
-                str(
-                    base_dir
-                    / "ecg_inceptiontime_multimodal_asymmetric_loss_loss-min_best_balance.h5"
-                ),
+        _model_filename = "ecg_inceptiontime_multimodal_asymmetric_loss_loss-min_best_balance.h5"
+        _default_model_path = base_dir / _model_filename
+        _env_model_path = os.getenv("ECG_MODEL_PATH")
+
+        if _env_model_path:
+            self.model_path = Path(_env_model_path)
+        elif _default_model_path.exists():
+            self.model_path = _default_model_path
+        else:
+            self.model_path = Path(
+                hf_hub_download(
+                    repo_id="Ali-Abdelhamid-Ali/ECG",
+                    filename=_model_filename,
+                )
             )
-        )
         self.thresholds_path = Path(
             os.getenv("ECG_THRESHOLDS_PATH", str(base_dir / "per_class_thresholds.npy"))
         )

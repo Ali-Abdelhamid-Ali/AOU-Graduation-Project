@@ -267,40 +267,50 @@ class PhiQAProvider(LLMInterface):
             self.logger.error("[PhiQA] EXCEPTION in generate_text: %s", e, exc_info=True)
             raise
 
-    def embed_text(self, text: str, document_type: Optional[str] = None) -> Optional[list[float]]:
+    def embed_text(self, text: "str | list[str]", document_type: Optional[str] = None) -> "Optional[list]":
+        """Embed one string or a list of strings.
+
+        Returns a single vector (list[float]) when *text* is a str, or a list
+        of vectors (list[list[float]]) when *text* is a list — matching the
+        contract used by CoHereProvider so callers can treat both providers
+        identically.
+        """
         if not self.model or not self.tokenizer:
             raise RuntimeError("PhiQA model is not loaded.")
 
-        try:
-            # Use the model's true context limit (tokens) — not characters.
-            inputs = self.tokenizer(
-                self.process_text(text),
-                return_tensors="pt",
-                truncation=True,
-                max_length=self.default_max_input_tokens,
-            ).to(self.model.device)
+        is_batch = isinstance(text, list)
+        texts: list[str] = text if is_batch else [text]
 
-            with torch.inference_mode():
-                outputs = self.model(**inputs, output_hidden_states=True)
+        results: list[list[float]] = []
+        for item in texts:
+            try:
+                inputs = self.tokenizer(
+                    self.process_text(item),
+                    return_tensors="pt",
+                    truncation=True,
+                    max_length=self.default_max_input_tokens,
+                ).to(self.model.device)
 
-            last_hidden_state = outputs.hidden_states[-1]
-            # Cast attention_mask to hidden-state dtype so the product is numerically clean.
-            attention_mask = inputs["attention_mask"].to(last_hidden_state.dtype).unsqueeze(-1)
-            summed = (last_hidden_state * attention_mask).sum(dim=1)
-            counts = attention_mask.sum(dim=1).clamp(min=1e-9)
-            pooled = summed / counts
+                with torch.inference_mode():
+                    outputs = self.model(**inputs, output_hidden_states=True)
 
-            # L2-normalize so cosine similarity == dot product downstream.
-            pooled = torch.nn.functional.normalize(pooled, p=2, dim=-1).squeeze(0)
+                last_hidden_state = outputs.hidden_states[-1]
+                attention_mask = inputs["attention_mask"].to(last_hidden_state.dtype).unsqueeze(-1)
+                summed = (last_hidden_state * attention_mask).sum(dim=1)
+                counts = attention_mask.sum(dim=1).clamp(min=1e-9)
+                pooled = summed / counts
+                pooled = torch.nn.functional.normalize(pooled, p=2, dim=-1).squeeze(0)
 
-            embedding = pooled.detach().cpu().float().tolist()
-            if self.embedding_size is None:
-                self.embedding_size = len(embedding)
-            return embedding
+                embedding = pooled.detach().cpu().float().tolist()
+                if self.embedding_size is None:
+                    self.embedding_size = len(embedding)
+                results.append(embedding)
 
-        except Exception as e:
-            self.logger.error("PhiQA embedding error: %s", e)
-            raise
+            except Exception as e:
+                self.logger.error("PhiQA embedding error for item: %s", e)
+                raise
+
+        return results if is_batch else results[0]
 
     def construct_prompt(self, query: str, role: str) -> dict:
         return {

@@ -18,7 +18,13 @@ class LLMInterface(ABC):
         pass
 
     @abstractmethod
-    def embed_text(self, text: str, document_type: Optional[str] = None) -> Optional[list[float]]:
+    def embed_text(self, text: "str | list[str]", document_type: Optional[str] = None) -> "Optional[list]":
+        """Embed text.
+
+        Accepts a single string or a list of strings.
+        Returns a single vector (list[float]) for str input, or a list of
+        vectors (list[list[float]]) for list input.
+        """
         pass
 
     @abstractmethod

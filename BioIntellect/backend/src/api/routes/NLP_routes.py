@@ -181,42 +181,19 @@ def _model_catalog() -> list[dict[str, Any]]:
 
 
 def _resolve_embedding_client(request: Request, backend: str):
-	"""Return the correct embedding client for the given backend.
+	"""Return the embedding client to use for search queries.
 
-	Cloud backends (cohere, openai) use the startup embedding_client only when
-	the embedding backend matches the generation backend. Local backends
-	(medmo, phi_qa) do not support embeddings — always fall back to the
-	startup embedding_client so vector search still works.
+	The embedding backend is fixed at startup from EMBEDDING_BACKEND in .env.
+	It is intentionally decoupled from the generation backend so that:
+	- All indexed vectors always use the same embedding model (consistent dims).
+	- Switching the generation backend (phi_qa ↔ cohere ↔ openai) never causes
+	  a dimension mismatch against the already-indexed Qdrant collection.
+
+	The startup embedding_client is always returned. The `backend` parameter is
+	kept for callers that want to build a per-backend client in the future, but
+	today the only correct behaviour is to reuse the startup client.
 	"""
-	startup_client = getattr(request.app.state, "embedding_client", None)
-	settings = get_settings()
-	embedding_backend = str(settings.EMBEDDING_BACKEND or "").strip().lower()
-
-	# If the embedding backend already matches what was requested, use as-is
-	if embedding_backend == backend:
-		return startup_client
-
-	# Local models have no standalone embedding API — use startup client
-	if backend in {"medmo", "phi_qa"}:
-		return startup_client
-
-	# For cloud backends, try to get a cached embedding client for that backend
-	if not hasattr(request.app.state, "embedding_clients") or request.app.state.embedding_clients is None:
-		request.app.state.embedding_clients = {}
-	cache = request.app.state.embedding_clients
-
-	if backend in cache:
-		return cache[backend]
-
-	# Build a new embedding client for the requested backend
-	try:
-		factory = LLMProviderFactory(settings)
-		client = factory.create(backend=backend)
-		cache[backend] = client
-		return client
-	except Exception:
-		# Fall back to the startup embedding client rather than failing the request
-		return startup_client
+	return getattr(request.app.state, "embedding_client", None)
 
 
 def _resolve_generation_client(request: Request, requested_backend: str | None):
@@ -269,7 +246,7 @@ def _resolve_generation_client(request: Request, requested_backend: str | None):
 					model_path=local_model_path,
 					default_input_max_characters=default_input_max_characters,
 					default_output_max_tokens=default_output_max_tokens,
-					default_max_input_tokens=default_output_max_tokens,
+					default_max_input_tokens=2048,
 					default_temp=default_temp,
 					force_cpu_only=settings.FORCE_CPU_ONLY,
 				)

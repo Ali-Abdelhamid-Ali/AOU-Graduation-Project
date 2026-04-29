@@ -79,7 +79,7 @@ class OpenAIProvider(LLMInterface):
 
 
 
-    def embed_text(self, text: str, document_type: str = None) -> list[float]:
+    def embed_text(self, text: "str | list[str]", document_type: str = None) -> "list | None":
         if not self.client:
             self.logger.error("OpenAI client is not initialized.")
             return None
@@ -87,19 +87,21 @@ class OpenAIProvider(LLMInterface):
             self.logger.error("Embedding model is not set.")
             return None
 
+        is_batch = isinstance(text, list)
+        input_payload = text if is_batch else [text]
 
         response = self.client.embeddings.create(
-            input=text,
+            input=input_payload,
             model=self.embedding_model_id,
             timeout=30.0,
         )
 
-
-        if not response or not response.data or len(response.data) == 0 or not response.data[0].embedding:
+        if not response or not response.data or len(response.data) == 0:
             self.logger.error("No embedding data returned from OpenAI.")
             return None
-        
-        return response.data[0].embedding
+
+        vectors = [item.embedding for item in response.data]
+        return vectors if is_batch else vectors[0]
 
     def construct_prompt(self, query: str, role: str) -> dict:
         # This method can be customized based on specific prompt construction needs

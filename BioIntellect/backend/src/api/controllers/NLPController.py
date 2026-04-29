@@ -122,7 +122,12 @@ class NLPController(BaseController):
 
         prompt_started = time.perf_counter()
         self.template_parser.set_language(language)
-        system_prompt = self.template_parser.get("rag", "system_prompt", vars={})
+        # Local small models (PhiQA) have a tight context window (~2048 tokens).
+        # Use the compact system prompt so the RAG context fits without truncation.
+        from src.stores.llm.providers.PhiQAProvider import PhiQAProvider
+        is_local_model = isinstance(self.generation_client, PhiQAProvider)
+        prompt_key = "system_prompt_local" if is_local_model else "system_prompt"
+        system_prompt = self.template_parser.get("rag", prompt_key, vars={})
 
         # Build per-document prompt blocks WITH source name so the model can
         # cite. We also return a parallel `sources` list for the UI.
@@ -184,7 +189,9 @@ class NLPController(BaseController):
         )
 
         settings = get_settings()
-        history_limit = settings.CHAT_HISTORY_MAX_MESSAGES
+        # Local small models have a tight context window — cap history aggressively
+        # so the RAG context and system prompt are not crowded out.
+        history_limit = 2 if is_local_model else settings.CHAT_HISTORY_MAX_MESSAGES
         max_tokens = settings.CHAT_MAX_OUTPUT_TOKENS
 
         clean_history = [

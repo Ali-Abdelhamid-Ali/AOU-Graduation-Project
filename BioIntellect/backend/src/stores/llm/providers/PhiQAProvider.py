@@ -1,9 +1,38 @@
 import gc
 import os
+import sys
+import threading
 import time
 from typing import Any, Optional
 
 import torch
+
+# CRITICAL: Import unsloth BEFORE transformers to apply optimizations
+_UNSLOTH_AVAILABLE = False
+FastLanguageModel = None
+
+
+def _try_import_unsloth() -> bool:
+    """Attempt to import unsloth only if CUDA is available."""
+    global FastLanguageModel, _UNSLOTH_AVAILABLE
+    logger = get_logger("provider.PhiQAProvider")
+    
+    if not torch.cuda.is_available():
+        logger.warning("[PhiQA] CUDA not available — skipping unsloth import")
+        return False
+    
+    try:
+        logger.info("[PhiQA] CUDA detected — attempting unsloth import …")
+        from unsloth import FastLanguageModel as _FL
+        FastLanguageModel = _FL
+        _UNSLOTH_AVAILABLE = True
+        logger.info("[PhiQA] Unsloth imported successfully")
+        return True
+    except Exception as e:
+        logger.error("[PhiQA] Unsloth import failed: %s", e, exc_info=True)
+        return False
+
+
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from ..LLMInterface import LLMInterface
@@ -11,15 +40,38 @@ from ..LLMEnums import PhiQAEnums
 from src.observability.logger import get_logger
 
 
+_SYSTEM_PROMPT = (
+    "You must answer only using information explicitly provided in the user message.\n"
+    "Do not add external knowledge.\n"
+    "Do not assume missing facts.\n"
+    "If the information is not present reply: "
+    '"The context does not contain this information."\n'
+    "Maintain a neutral, clear, and factual tone (C2 English level)."
+)
+
+
 class PhiQAProvider(LLMInterface):
-    def __init__(self, model_path: str, default_input_max_characters: int = 6000,
-                 default_output_max_tokens: int = 1024, default_temp: float = 0.3,
-                 default_max_input_tokens: int = 2048, force_cpu_only: bool = False):
+    def __init__(
+        self,
+        model_path: str,
+        default_input_max_characters: int = 6000,
+        default_output_max_tokens: int = 1024,
+        default_max_input_tokens: int = 4048,
+        force_cpu_only: bool = False,
+    ):
+        self.logger = get_logger("provider.PhiQAProvider")
+
+        cuda_available = torch.cuda.is_available()
+        unsloth_available = _try_import_unsloth()
+        self.logger.info(
+            "[PhiQA] CUDA available: %s | Unsloth available: %s | Python: %s",
+            cuda_available, unsloth_available, sys.executable,
+        )
+
         self.model_path = model_path
         self.default_input_max_characters = default_input_max_characters
         self.default_output_max_tokens = default_output_max_tokens
         self.default_max_input_tokens = default_max_input_tokens
-        self.default_temp = default_temp
         self.force_cpu_only = force_cpu_only
         self.Enums = PhiQAEnums
         self.generation_model_id = model_path
@@ -27,113 +79,119 @@ class PhiQAProvider(LLMInterface):
         self.embedding_size: Optional[int] = None
         self.model: Any = None
         self.tokenizer: Any = None
+        self.is_cpu_mode: bool = False
 
-        self.logger = get_logger("provider.PhiQAProvider")
+        self._generate_lock = threading.Lock()
+
         self.logger.info("Loading PhiQA model from: %s", self.model_path)
 
         load_started = time.perf_counter()
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True)
-        if self.tokenizer.pad_token_id is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-
-        has_accelerate = False
-        try:
-            import accelerate  # noqa: F401
-            has_accelerate = True
-        except ImportError:
-            self.logger.warning("accelerate not installed — device_map disabled")
-
         skip_4bit = os.getenv("PHIQA_SKIP_4BIT", "false").lower() in ("1", "true", "yes")
+        use_cpu_loader = self.force_cpu_only or not _UNSLOTH_AVAILABLE
+        loader_name = "transformers-cpu" if use_cpu_loader else "unsloth"
 
-        load_strategies: list[tuple[str, dict]] = []
-        if not self.force_cpu_only and not skip_4bit:
+        try:
+            if use_cpu_loader:
+                self.model, self.tokenizer = self._load_with_transformers_cpu()
+                self.is_cpu_mode = True
+            else:
+                self.model, self.tokenizer = self._load_with_unsloth(skip_4bit=skip_4bit)
+                self.is_cpu_mode = False
+            self.model.eval()
+            if self.tokenizer.pad_token_id is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.tokenizer.padding_side = "right"
+
+            template_path = os.path.join(self.model_path, "chat_template.jinja")
+            if os.path.exists(template_path):
+                with open(template_path, "r", encoding="utf-8") as f:
+                    self.tokenizer.chat_template = f.read()
+                self.logger.info("Loaded custom chat template from %s", template_path)
+            else:
+                self.logger.warning("chat_template.jinja not found at %s", template_path)
+
             try:
-                from transformers import BitsAndBytesConfig
-                import bitsandbytes  # noqa: F401
-                q_kwargs: dict = {
-                    "low_cpu_mem_usage": True,
-                    "trust_remote_code": True,
-                    "quantization_config": BitsAndBytesConfig(
-                        load_in_4bit=True,
-                        bnb_4bit_compute_dtype=torch.float16,
-                        bnb_4bit_quant_type="nf4",
-                        bnb_4bit_use_double_quant=True,
-                    ),
-                }
-                if has_accelerate:
-                    q_kwargs["device_map"] = "auto"
-                load_strategies.append(("4bit", q_kwargs))
-            except ImportError:
-                pass
+                self.embedding_size = int(self.model.config.hidden_size)
+            except AttributeError:
+                self.embedding_size = None
 
-            fp16_kwargs: dict = {
-                "torch_dtype": torch.float16,
-                "low_cpu_mem_usage": True,
-                "trust_remote_code": True,
-            }
-            # Only use device_map=auto when a real GPU is available.
-            # On CPU-only hosts accelerate will offload weights to disk which
-            # makes generation 10-100x slower due to I/O on every token.
-            import torch as _torch
-            if has_accelerate and _torch.cuda.is_available():
-                fp16_kwargs["device_map"] = "auto"
-                # Tell accelerate to prioritize GPU and use RAM as overflow only.
-                # Without this, accelerate may split the model across GPU+CPU
-                # causing slow meta-device offloading on every forward pass.
-                gpu_mem = _torch.cuda.get_device_properties(0).total_memory
-                fp16_kwargs["max_memory"] = {
-                    0: f"{int(gpu_mem * 0.90 / 1024**3)}GiB",
-                    "cpu": "20GiB",
-                }
-            load_strategies.append(("float16", fp16_kwargs))
-
-        # float16 on CPU — no device_map to prevent accelerate disk offloading
-        load_strategies.append(("float16-cpu", {
-            "torch_dtype": torch.float16,
-            "low_cpu_mem_usage": True,
-            "trust_remote_code": True,
-        }))
-        # bfloat16 on CPU — no device_map to prevent accelerate disk offloading
-        load_strategies.append(("bfloat16-cpu", {
-            "torch_dtype": torch.bfloat16,
-            "low_cpu_mem_usage": True,
-            "trust_remote_code": True,
-        }))
-        load_strategies.append(("float32-cpu", {
-            "torch_dtype": torch.float32,
-            "low_cpu_mem_usage": True,
-            "trust_remote_code": True,
-        }))
-
-        last_exc: Optional[Exception] = None
-        for strategy_name, kwargs in load_strategies:
-            try:
-                self.logger.info("Attempting PhiQA load with strategy: %s", strategy_name)
-                self.model = AutoModelForCausalLM.from_pretrained(self.model_path, **kwargs)
-                self.model.eval()
-                try:
-                    self.embedding_size = int(self.model.config.hidden_size)
-                except AttributeError:
-                    self.embedding_size = None
-                try:
-                    device_map = getattr(self.model, "hf_device_map", None) or {"model": str(self.model.device)}
-                except Exception:
-                    device_map = "unknown"
-                self.logger.info(
-                    "PhiQA model loaded (%s, load_s=%.2f, embedding_size=%s, devices=%s).",
-                    strategy_name, time.perf_counter() - load_started, self.embedding_size, device_map,
+            actual_device = str(self.model.device)
+            if not self.is_cpu_mode and "cuda" not in actual_device:
+                self.logger.error(
+                    "[PhiQA] DEVICE MISMATCH — expected GPU but model is on %s", actual_device
                 )
-                return
-            except Exception as load_exc:
-                self.logger.warning("Strategy %s failed: %s", strategy_name, load_exc)
-                last_exc = load_exc
-                self.model = None
+                raise RuntimeError(
+                    f"PhiQA loaded via unsloth but model.device={actual_device}. "
+                    "Check CUDA installation and conda environment."
+                )
+
+            self.logger.info(
+                "[PhiQA] Model loaded — device=%s | loader=%s | load_s=%.2f | embedding_size=%s",
+                actual_device, loader_name,
+                time.perf_counter() - load_started,
+                self.embedding_size,
+            )
+        except Exception as load_exc:
+            self.model = None
+            self.tokenizer = None
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            raise RuntimeError(
+                f"Failed to load PhiQA via {loader_name}. Last error: {load_exc}"
+            ) from load_exc
+
+    def _load_with_unsloth(self, skip_4bit: bool) -> tuple[Any, Any]:
+        if FastLanguageModel is None:
+            raise RuntimeError("Unsloth is not available in this runtime.")
+        self.logger.info("Attempting PhiQA load with strategy: unsloth")
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name=self.model_path,
+            max_seq_length=self.default_max_input_tokens,
+            load_in_4bit=(not skip_4bit),
+            low_cpu_mem_usage=True,
+        )
+        model = FastLanguageModel.for_inference(model)
+        return model, tokenizer
+
+    def _load_with_transformers_cpu(self) -> tuple[Any, Any]:
+        # Unsloth requires an accelerator; CPU-only runtimes load the merged checkpoint
+        # directly through Transformers instead.
+        strategies: list[tuple[str, torch.dtype]] = [
+            ("bfloat16", torch.bfloat16),
+            ("float32", torch.float32),
+        ]
+        last_exc: Optional[Exception] = None
+
+        for strategy_name, dtype in strategies:
+            try:
+                self.logger.info(
+                    "Attempting PhiQA load with strategy: transformers-cpu-%s",
+                    strategy_name,
+                )
+                model = AutoModelForCausalLM.from_pretrained(
+                    self.model_path,
+                    low_cpu_mem_usage=True,
+                    dtype=dtype,
+                    device_map="auto",
+                    trust_remote_code=True,
+                )
+                tokenizer = AutoTokenizer.from_pretrained(
+                    self.model_path,
+                    trust_remote_code=True,
+                )
+                return model, tokenizer
+            except Exception as exc:
+                last_exc = exc
+                self.logger.warning(
+                    "PhiQA CPU load strategy %s failed: %s",
+                    strategy_name,
+                    exc,
+                )
                 gc.collect()
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
 
         raise RuntimeError(
-            f"All loading strategies failed for PhiQA. Last error: {last_exc}"
+            f"All CPU loading strategies failed. Last error: {last_exc}"
         ) from last_exc
 
     def set_generation_model(self, model_id: str) -> str:
@@ -147,20 +205,23 @@ class PhiQAProvider(LLMInterface):
         self.embedding_size = embedding_size
         return self.embedding_model_id
 
-    def generate_text(self, prompt: str, chat_history: Optional[list] = None,
-                      max_output_tokens: Optional[int] = None,
-                      temp: Optional[float] = None) -> Optional[str]:
+    def generate_text(
+        self,
+        prompt: str,
+        chat_history: Optional[list] = None,
+        max_output_tokens: Optional[int] = None,
+    ) -> Optional[str]:
         self.logger.info("=" * 60)
-        self.logger.info("[PhiQA] generate_text CALLED")
-        self.logger.info("[PhiQA] prompt_len=%d  history_msgs=%d  max_tokens=%s  temp=%s",
-                         len(prompt), len(chat_history or []), max_output_tokens, temp)
+        self.logger.info(
+            "[PhiQA] generate_text CALLED | prompt_len=%d | history_msgs=%d",
+            len(prompt), len(chat_history or []),
+        )
 
         if not self.model or not self.tokenizer:
-            self.logger.error("[PhiQA] ABORT — model or tokenizer is None")
             raise RuntimeError("PhiQA model is not loaded.")
 
-        self.logger.info("[PhiQA] STEP 1/5 — normalising chat history …")
-        normalized: list[dict] = []
+        # --- STEP 1: normalise history ---
+        normalized: list[dict] = [{"role": PhiQAEnums.system.value, "content": _SYSTEM_PROMPT}]
         for msg in (chat_history or []):
             if not isinstance(msg, dict):
                 continue
@@ -168,9 +229,9 @@ class PhiQAProvider(LLMInterface):
             raw_content = msg.get("content")
             if isinstance(raw_content, list):
                 text = " ".join(
-                    str(block.get("text", ""))
-                    for block in raw_content
-                    if isinstance(block, dict) and block.get("type") == "text"
+                    str(b.get("text", ""))
+                    for b in raw_content
+                    if isinstance(b, dict) and b.get("type") == "text"
                 )
             else:
                 text = str(raw_content or msg.get("message") or "")
@@ -179,95 +240,92 @@ class PhiQAProvider(LLMInterface):
             if role in ("assistant", "chatbot"):
                 role = "assistant"
             elif role == "system":
-                role = "system"
+                continue
             else:
                 role = "user"
             normalized.append({"role": role, "content": text})
 
-        normalized.append({"role": PhiQAEnums.user.value, "content": prompt})
-        self.logger.info("[PhiQA] STEP 1/5 DONE — total messages in context: %d", len(normalized))
+        normalized.append({"role": PhiQAEnums.user.value, "content": f"Input:\n{prompt}"})
+        self.logger.info("[PhiQA] STEP 1 DONE — context messages: %d", len(normalized))
 
-        try:
-            generation_started = time.perf_counter()
+        # --- STEP 2: chat template ---
+        if hasattr(self.tokenizer, "apply_chat_template") and getattr(self.tokenizer, "chat_template", None):
+            input_text = self.tokenizer.apply_chat_template(
+                normalized, tokenize=False, add_generation_prompt=True
+            )
+        else:
+            input_text = self._build_plain_prompt(normalized)
+        self.logger.info("[PhiQA] STEP 2 DONE — input_text_len=%d chars", len(input_text))
 
-            self.logger.info("[PhiQA] STEP 2/5 — applying chat template …")
-            if hasattr(self.tokenizer, "apply_chat_template") and getattr(self.tokenizer, "chat_template", None):
-                input_text = self.tokenizer.apply_chat_template(
-                    normalized,
-                    tokenize=False,
-                    add_generation_prompt=True,
+        # --- STEP 3: tokenize ---
+        inputs = self.tokenizer(
+            input_text,
+            return_tensors="pt",
+            truncation=True,
+            max_length=self.default_max_input_tokens,
+        ).to(self.model.device)
+        input_token_count = inputs.input_ids.shape[-1]
+        self.logger.info(
+            "[PhiQA] STEP 3 DONE — input_tokens=%d | device=%s",
+            input_token_count, self.model.device,
+        )
+
+        # --- STEP 4: generate (P0-FIX: thread lock, P1-FIX: no SIGALRM) ---
+        token_cap = 100 if self.is_cpu_mode else 512
+        max_new = min(max_output_tokens or self.default_output_max_tokens, token_cap)
+        if self.is_cpu_mode:
+            self.logger.warning("[PhiQA] CPU mode — capped max_new_tokens to %d", max_new)
+
+        gen_kwargs = {
+            "max_new_tokens": max_new,
+            "do_sample": False,
+            "pad_token_id": self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
+            "eos_token_id": self.tokenizer.eos_token_id,
+            "use_cache": True,
+        }
+
+        self.logger.info("[PhiQA] STEP 4 — acquiring generate lock …")
+        with self._generate_lock:
+            self.logger.info("[PhiQA] STEP 4 — model.generate starting | max_new=%d", max_new)
+            t0 = time.perf_counter()
+            try:
+                with torch.inference_mode():
+                    generated_ids = self.model.generate(**inputs, **gen_kwargs)
+            finally:
+                generate_s = time.perf_counter() - t0
+                output_token_count = generated_ids.shape[-1] - input_token_count if 'generated_ids' in dir() else 0
+                self.logger.info(
+                    "[PhiQA] STEP 4 DONE — generate_s=%.2f | output_tokens=%d | tok/s=%.2f",
+                    generate_s, output_token_count,
+                    output_token_count / generate_s if generate_s > 0 else 0,
                 )
-                self.logger.info("[PhiQA] STEP 2/5 DONE — used apply_chat_template, input_text_len=%d chars", len(input_text))
-            else:
-                input_text = self._build_plain_prompt(normalized)
-                self.logger.info("[PhiQA] STEP 2/5 DONE — used _build_plain_prompt, input_text_len=%d chars", len(input_text))
 
-            self.logger.info("[PhiQA] STEP 3/5 — tokenizing (max_length=%d) …", self.default_max_input_tokens)
-            tokenize_started = time.perf_counter()
-            inputs = self.tokenizer(
-                input_text,
-                return_tensors="pt",
-                truncation=True,
-                max_length=self.default_max_input_tokens,
-            ).to(self.model.device)
-            tokenize_s = time.perf_counter() - tokenize_started
-            input_token_count = inputs.input_ids.shape[-1]
-            self.logger.info("[PhiQA] STEP 3/5 DONE — tokenize_s=%.2f  input_tokens=%d  device=%s",
-                             tokenize_s, input_token_count, self.model.device)
+        # --- STEP 5: decode ---
+        new_tokens = generated_ids[0][input_token_count:]
+        output_text = self.tokenizer.decode(
+            new_tokens,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        ).strip()
 
-            actual_temp = self.default_temp if temp is None else temp
-            do_sample = actual_temp is not None and actual_temp > 0
-            max_new = max_output_tokens or self.default_output_max_tokens
+        # P1-FIX: release GPU memory immediately after decode
+        del generated_ids, new_tokens, inputs
+        if not self.is_cpu_mode:
+            torch.cuda.empty_cache()
 
-            gen_kwargs: dict = {
-                "max_new_tokens": max_new,
-                "do_sample": do_sample,
-                "repetition_penalty": 1.15,
-                "pad_token_id": self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
-                "eos_token_id": self.tokenizer.eos_token_id,
-                "use_cache": True,
-            }
-            if do_sample:
-                gen_kwargs["temperature"] = float(actual_temp)
+        if not output_text:
+            raise RuntimeError("PhiQA returned empty output.")
 
-            self.logger.info("[PhiQA] STEP 4/5 — model.generate starting …")
-            self.logger.info("[PhiQA]   max_new_tokens=%d  do_sample=%s  temp=%s  use_cache=%s",
-                             max_new, do_sample, actual_temp, gen_kwargs["use_cache"])
-            model_started = time.perf_counter()
-            with torch.inference_mode():
-                generated_ids = self.model.generate(**inputs, **gen_kwargs)
-            model_s = time.perf_counter() - model_started
-            output_token_count = generated_ids.shape[-1] - input_token_count
-            self.logger.info("[PhiQA] STEP 4/5 DONE — generate_s=%.2f  output_tokens=%d  tokens_per_sec=%.2f",
-                             model_s, output_token_count,
-                             output_token_count / model_s if model_s > 0 else 0)
+        self.logger.info(
+            "[PhiQA] COMPLETE — output_len=%d chars | total_s=%.2f",
+            len(output_text), time.perf_counter() - t0,
+        )
+        self.logger.info("=" * 60)
+        return output_text
 
-            self.logger.info("[PhiQA] STEP 5/5 — decoding output tokens …")
-            new_tokens = generated_ids[0][input_token_count:]
-            output_text = self.tokenizer.decode(
-                new_tokens,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=False,
-            ).strip()
-
-            if not output_text:
-                self.logger.error("[PhiQA] STEP 5/5 FAILED — decoded text is empty")
-                raise RuntimeError("PhiQA returned empty output.")
-
-            total_s = time.perf_counter() - generation_started
-            self.logger.info("[PhiQA] STEP 5/5 DONE — output_len=%d chars", len(output_text))
-            self.logger.info("[PhiQA] COMPLETE — tokenize_s=%.2f  generate_s=%.2f  total_s=%.2f",
-                             tokenize_s, model_s, total_s)
-            self.logger.info("=" * 60)
-            return output_text
-
-        except RuntimeError:
-            raise
-        except Exception as e:
-            self.logger.error("[PhiQA] EXCEPTION in generate_text: %s", e, exc_info=True)
-            raise
-
-    def embed_text(self, text: "str | list[str]", document_type: Optional[str] = None) -> "Optional[list]":
+    def embed_text(
+        self, text: "str | list[str]", document_type: Optional[str] = None
+    ) -> "Optional[list]":
         """Embed one string or a list of strings.
 
         Returns a single vector (list[float]) when *text* is a str, or a list
@@ -280,35 +338,35 @@ class PhiQAProvider(LLMInterface):
 
         is_batch = isinstance(text, list)
         texts: list[str] = text if is_batch else [text]
-
         results: list[list[float]] = []
+
         for item in texts:
-            try:
-                inputs = self.tokenizer(
-                    self.process_text(item),
-                    return_tensors="pt",
-                    truncation=True,
-                    max_length=self.default_max_input_tokens,
-                ).to(self.model.device)
+            inputs = self.tokenizer(
+                self.process_text(item),
+                return_tensors="pt",
+                truncation=True,
+                max_length=self.default_max_input_tokens,
+            ).to(self.model.device)
 
-                with torch.inference_mode():
-                    outputs = self.model(**inputs, output_hidden_states=True)
+            with torch.inference_mode():
+                outputs = self.model(**inputs, output_hidden_states=True)
 
-                last_hidden_state = outputs.hidden_states[-1]
-                attention_mask = inputs["attention_mask"].to(last_hidden_state.dtype).unsqueeze(-1)
-                summed = (last_hidden_state * attention_mask).sum(dim=1)
-                counts = attention_mask.sum(dim=1).clamp(min=1e-9)
-                pooled = summed / counts
-                pooled = torch.nn.functional.normalize(pooled, p=2, dim=-1).squeeze(0)
+            if outputs.hidden_states is None:
+                raise RuntimeError("Model did not return hidden_states.")
 
-                embedding = pooled.detach().cpu().float().tolist()
-                if self.embedding_size is None:
-                    self.embedding_size = len(embedding)
-                results.append(embedding)
+            last_hidden = outputs.hidden_states[-1]
+            mask = inputs["attention_mask"].to(last_hidden.dtype).unsqueeze(-1)
+            pooled = (last_hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
+            pooled = torch.nn.functional.normalize(pooled, p=2, dim=-1).squeeze(0)
+            embedding = pooled.detach().cpu().float().tolist()
 
-            except Exception as e:
-                self.logger.error("PhiQA embedding error for item: %s", e)
-                raise
+            del inputs, outputs, last_hidden, pooled
+            if not self.is_cpu_mode:
+                torch.cuda.empty_cache()
+
+            if self.embedding_size is None:
+                self.embedding_size = len(embedding)
+            results.append(embedding)
 
         return results if is_batch else results[0]
 

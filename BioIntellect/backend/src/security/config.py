@@ -46,7 +46,7 @@ class SecurityConfig:
         # Production CORS comes from the env-driven list, plus the Render frontend
         # and an optional FRONTEND_URL override so the deployed UI can reach the API.
         _PROD_EXTRA_ORIGINS = [
-            "https://aou-graduation-project-teje.onrender.com",
+            "https://aou-graduation-project-front.onrender.com",
             os.getenv("FRONTEND_URL", ""),
         ]
         CORS_ORIGINS = list(
